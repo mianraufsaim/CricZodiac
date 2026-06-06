@@ -1,0 +1,231 @@
+// ============================================================
+// CricZodiac — Series Detail Screen
+// ============================================================
+
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  View, Text, FlatList, TouchableOpacity,
+  StyleSheet, ActivityIndicator, Alert,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
+import { MATCH_STATUS } from '../../config/constants';
+import { getSeriesById, getSeriesMatches, updateSeriesStatus } from '../../database/queries/seriesQueries';
+
+const FORMAT_LABELS = { bestOf1: 'Best of 1', bestOf3: 'Best of 3', bestOf5: 'Best of 5' };
+
+const winsNeededFor = (format) => {
+  if (format === 'bestOf5') return 3;
+  if (format === 'bestOf3') return 2;
+  return 1;
+};
+
+const SeriesDetailScreen = ({ navigation, route }) => {
+  const { colors: COLORS } = useTheme();
+  const styles = useMemo(() => getStyles(COLORS), [COLORS]);
+
+  const { seriesId, seriesName } = route.params;
+  const [series, setSeries]   = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [s, m] = await Promise.all([
+        getSeriesById(seriesId),
+        getSeriesMatches(seriesId),
+      ]);
+      setSeries(s);
+      setMatches(m);
+    } catch (e) {
+      console.error('SeriesDetail:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(useCallback(() => { load(); }, []));
+
+  const handleClose = () => {
+    Alert.alert('Close Series', 'Mark this series as completed?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Close Series',
+        style: 'destructive',
+        onPress: async () => {
+          await updateSeriesStatus(seriesId, 'completed');
+          navigation.goBack();
+        },
+      },
+    ]);
+  };
+
+  const statusColor = (s) => {
+    if (s === MATCH_STATUS?.LIVE || s === 'live')      return COLORS.cyan;
+    if (s === MATCH_STATUS?.COMPLETED || s === 'completed') return COLORS.gold;
+    return COLORS.gray;
+  };
+
+  const renderMatch = ({ item, index }) => (
+    <TouchableOpacity
+      style={styles.matchCard}
+      onPress={() => {
+        if (item.status === 'live') {
+          navigation.navigate('LiveScoring', { matchId: item.id });
+        } else {
+          navigation.navigate('Scorecard', { matchId: item.id });
+        }
+      }}
+    >
+      <View style={styles.matchNum}>
+        <Text style={styles.matchNumText}>M{index + 1}</Text>
+      </View>
+      <View style={styles.matchBody}>
+        <Text style={styles.matchTitle}>{item.title}</Text>
+        <Text style={styles.matchTeams}>
+          {item.team_a_name || 'TBD'} <Text style={{ color: COLORS.gold }}>vs</Text> {item.team_b_name || 'TBD'}
+        </Text>
+        <View style={styles.matchMeta}>
+          <Text style={styles.metaText}>{item.overs} ov  ·  {item.venue || 'Indoor'}</Text>
+        </View>
+      </View>
+      <View style={[styles.statusBadge, { borderColor: statusColor(item.status) }]}>
+        <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
+          {item.status?.toUpperCase() || 'SETUP'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.title} numberOfLines={1}>{seriesName || 'Series'}</Text>
+        {series?.status === 'active'
+          ? <TouchableOpacity onPress={handleClose}>
+              <Icon name="close-circle-outline" size={24} color={COLORS.gray} />
+            </TouchableOpacity>
+          : <View style={{ width: 24 }} />
+        }
+      </View>
+
+      {loading
+        ? <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
+        : (
+          <FlatList
+            data={matches}
+            keyExtractor={i => i.id}
+            renderItem={renderMatch}
+            contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+            ListHeaderComponent={
+              series ? (
+                <View style={styles.seriesInfo}>
+                  <View style={styles.statsRow}>
+                    {[
+                      { label: 'Total', value: matches.length, icon: 'cricket' },
+                      { label: 'Live',  value: matches.filter(m => m.status === 'live').length, icon: 'circle', color: COLORS.cyan },
+                      { label: 'Done',  value: matches.filter(m => m.status === 'completed').length, icon: 'check-circle', color: COLORS.gold },
+                    ].map(s => (
+                      <View key={s.label} style={styles.statBox}>
+                        <Icon name={s.icon} size={20} color={s.color || COLORS.white} />
+                        <Text style={[styles.statNum, s.color && { color: s.color }]}>{s.value}</Text>
+                        <Text style={styles.statLabel}>{s.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {series.description
+                    ? <Text style={styles.seriesDesc}>{series.description}</Text>
+                    : null}
+
+                  {/* Best-of-X Win Progress */}
+                  {series.format && series.format !== 'bestOf1' && (
+                    <View style={styles.bestOfRow}>
+                      <Text style={styles.bestOfTitle}>{FORMAT_LABELS[series.format] || series.format}</Text>
+                      <View style={styles.winsRow}>
+                        <View style={styles.winsBox}>
+                          <Text style={styles.winsNum}>{series.team_a_wins || 0}</Text>
+                          <Text style={styles.winsLabel}>Team A Wins</Text>
+                        </View>
+                        <Text style={styles.winsNeed}>Need {winsNeededFor(series.format)} to win</Text>
+                        <View style={styles.winsBox}>
+                          <Text style={styles.winsNum}>{series.team_b_wins || 0}</Text>
+                          <Text style={styles.winsLabel}>Team B Wins</Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {series.status === 'active' && (
+                    <TouchableOpacity
+                      style={styles.newMatchBtn}
+                      onPress={() => navigation.navigate('MatchSetup', {
+                        seriesId,
+                        seriesName,
+                        matchNumber: matches.length + 1,
+                      })}
+                    >
+                      <LinearGradient colors={[COLORS.royalBlue, COLORS.purple]} style={styles.newMatchInner}>
+                        <Icon name="plus" size={18} color={COLORS.white} />
+                        <Text style={styles.newMatchText}>New Match in Series</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+
+                  <Text style={styles.sectionLabel}>MATCHES</Text>
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyMatches}>
+                <Icon name="cricket" size={40} color={COLORS.cardBorder} />
+                <Text style={styles.emptyText}>No matches yet in this series</Text>
+              </View>
+            }
+          />
+        )}
+    </LinearGradient>
+  );
+};
+
+const getStyles = (COLORS) => StyleSheet.create({
+  header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 8 },
+  title:         { color: COLORS.white, fontSize: 18, fontWeight: '700', flex: 1, textAlign: 'center' },
+  seriesInfo:    { marginBottom: 8 },
+  statsRow:      { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  statBox:       { flex: 1, backgroundColor: COLORS.card, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
+  statNum:       { color: COLORS.white, fontSize: 22, fontWeight: '800', marginTop: 4 },
+  statLabel:     { color: COLORS.gray, fontSize: 11, marginTop: 2 },
+  seriesDesc:    { color: COLORS.gray, fontSize: 13, marginBottom: 12, paddingHorizontal: 4 },
+  newMatchBtn:   { borderRadius: 12, overflow: 'hidden', marginBottom: 20 },
+  newMatchInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 50 },
+  newMatchText:  { color: COLORS.white, fontWeight: '700', fontSize: 14 },
+  sectionLabel:  { color: COLORS.gold, fontSize: 11, fontWeight: '700', letterSpacing: 3, marginBottom: 10 },
+  matchCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
+  matchNum:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  matchNumText:  { color: COLORS.white, fontWeight: '700', fontSize: 12 },
+  matchBody:     { flex: 1 },
+  matchTitle:    { color: COLORS.white, fontWeight: '700', fontSize: 14, marginBottom: 2 },
+  matchTeams:    { color: COLORS.gray, fontSize: 12, marginBottom: 2 },
+  matchMeta:     {},
+  metaText:      { color: COLORS.gray, fontSize: 11 },
+  statusBadge:   { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  statusText:    { fontSize: 9, fontWeight: '700' },
+  emptyMatches:  { alignItems: 'center', paddingTop: 30, gap: 10 },
+  emptyText:     { color: COLORS.gray, fontSize: 13 },
+  bestOfRow:     { backgroundColor: COLORS.darkGray, borderRadius: 12, padding: 14, marginBottom: 12 },
+  bestOfTitle:   { color: COLORS.gold, fontWeight: '700', fontSize: 12, textAlign: 'center', marginBottom: 10 },
+  winsRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  winsBox:       { alignItems: 'center', flex: 1 },
+  winsNum:       { color: COLORS.white, fontWeight: '900', fontSize: 28 },
+  winsLabel:     { color: COLORS.gray, fontSize: 10, marginTop: 2 },
+  winsNeed:      { color: COLORS.gray, fontSize: 11, textAlign: 'center', flex: 2 },
+});
+
+export default SeriesDetailScreen;

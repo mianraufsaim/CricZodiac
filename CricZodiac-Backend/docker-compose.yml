@@ -1,0 +1,93 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: criczodiac_app
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: criczodiac
+      DB_USER: criczodiac_user
+      DB_PASSWORD: "${DB_PASSWORD}"
+      JWT_SECRET: "${JWT_SECRET}"
+      APP_DOMAIN: "${APP_DOMAIN:-cricket.zodiactech.net}"
+    volumes:
+      - /docker/CricZodiac-Backend:/var/www/html
+      - /docker/CricZodiac-Backend/uploads:/var/www/html/uploads
+      - /docker/CricZodiac-Backend/logs:/var/www/html/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.criczodiac.rule=Host(`cricket.zodiactech.net`)"
+      - "traefik.http.routers.criczodiac.entrypoints=websecure"
+      - "traefik.http.routers.criczodiac.tls=true"
+      - "traefik.http.routers.criczodiac.tls.certresolver=letsencrypt"
+      - "traefik.http.services.criczodiac.loadbalancer.server.port=80"
+    networks:
+      - criczodiac_net
+      - proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  mysql:
+    image: mysql:8.0
+    container_name: criczodiac_mysql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: criczodiac
+      MYSQL_USER: criczodiac_user
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - criczodiac_net
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: criczodiac_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: "3306"
+      PMA_ABSOLUTE_URI: https://db.cricket.zodiactech.net
+      UPLOAD_LIMIT: 128M
+    depends_on:
+      mysql:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.criczodiac-phpmyadmin.rule=Host(`db.cricket.zodiactech.net`)"
+      - "traefik.http.routers.criczodiac-phpmyadmin.entrypoints=websecure"
+      - "traefik.http.routers.criczodiac-phpmyadmin.tls=true"
+      - "traefik.http.routers.criczodiac-phpmyadmin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.criczodiac-phpmyadmin.loadbalancer.server.port=80"
+    networks:
+      - criczodiac_net
+      - proxy
+
+networks:
+  criczodiac_net:
+    driver: bridge
+  proxy:
+    external: true
+
+volumes:
+  mysql_data:

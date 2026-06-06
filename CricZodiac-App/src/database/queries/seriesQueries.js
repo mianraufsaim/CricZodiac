@@ -1,0 +1,115 @@
+// ============================================================
+// CricZodiac — Series Database Queries (Local SQLite)
+// ============================================================
+
+import { queryRows, queryFirstRow, executeTransaction } from '../DatabaseHelper';
+import { SYNC_STATUS } from '../../config/constants';
+import uuid from 'react-native-uuid';
+
+export const createSeries = async (data, userId) => {
+  const id = uuid.v4();
+  await executeTransaction([
+    {
+      sql: `INSERT INTO series
+              (id, name, description, start_date, end_date, format, status, created_by, club_id, sync_status)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      params: [
+        id,
+        data.name,
+        data.description || null,
+        data.start_date  || null,
+        data.end_date    || null,
+        data.format      || 'bestOf1',
+        'active',
+        userId || null,
+        data.club_id     || null,
+        SYNC_STATUS.PENDING,
+      ],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [uuid.v4(), 'series', 'create', id, JSON.stringify({ id, ...data }), SYNC_STATUS.PENDING],
+    },
+  ]);
+  return id;
+};
+
+export const getAllSeries = () =>
+  queryRows(`
+    SELECT s.*,
+      COUNT(m.id) AS match_count,
+      SUM(CASE WHEN m.status = 'live' THEN 1 ELSE 0 END) AS live_count,
+      SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) AS completed_count
+    FROM series s
+    LEFT JOIN matches m ON m.series_id = s.id
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+  `);
+
+export const getSeriesById = (id) =>
+  queryFirstRow('SELECT * FROM series WHERE id = ?', [id]);
+
+export const getSeriesMatches = (seriesId) =>
+  queryRows(`
+    SELECT m.*,
+      t1.team_name AS team_a_name,
+      t2.team_name AS team_b_name
+    FROM matches m
+    LEFT JOIN teams t1 ON m.team_a_id = t1.id
+    LEFT JOIN teams t2 ON m.team_b_id = t2.id
+    WHERE m.series_id = ?
+    ORDER BY m.created_at DESC
+  `, [seriesId]);
+
+export const updateSeriesStatus = async (id, status) => {
+  await executeTransaction([
+    {
+      sql: `UPDATE series SET status = ?, updated_at = datetime('now'), sync_status = ? WHERE id = ?`,
+      params: [status, SYNC_STATUS.PENDING, id],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [uuid.v4(), 'series', 'update', id, JSON.stringify({ id, status }), SYNC_STATUS.PENDING],
+    },
+  ]);
+};
+
+// ── Record a match win and auto-complete series if Best of X decided ─────────
+// teamSide: 'a' | 'b'
+export const recordSeriesMatchWin = async (seriesId, teamSide) => {
+  const series = await queryFirstRow('SELECT * FROM series WHERE id = ?', [seriesId]);
+  if (!series || series.status !== 'active') return null;
+
+  const format    = series.format || 'bestOf1';
+  const totalGames = format === 'bestOf5' ? 5 : format === 'bestOf3' ? 3 : 1;
+  const winsNeeded = Math.ceil(totalGames / 2);  // 1 for Bo1, 2 for Bo3, 3 for Bo5
+
+  const newAWins = (series.team_a_wins || 0) + (teamSide === 'a' ? 1 : 0);
+  const newBWins = (series.team_b_wins || 0) + (teamSide === 'b' ? 1 : 0);
+
+  const seriesWon = newAWins >= winsNeeded || newBWins >= winsNeeded;
+  const newStatus = seriesWon ? 'completed' : 'active';
+
+  await executeTransaction([
+    {
+      sql: `UPDATE series
+            SET team_a_wins = ?, team_b_wins = ?, status = ?,
+                updated_at = datetime('now'), sync_status = ?
+            WHERE id = ?`,
+      params: [newAWins, newBWins, newStatus, SYNC_STATUS.PENDING, seriesId],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        uuid.v4(), 'series', 'update', seriesId,
+        JSON.stringify({ id: seriesId, team_a_wins: newAWins, team_b_wins: newBWins, status: newStatus }),
+        SYNC_STATUS.PENDING,
+      ],
+    },
+  ]);
+
+  return { newAWins, newBWins, seriesWon, winsNeeded, winner: seriesWon ? (newAWins >= winsNeeded ? 'a' : 'b') : null };
+};

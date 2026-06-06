@@ -1,0 +1,29 @@
+2026-06-06T02:22:08.282053 Project directory: /docker/CricZodiac-Backend
+2026-06-06T02:22:08.282510 Pulling project images
+2026-06-06T02:22:08.283512 ------------------------------
+2026-06-06T02:22:08.404178  app Skipped No image to be pulled
+2026-06-06T02:22:08.404232  Image phpmyadmin/phpmyadmin:latest Pulling 
+2026-06-06T02:22:08.404240  Image mysql:8.0 Pulling 
+2026-06-06T02:22:10.624140  Image mysql:8.0 Pulled 
+2026-06-06T02:22:35.798494  Image phpmyadmin/phpmyadmin:latest Pulled 
+2026-06-06T02:22:35.870924 ------------------------------
+2026-06-06T02:22:35.871561 Deploying project
+2026-06-06T02:22:35.874261 ------------------------------
+2026-06-06T02:22:36.075251  Container criczodiac_mysql Recreate 
+2026-06-06T02:22:37.339588  Container criczodiac_mysql Recreated 
+2026-06-06T02:22:37.339817  Container criczodiac_app Recreate 
+2026-06-06T02:22:37.341067  Container criczodiac_phpmyadmin Creating 
+2026-06-06T02:22:37.463659  Container criczodiac_phpmyadmin Created 
+2026-06-06T02:22:40.223395  Container criczodiac_app Recreated 
+2026-06-06T02:22:40.276049  Container criczodiac_mysql Starting 
+2026-06-06T02:22:40.530189  Container criczodiac_mysql Started 
+2026-06-06T02:22:40.530263  Container criczodiac_mysql Waiting 
+2026-06-06T02:22:40.530274  Container criczodiac_mysql Waiting 
+2026-06-06T02:22:51.032872  Container criczodiac_mysql Healthy 
+2026-06-06T02:22:51.032941  Container criczodiac_phpmyadmin Starting 
+2026-06-06T02:22:51.032950  Container criczodiac_mysql Healthy 
+2026-06-06T02:22:51.032958  Container criczodiac_app Starting 
+2026-06-06T02:22:51.366410  Container criczodiac_phpmyadmin Started 
+2026-06-06T02:22:51.395704  Container criczodiac_app Started 
+2026-06-06T02:22:51.401216 ------------------------------
+2026-06-06T02:22:51.401259 Project deployed successfully
