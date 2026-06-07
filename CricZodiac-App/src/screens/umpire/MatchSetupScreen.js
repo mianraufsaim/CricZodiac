@@ -79,7 +79,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { user } = useAuth();
+  const { user, activeClub } = useAuth();
   const { seriesId = null, seriesName = null, matchNumber = 1 } = route.params || {};
   const [form, setForm] = useState({
     title:              seriesId ? `Match ${matchNumber}` : '',
@@ -108,8 +108,9 @@ const MatchSetupScreen = ({ navigation, route }) => {
         ...form,
         overs:            form.overs,
         players_per_team: form.players_per_team,
-        umpire_id:        user?.id,
+        umpire_id:        null,   // assigned later when umpire is selected
         series_id:        seriesId,
+        club_id:          activeClub?.server_id || user?.club_id || null,
       });
       navigation.navigate('TeamSelection', { matchId, form, matchNumber });
     } catch (err) {

@@ -13,15 +13,16 @@ export const createMatch = async (matchData) => {
   const queries = [
     {
       sql: `INSERT INTO matches (
-        id, title, venue, match_date, overs, players_per_team,
+        id, club_id, title, venue, match_date, overs, players_per_team,
         team_a_id, team_b_id, umpire_id, series_id,
         wide_value, no_ball_value, max_overs_per_bowler,
         status, created_at, sync_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
       params: [
-        id, matchData.title, matchData.venue, matchData.match_date,
+        id, matchData.club_id || null,
+        matchData.title, matchData.venue, matchData.match_date,
         matchData.overs || 6, matchData.players_per_team || 6,
-        matchData.team_a_id, matchData.team_b_id, matchData.umpire_id,
+        matchData.team_a_id, matchData.team_b_id, matchData.umpire_id || null,
         matchData.series_id || null,
         matchData.wide_value || 1, matchData.no_ball_value || 1, matchData.max_overs_per_bowler || 0,
         'setup', SYNC_STATUS.PENDING
