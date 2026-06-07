@@ -48,7 +48,7 @@ $stmt = $pdo->prepare("
     FROM users u
     LEFT JOIN players p ON p.user_id = u.id AND p.is_active = 1
     WHERE u.club_id = ?
-      AND u.role IN ('umpire', 'player')
+      AND u.role IN ('player')
     ORDER BY u.role ASC, u.name ASC
 ");
 $stmt->execute([$clubId]);

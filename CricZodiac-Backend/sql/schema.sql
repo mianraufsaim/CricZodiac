@@ -1,7 +1,7 @@
 -- ============================================================
 -- CricZodiac — MySQL Schema  (v2)
 -- Production: https://cricket.zodiactech.net
--- Multi-club architecture: super_admin → clubs → admins → umpires/players
+-- Multi-club architecture: super_admin → clubs → admins → players
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS criczodiac CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     email           VARCHAR(150) NULL,                        -- NULL allowed (phone-only users)
     phone           VARCHAR(20),
     password_hash   VARCHAR(255) NOT NULL,
-    role            ENUM('super_admin','admin','umpire','player') NOT NULL DEFAULT 'admin',
+    role            ENUM('super_admin','admin','player') NOT NULL DEFAULT 'admin',
     status          ENUM('active','blocked','pending') NOT NULL DEFAULT 'pending',
     is_approved     TINYINT(1) NOT NULL DEFAULT 0,
     profile_pic     VARCHAR(500),
@@ -116,7 +116,6 @@ CREATE TABLE IF NOT EXISTS matches (
     team_a_local         VARCHAR(36),
     team_b_id            INT UNSIGNED,
     team_b_local         VARCHAR(36),
-    umpire_id            INT UNSIGNED,
     toss_winner_id       INT UNSIGNED,
     toss_choice          VARCHAR(10),
     batting_first        INT UNSIGNED,

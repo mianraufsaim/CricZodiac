@@ -135,24 +135,12 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
             $seriesId = $row ? (int)$row['id'] : null;
         }
 
-        // Resolve umpire_id → MySQL user id (if sent)
-        $umpireId = null;
-        if (!empty($d['umpire_id'])) {
-            $isUuid = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $d['umpire_id']);
-            $uq = $isUuid
-                ? $pdo->prepare("SELECT id FROM users WHERE local_id = ? LIMIT 1")
-                : $pdo->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
-            $uq->execute([$isUuid ? $d['umpire_id'] : (int)$d['umpire_id']]);
-            $urow = $uq->fetch(PDO::FETCH_ASSOC);
-            $umpireId = $urow ? (int)$urow['id'] : null;
-        }
-
         $pdo->prepare("
             INSERT INTO matches (
                 local_id, club_id, series_id, series_local_id, title, venue, match_date,
                 overs, players_per_team, max_overs_per_bowler, wide_value, no_ball_value,
-                umpire_id, status, created_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
+                status, created_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
             ON DUPLICATE KEY UPDATE title=VALUES(title), venue=VALUES(venue),
                 series_id=COALESCE(VALUES(series_id), series_id),
                 club_id=COALESCE(VALUES(club_id), club_id),
@@ -170,7 +158,6 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
             $d['max_overs_per_bowler'] ?? 0,
             $d['wide_value']   ?? 1,
             $d['no_ball_value'] ?? 1,
-            $umpireId,
         ]);
     } elseif ($action === 'update') {
         $allowed = ['title','venue','match_date','overs','status','toss_winner_id','batting_first','result_text','winner_team_id'];

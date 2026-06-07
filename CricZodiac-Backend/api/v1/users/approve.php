@@ -24,7 +24,7 @@ switch ($action) {
         $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$userId]);
         sendSuccess([], 'User deleted.');
     case 'update_role':
-        $allowed = ['admin', 'umpire', 'player'];
+        $allowed = ['admin', 'player'];
         if (!in_array($data['role'] ?? '', $allowed)) sendError('Invalid role.');
         $pdo->prepare("UPDATE users SET role=? WHERE id=?")->execute([$data['role'], $userId]);
         sendSuccess([], 'Role updated.');

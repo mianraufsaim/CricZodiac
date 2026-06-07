@@ -30,7 +30,7 @@ if ($user['status'] === 'inactive')     sendError('Your account has been deactiv
 if ($user['status'] === 'blocked')      sendError('Your account has been blocked. Contact Zodiac Technologies.', 403);
 
 // super_admin: never needs approval
-// admin/umpire/player: must be approved
+// admin/player: must be approved
 if ($user['role'] !== 'super_admin' && $user['is_approved'] == 0) {
     sendError('Your account is pending approval. You will be notified once activated.', 403);
 }

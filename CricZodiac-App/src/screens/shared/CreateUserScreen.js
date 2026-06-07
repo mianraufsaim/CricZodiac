@@ -246,8 +246,7 @@ const CreateUserScreen = ({ navigation, route }) => {
             <View style={st.card}>
               <Text style={st.sectionLabel}>ACCOUNT TYPE</Text>
               <View style={st.roleRow}>
-                <RoleBtn id="player" label="Player"  icon="account-outline" color={COLORS.gray}  active={role === 'player'} onPress={() => setRole('player')} COLORS={COLORS} st={st} />
-                <RoleBtn id="umpire" label="Umpire"  icon="account-tie"     color={COLORS.cyan}  active={role === 'umpire'} onPress={() => setRole('umpire')} COLORS={COLORS} st={st} />
+                <RoleBtn id="player" label="Player"  icon="account-outline" color={COLORS.gold}  active={role === 'player'} onPress={() => setRole('player')} COLORS={COLORS} st={st} />
               </View>
             </View>
           )}

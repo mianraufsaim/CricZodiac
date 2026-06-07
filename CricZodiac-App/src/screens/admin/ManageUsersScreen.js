@@ -16,21 +16,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../config/constants';
-import { changeUserRole, setUserApproval, deactivateUser, getAllUsers } from '../../database/queries/userQueries';
+import { setUserApproval, deactivateUser, getAllUsers } from '../../database/queries/userQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
 // ── Config ────────────────────────────────────────────────
 const TABS = [
   { id: 'all',    label: 'All',     icon: 'account-group' },
-  { id: 'umpire', label: 'Umpires', icon: 'account-tie'   },
   { id: 'player', label: 'Players', icon: 'account'       },
 ];
 
 const getRoleCfg = (COLORS) => ({
-  admin:  { color: COLORS.gold,    icon: 'shield-crown'  },
-  umpire: { color: COLORS.cyan,    icon: 'account-tie'   },
-  player: { color: COLORS.gold,    icon: 'account'       },
+  admin:  { color: COLORS.gold, icon: 'shield-crown' },
+  player: { color: COLORS.gold, icon: 'account'      },
 });
 
 const STATUS_COLOR = {
@@ -56,16 +54,6 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
     <TouchableOpacity style={sh.overlay} activeOpacity={1} onPress={onClose}>
       <View style={sh.sheet}>
         <Text style={sh.title}>Create Account</Text>
-        <TouchableOpacity style={sh.option} onPress={() => { onClose(); onSelect('umpire'); }}>
-          <View style={[sh.iconBox, { backgroundColor: COLORS.cyan + '22' }]}>
-            <Icon name="account-tie" size={26} color={COLORS.cyan} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={sh.optLabel}>Add Umpire</Text>
-            <Text style={sh.optDesc}>Create login for a new umpire</Text>
-          </View>
-          <Icon name="chevron-right" size={18} color={COLORS.gray} />
-        </TouchableOpacity>
         <TouchableOpacity style={sh.option} onPress={() => { onClose(); onSelect('player'); }}>
           <View style={[sh.iconBox, { backgroundColor: COLORS.gold + '22' }]}>
             <Icon name="account" size={26} color={COLORS.gold} />
@@ -87,25 +75,11 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
 // ── User Action Sheet ─────────────────────────────────────
 const UserActionSheet = ({ user, visible, onClose, onRefresh, onEdit, COLORS, ac }) => {
   if (!user) return null;
-  const isUmpire = user.role === 'umpire';
   const isAdmin  = user.role === 'admin';
   const ROLE_CFG = getRoleCfg(COLORS);
 
   // local_id is the SQLite UUID; server users have integer id + local_id
   const localId = user.local_id || user.id;
-
-  const handleChangeRole = () => {
-    onClose();
-    const newRole = isUmpire ? 'player' : 'umpire';
-    Alert.alert(
-      isUmpire ? 'Demote to Player' : 'Promote to Umpire',
-      `Change ${user.name}'s role to ${newRole}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: async () => { await changeUserRole(localId, newRole); onRefresh(); } },
-      ]
-    );
-  };
 
   const handleApproval = () => {
     onClose();
@@ -152,10 +126,6 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, onEdit, COLORS, ac
                 <Text style={ac.actionTxt}>Edit Profile</Text>
               </TouchableOpacity>
               <View style={ac.divider} />
-              <TouchableOpacity style={ac.action} onPress={handleChangeRole}>
-                <Icon name={isUmpire ? 'arrow-down-circle' : 'arrow-up-circle'} size={20} color={COLORS.cyan} />
-                <Text style={ac.actionTxt}>{isUmpire ? 'Demote to Player' : 'Promote to Umpire'}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={ac.action} onPress={handleApproval}>
                 <Icon name={user.is_approved ? 'account-cancel' : 'account-check'} size={20} color={COLORS.warning} />
                 <Text style={ac.actionTxt}>{user.is_approved ? 'Revoke Approval' : 'Approve User'}</Text>
@@ -239,7 +209,6 @@ const ManageUsersScreen = ({ navigation }) => {
     u.role !== 'super_admin' &&
     String(u.local_id || u.id) !== String(currentUser?.id)
   );
-  const umpires = active.filter(u => u.role === 'umpire');
   const players = active.filter(u => u.role === 'player');
 
   const filtered = active
@@ -376,9 +345,8 @@ const ManageUsersScreen = ({ navigation }) => {
       {/* Summary */}
       <View style={st.summary}>
         {[
-          { label: 'Umpires', count: umpires.length, color: COLORS.cyan   },
-          { label: 'Players', count: players.length, color: COLORS.gray   },
-          { label: 'Total',   count: active.length,  color: COLORS.gold   },
+          { label: 'Players', count: players.length, color: COLORS.gold },
+          { label: 'Total',   count: active.length,  color: COLORS.cyan },
         ].map((s, i) => (
           <React.Fragment key={s.label}>
             {i > 0 && <View style={st.summaryDivider} />}
@@ -436,7 +404,7 @@ const ManageUsersScreen = ({ navigation }) => {
               <View style={st.empty}>
                 <Icon name="account-off" size={48} color={COLORS.cardBorder} />
                 <Text style={st.emptyTxt}>
-                  {tab === 'umpire' ? 'No umpires yet.' : tab === 'player' ? 'No players yet.' : 'No users found.'}
+                  {tab === 'player' ? 'No players yet.' : 'No users found.'}
                 </Text>
                 <TouchableOpacity style={st.emptyBtn} onPress={() => setAddSheet(true)}>
                   <Text style={st.emptyBtnTxt}>+ Create Account</Text>

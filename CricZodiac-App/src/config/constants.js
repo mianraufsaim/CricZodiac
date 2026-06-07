@@ -25,7 +25,6 @@ export const COLORS = {
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',  // Zodiac Technologies staff — sees all clubs
   ADMIN:       'admin',        // Club admin — manages one or more clubs
-  UMPIRE:      'umpire',       // Per-club umpire
   PLAYER:      'player',       // Per-club player (view-only)
 };
 

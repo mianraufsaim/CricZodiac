@@ -108,7 +108,6 @@ const MatchSetupScreen = ({ navigation, route }) => {
         ...form,
         overs:            form.overs,
         players_per_team: form.players_per_team,
-        umpire_id:        null,   // assigned later when umpire is selected
         series_id:        seriesId,
         club_id:          activeClub?.server_id || user?.club_id || null,
       });

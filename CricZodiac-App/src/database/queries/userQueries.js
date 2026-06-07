@@ -21,39 +21,6 @@ export const getAllUsers = (role = null) => {
 export const getUserById = (id) =>
   queryFirstRow('SELECT * FROM users WHERE id = ?', [id]);
 
-// ── Create a new umpire (local + sync queue) ──────────────
-export const createUmpire = async (data) => {
-  const id = uuid.v4();
-  await executeTransaction([
-    {
-      sql: `INSERT INTO users
-              (id, name, email, phone, role, status, is_approved, sync_status)
-            VALUES (?,?,?,?,?,?,?,?)`,
-      params: [
-        id,
-        data.name,
-        data.email   || null,
-        data.phone   || null,
-        'umpire',
-        'active',
-        1,             // admin-created users are pre-approved
-        SYNC_STATUS.PENDING,
-      ],
-    },
-    {
-      sql: `INSERT INTO sync_queue
-              (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
-            VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [
-        uuid.v4(), 'users', 'create', id,
-        JSON.stringify({ id, ...data, role: 'umpire', status: 'active', is_approved: 1 }),
-        SYNC_STATUS.PENDING,
-      ],
-    },
-  ]);
-  return id;
-};
-
 // ── Change a user's role ──────────────────────────────────
 export const changeUserRole = async (id, newRole) => {
   await executeTransaction([

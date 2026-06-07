@@ -12,7 +12,6 @@ import { ROLES } from '../config/constants';
 // Navigators
 import AuthNavigator       from './AuthNavigator';
 import AdminNavigator      from './AdminNavigator';
-import UmpireNavigator     from './UmpireNavigator';
 import PlayerNavigator     from './PlayerNavigator';
 import SuperAdminNavigator from './SuperAdminNavigator';
 
@@ -43,9 +42,6 @@ const AppNavigator = () => {
       case ROLES.ADMIN:
         if (!activeClub) return <ClubSelectorScreen />;
         return <AdminNavigator />;
-
-      case ROLES.UMPIRE:
-        return <UmpireNavigator />;
 
       case ROLES.PLAYER:
         return <PlayerNavigator />;
