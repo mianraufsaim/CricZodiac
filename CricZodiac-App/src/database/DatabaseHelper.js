@@ -21,11 +21,40 @@ export const getDatabase = async () => {
       location: 'default',
     });
     await initializeTables(db);
+    await runMigrations(db);
     return db;
   } catch (error) {
     console.error('[DB] Failed to open database:', error);
     throw error;
   }
+};
+
+// ── Migrations (ALTER TABLE for schema changes) ───────────
+// Each migration is wrapped in try/catch — SQLite throws if
+// the column already exists, which is fine to ignore.
+const runMigrations = async (database) => {
+  const addColumnIfMissing = (tx, table, column, definition) => {
+    tx.executeSql(
+      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`,
+      [],
+      () => {},           // success — column was added
+      () => {}            // error  — column already exists, ignore
+    );
+  };
+
+  await database.transaction(tx => {
+    // players: ensure full_name, email, phone exist
+    // (old schema may have been created without them)
+    addColumnIfMissing(tx, 'players', 'full_name', 'TEXT');
+    addColumnIfMissing(tx, 'players', 'email',     'TEXT');
+    addColumnIfMissing(tx, 'players', 'phone',     'TEXT');
+    addColumnIfMissing(tx, 'players', 'server_id', 'INTEGER');
+    addColumnIfMissing(tx, 'players', 'user_id',   'TEXT');
+
+    // users: ensure server_id exists (older installs may lack it)
+    addColumnIfMissing(tx, 'users',   'server_id', 'INTEGER');
+    addColumnIfMissing(tx, 'users',   'profile_pic', 'TEXT');
+  });
 };
 
 // ── Create All Tables ─────────────────────────────────────
@@ -73,7 +102,7 @@ const initializeTables = async (database) => {
         id            TEXT PRIMARY KEY,
         server_id     INTEGER,
         user_id       TEXT,
-        full_name     TEXT NOT NULL,
+        full_name     TEXT,
         email         TEXT,
         phone         TEXT,
         player_type   TEXT DEFAULT 'allrounder',
