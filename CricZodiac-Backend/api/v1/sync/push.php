@@ -368,15 +368,25 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
         }
 
         $hash = isset($d['password']) ? password_hash($d['password'], PASSWORD_BCRYPT, ['cost' => 12]) : '';
+        // ON DUPLICATE KEY handles re-sync of same local_id (UNIQUE on local_id column).
+        // Email+club_id uniqueness is already handled by the explicit check above.
         $pdo->prepare("
             INSERT INTO users (local_id, name, email, phone, password_hash, role, status, is_approved, club_id, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,NOW())
-            ON DUPLICATE KEY UPDATE name=VALUES(name)
+            ON DUPLICATE KEY UPDATE
+                name=VALUES(name),
+                local_id=VALUES(local_id),
+                updated_at=NOW()
         ")->execute([
-            $d['id'], $d['name'], $d['email'] ?? null, $d['phone'] ?? null,
-            $hash, $d['role'] ?? 'player',
-            $d['status'] ?? 'pending', $d['is_approved'] ?? 0,
-            $d['club_id'] ?? null,
+            $d['id'],
+            $d['name'],
+            $d['email'] ?: null,
+            $d['phone'] ?: null,
+            $hash,
+            $d['role']        ?? 'player',
+            $d['status']      ?? 'active',
+            $d['is_approved'] ?? 1,
+            $d['club_id']     ?? null,
         ]);
     } elseif ($action === 'update') {
         // Only update fields that are actually present in the payload.

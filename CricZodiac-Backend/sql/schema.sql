@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
     local_id        VARCHAR(36) UNIQUE,
     club_id         INT UNSIGNED,                          -- NULL for super_admin
     name            VARCHAR(100) NOT NULL,
-    email           VARCHAR(150) UNIQUE NOT NULL,
-    phone           VARCHAR(20) UNIQUE,
+    email           VARCHAR(150) NULL,                        -- NULL allowed (phone-only users)
+    phone           VARCHAR(20),
     password_hash   VARCHAR(255) NOT NULL,
     role            ENUM('super_admin','admin','umpire','player') NOT NULL DEFAULT 'admin',
     status          ENUM('active','blocked','pending') NOT NULL DEFAULT 'pending',
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_login      DATETIME,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_email   (email),
+    UNIQUE KEY unique_email_per_club (email, club_id),        -- same email allowed in different clubs
     INDEX idx_phone   (phone),
     INDEX idx_status  (status),
     INDEX idx_club    (club_id),
