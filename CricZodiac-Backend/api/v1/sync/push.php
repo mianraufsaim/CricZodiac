@@ -389,7 +389,27 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
             $d['club_id']     ?? null,
         ]);
     } elseif ($action === 'update') {
-        // Only update fields that are actually present in the payload.
+        // Resolve which MySQL row to update.
+        // Payload 'id' is either:
+        //   - A UUID string  → user was created in-app, use local_id column
+        //   - A plain integer → user has no local_id (created outside app), use MySQL id directly
+        $payloadId = $d['id'] ?? '';
+        $isUuid    = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $payloadId);
+
+        if ($isUuid) {
+            $res = $pdo->prepare("SELECT id FROM users WHERE local_id = ? LIMIT 1");
+            $res->execute([$payloadId]);
+        } else {
+            // Numeric MySQL id — match by local_id OR by primary key
+            $res = $pdo->prepare("SELECT id FROM users WHERE local_id = ? OR id = ? LIMIT 1");
+            $res->execute([$payloadId, (int)$payloadId]);
+        }
+        $resolved = $res->fetch(PDO::FETCH_ASSOC);
+        if (!$resolved) return true; // user not found — skip gracefully
+
+        $mysqlId = $resolved['id'];
+
+        // Only update fields present in the payload
         $allowed = ['name', 'phone', 'email', 'role', 'status', 'is_approved'];
         $sets = []; $params = [];
         foreach ($allowed as $col) {
@@ -398,15 +418,20 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
                 $params[] = $d[$col];
             }
         }
-        // Optional password reset — only if payload contains 'password'
+        // Optional password reset
         if (!empty($d['password'])) {
             $sets[]   = "password_hash = ?";
             $params[] = password_hash($d['password'], PASSWORD_BCRYPT, ['cost' => 12]);
         }
+        // Backfill local_id if this user never had one
+        if (!$isUuid && !empty($d['local_uuid'])) {
+            $sets[]   = "local_id = COALESCE(local_id, ?)";
+            $params[] = $d['local_uuid'];
+        }
         if ($sets) {
-            $params[] = $d['id'];
+            $params[] = $mysqlId;
             $pdo->prepare(
-                "UPDATE users SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE local_id=?"
+                "UPDATE users SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?"
             )->execute($params);
         }
     }

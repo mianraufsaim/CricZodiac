@@ -215,17 +215,22 @@ export const createUserWithPlayer = async (data) => {
 };
 
 // ── Update an existing user + player profile ──────────────
-// localUserId  — SQLite UUID (local_id from server or id from local)
+// localUserId  — SQLite UUID OR MySQL integer-as-string (when user has no local_id)
 // data.role    — used to decide whether to upsert player profile
 // data.player_local_id — player row's SQLite UUID (from server list response)
 export const updateUserWithPlayer = async (localUserId, data) => {
-  const statements = [
-    // Update user record
-    {
+  // Detect whether localUserId is a real UUID or just a MySQL integer id
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(localUserId);
+
+  const statements = [];
+
+  // Only update local SQLite if we have a real local record (UUID match)
+  if (isUuid) {
+    statements.push({
       sql: `UPDATE users
-            SET name=?, email=?, phone=?, status=?, is_approved=?,
-                updated_at=datetime('now'), sync_status=?
-            WHERE id=?`,
+              SET name=?, email=?, phone=?, status=?, is_approved=?,
+                  updated_at=datetime('now'), sync_status=?
+              WHERE id=?`,
       params: [
         data.name,
         data.email       || null,
@@ -235,27 +240,28 @@ export const updateUserWithPlayer = async (localUserId, data) => {
         SYNC_STATUS.PENDING,
         localUserId,
       ],
-    },
-    // Sync queue — user update (includes optional new password)
-    {
-      sql: `INSERT INTO sync_queue
-              (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
-            VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [
-        uuid.v4(), 'users', 'update', localUserId,
-        JSON.stringify({
-          id:          localUserId,
-          name:        data.name,
-          email:       data.email       || null,
-          phone:       data.phone       || null,
-          status:      data.status      || 'active',
-          is_approved: data.is_approved != null ? (data.is_approved ? 1 : 0) : 1,
-          ...(data.new_password ? { password: data.new_password } : {}),
-        }),
-        SYNC_STATUS.PENDING,
-      ],
-    },
-  ];
+    });
+  }
+
+  // Sync queue — always push to server regardless of local record
+  statements.push({
+    sql: `INSERT INTO sync_queue
+            (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+          VALUES (?,?,?,?,?,?,datetime('now'))`,
+    params: [
+      uuid.v4(), 'users', 'update', localUserId,
+      JSON.stringify({
+        id:          localUserId,          // UUID → server uses local_id; integer → server uses id
+        name:        data.name,
+        email:       data.email       || null,
+        phone:       data.phone       || null,
+        status:      data.status      || 'active',
+        is_approved: data.is_approved != null ? (data.is_approved ? 1 : 0) : 1,
+        ...(data.new_password ? { password: data.new_password } : {}),
+      }),
+      SYNC_STATUS.PENDING,
+    ],
+  });
 
   if (data.role === 'player') {
     // Prefer server-returned player_local_id; fall back to local SQLite lookup
