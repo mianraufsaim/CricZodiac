@@ -164,6 +164,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   cardRight:      { alignItems: 'flex-end' },
   badge:          { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
   badgeText:      { fontSize: 9, fontWeight: '700' },
+  formatPill:     { backgroundColor: COLORS.royalBlue + '60', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.royalBlue },
+  formatPillText: { color: COLORS.cyan, fontSize: 10, fontWeight: '700' },
   empty:          { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
   emptyTitle:     { color: COLORS.white, fontSize: 18, fontWeight: '700', marginTop: 16 },
   emptySubtitle:  { color: COLORS.gray, fontSize: 13, textAlign: 'center', marginTop: 8, marginBottom: 32 },

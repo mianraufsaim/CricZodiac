@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
   PROFILE:        `${API_BASE_URL}/users/profile.php`,
   ADMIN_CLUB:     `${API_BASE_URL}/users/club.php`,
   USERS_LIST:     `${API_BASE_URL}/users/list.php`,
+  USERS_CHECK:    `${API_BASE_URL}/users/check.php`,
   USERS_APPROVE:  `${API_BASE_URL}/users/approve.php`,
   USERS_UPDATE:   `${API_BASE_URL}/users/update.php`,
   USERS_DELETE:   `${API_BASE_URL}/users/delete.php`,

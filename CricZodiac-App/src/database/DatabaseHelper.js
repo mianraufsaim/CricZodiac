@@ -55,7 +55,7 @@ const initializeTables = async (database) => {
         id            TEXT PRIMARY KEY,
         server_id     INTEGER,
         name          TEXT NOT NULL,
-        email         TEXT UNIQUE,
+        email         TEXT,
         phone         TEXT,
         role          TEXT NOT NULL DEFAULT 'player',
         status        TEXT NOT NULL DEFAULT 'active',
@@ -402,6 +402,118 @@ const initializeTables = async (database) => {
       tx.executeSql(`ALTER TABLE users ADD COLUMN local_password TEXT;`);
     });
   } catch (_) { /* already exists */ }
+
+  // Migration: remove UNIQUE constraint from users.email
+  // Rule: same email is allowed in different clubs. Uniqueness = email + club_id (enforced server-side).
+  // Detection: query sqlite_master — if the stored CREATE statement contains 'email TEXT UNIQUE' the
+  // old schema is still in place. CASE trick makes the query fail (division by zero) when not found,
+  // causing the outer transaction to reject → we skip the migration.
+  try {
+    await database.transaction(tx => {
+      tx.executeSql(`
+        SELECT CASE WHEN sql LIKE '%email         TEXT UNIQUE%'
+                          OR  sql LIKE '%email TEXT UNIQUE%'
+                    THEN 1 ELSE (1/0) END
+        FROM sqlite_master WHERE type='table' AND name='users'
+      `);
+    });
+    // Reached here → UNIQUE on email still present → recreate table
+    await database.transaction(tx => {
+      tx.executeSql(`DROP TABLE IF EXISTS users_v2`);
+      tx.executeSql(`
+        CREATE TABLE users_v2 (
+          id            TEXT PRIMARY KEY,
+          server_id     INTEGER,
+          name          TEXT NOT NULL,
+          email         TEXT,
+          phone         TEXT,
+          role          TEXT NOT NULL DEFAULT 'player',
+          status        TEXT NOT NULL DEFAULT 'active',
+          is_approved   INTEGER DEFAULT 0,
+          profile_pic   TEXT,
+          club_id       TEXT,
+          local_password TEXT,
+          created_at    TEXT DEFAULT (datetime('now')),
+          updated_at    TEXT DEFAULT (datetime('now')),
+          sync_status   TEXT DEFAULT 'pending'
+        )
+      `);
+      tx.executeSql(`
+        INSERT INTO users_v2
+          (id, server_id, name, email, phone, role, status, is_approved,
+           profile_pic, club_id, local_password, created_at, updated_at, sync_status)
+        SELECT
+          id, server_id, name, email, phone, role, status, is_approved,
+          profile_pic, club_id, local_password, created_at, updated_at, sync_status
+        FROM users
+      `);
+      tx.executeSql(`DROP TABLE users`);
+      tx.executeSql(`ALTER TABLE users_v2 RENAME TO users`);
+    });
+    await database.transaction(tx => {
+      tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_users_club ON users(club_id)`);
+    });
+    console.log('[DB] Migration: removed UNIQUE constraint from users.email');
+  } catch (_) {
+    // Already migrated or fresh install — safe to ignore
+    try { await database.transaction(tx => { tx.executeSql(`DROP TABLE IF EXISTS users_v2`); }); } catch (__) {}
+  }
+
+  // Migration: remove full_name / email / phone from players (those live in users table).
+  // Detection: SELECT full_name FROM players — if it succeeds the old schema is present.
+  // Then recreate the table keeping only the additional-data columns.
+  try {
+    // This throws if full_name doesn't exist → already migrated → skip
+    await database.transaction(tx => {
+      tx.executeSql(`SELECT full_name FROM players LIMIT 0`);
+    });
+    // full_name exists — do the table-recreation migration
+    await database.transaction(tx => {
+      tx.executeSql(`DROP TABLE IF EXISTS players_v2`);
+      tx.executeSql(`
+        CREATE TABLE players_v2 (
+          id            TEXT PRIMARY KEY,
+          server_id     INTEGER,
+          user_id       TEXT,
+          club_id       TEXT,
+          player_type   TEXT DEFAULT 'allrounder',
+          batting_hand  TEXT DEFAULT 'right',
+          bowling_style TEXT,
+          jersey_number TEXT,
+          date_of_birth TEXT,
+          profile_pic   TEXT,
+          is_active     INTEGER DEFAULT 1,
+          created_at    TEXT DEFAULT (datetime('now')),
+          updated_at    TEXT DEFAULT (datetime('now')),
+          sync_status   TEXT DEFAULT 'pending'
+        )
+      `);
+      tx.executeSql(`
+        INSERT INTO players_v2
+          (id, server_id, user_id, club_id, player_type, batting_hand,
+           bowling_style, jersey_number, date_of_birth, profile_pic,
+           is_active, created_at, updated_at, sync_status)
+        SELECT
+          id, server_id, user_id, club_id,
+          COALESCE(player_type, 'allrounder'),
+          COALESCE(batting_hand, 'right'),
+          bowling_style, jersey_number, date_of_birth, profile_pic,
+          COALESCE(is_active, 1), created_at, updated_at, sync_status
+        FROM players
+      `);
+      tx.executeSql(`DROP TABLE players`);
+      tx.executeSql(`ALTER TABLE players_v2 RENAME TO players`);
+    });
+    // Restore indexes
+    await database.transaction(tx => {
+      tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_players_club ON players(club_id)`);
+      tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_players_user ON players(user_id)`);
+    });
+    console.log('[DB] Migration: players table simplified (removed full_name/email/phone)');
+  } catch (_) {
+    // Either already migrated or non-critical — safe to continue
+    try { await database.transaction(tx => { tx.executeSql(`DROP TABLE IF EXISTS players_v2`); }); } catch (__) {}
+  }
 
   // Migration: balls_bowled column in bowling_scorecards
   try {

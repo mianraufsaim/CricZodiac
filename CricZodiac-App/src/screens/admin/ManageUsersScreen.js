@@ -4,11 +4,11 @@
 // Creation delegates to CreateUserScreen (credentials + share).
 // ============================================================
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
-  Modal, TextInput, Image,
+  Modal, TextInput, Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -16,9 +16,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../config/constants';
-import {
-  getAllUsers, changeUserRole, setUserApproval, deactivateUser,
-} from '../../database/queries/userQueries';
+import { changeUserRole, setUserApproval, deactivateUser, getAllUsers } from '../../database/queries/userQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 // ── Config ────────────────────────────────────────────────
 const TABS = [
@@ -43,7 +43,7 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
           <View style={[sh.iconBox, { backgroundColor: COLORS.cyan + '22' }]}>
             <Icon name="account-tie" size={26} color={COLORS.cyan} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={sh.optLabel}>Add Umpire</Text>
             <Text style={sh.optDesc}>Create login for a new umpire</Text>
           </View>
@@ -53,7 +53,7 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
           <View style={[sh.iconBox, { backgroundColor: COLORS.gold + '22' }]}>
             <Icon name="account" size={26} color={COLORS.gold} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={sh.optLabel}>Add Player</Text>
             <Text style={sh.optDesc}>Create login for a new player</Text>
           </View>
@@ -74,6 +74,9 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
   const isAdmin  = user.role === 'admin';
   const ROLE_CFG = getRoleCfg(COLORS);
 
+  // local_id is the SQLite UUID; server users have integer id + local_id
+  const localId = user.local_id || user.id;
+
   const handleChangeRole = () => {
     onClose();
     const newRole = isUmpire ? 'player' : 'umpire';
@@ -82,7 +85,7 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
       `Change ${user.name}'s role to ${newRole}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: async () => { await changeUserRole(user.id, newRole); onRefresh(); } },
+        { text: 'Confirm', onPress: async () => { await changeUserRole(localId, newRole); onRefresh(); } },
       ]
     );
   };
@@ -95,7 +98,7 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
       `${approve ? 'Approve access for' : 'Revoke access for'} ${user.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: async () => { await setUserApproval(user.id, approve); onRefresh(); } },
+        { text: 'Confirm', onPress: async () => { await setUserApproval(localId, approve); onRefresh(); } },
       ]
     );
   };
@@ -104,7 +107,7 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
     onClose();
     Alert.alert('Remove User', `Deactivate ${user.name}? They lose access but data is kept.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await deactivateUser(user.id); onRefresh(); } },
+      { text: 'Remove', style: 'destructive', onPress: async () => { await deactivateUser(localId); onRefresh(); } },
     ]);
   };
 
@@ -159,24 +162,60 @@ const ManageUsersScreen = ({ navigation }) => {
   const ac = useMemo(() => getAcStyles(COLORS), [COLORS]);
   const ROLE_CFG = useMemo(() => getRoleCfg(COLORS), [COLORS]);
 
-  const [users,    setUsers]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [tab,      setTab]      = useState('all');
-  const [search,   setSearch]   = useState('');
-  const [addSheet, setAddSheet] = useState(false);
-  const [selected, setSelected] = useState(null);
+  const [users,         setUsers]         = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [tab,           setTab]           = useState('all');
+  const [search,        setSearch]        = useState('');
+  const [addSheet,      setAddSheet]      = useState(false);
+  const [selected,      setSelected]      = useState(null);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const searchAnim = useRef(new Animated.Value(0)).current;
+  const searchRef  = useRef(null);
+
+  const toggleSearch = () => {
+    const opening = !searchVisible;
+    setSearchVisible(opening);
+    if (!opening) setSearch('');
+    Animated.timing(searchAnim, {
+      toValue: opening ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => { if (opening) searchRef.current?.focus(); });
+  };
 
   const load = async () => {
     setLoading(true);
-    try { setUsers(await getAllUsers()); }
-    catch (e) { Alert.alert('Error', e.message); }
-    finally  { setLoading(false); }
+    try {
+      // Try server first — returns users filtered by club_id with player data joined
+      const res = await ApiService.get(API_ENDPOINTS.USERS_LIST);
+      setUsers(res.users || []);
+    } catch (serverErr) {
+      // Offline fallback — local SQLite filtered to this admin's club
+      try {
+        const local = await getAllUsers();
+        const filtered = local.filter(u =>
+          u.status !== 'inactive' &&
+          u.role !== 'admin' &&
+          u.role !== 'super_admin' &&
+          u.club_id === currentUser?.club_id
+        );
+        setUsers(filtered);
+      } catch (e) {
+        Alert.alert('Error', e.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
-  // Exclude the logged-in admin from the list — they manage others, not themselves
-  const active  = users.filter(u => u.status !== 'inactive' && String(u.id) !== String(currentUser?.id));
+  // Always enforce role filter client-side regardless of data source
+  const active = users.filter(u =>
+    u.role !== 'admin' &&
+    u.role !== 'super_admin' &&
+    String(u.local_id || u.id) !== String(currentUser?.id)
+  );
   const umpires = active.filter(u => u.role === 'umpire');
   const players = active.filter(u => u.role === 'player');
 
@@ -192,8 +231,12 @@ const ManageUsersScreen = ({ navigation }) => {
     navigation.navigate('CreateUser', { defaultRole: role });
   };
 
+  const PLAYER_TYPE_LABEL = { batsman: 'Batsman', bowler: 'Bowler', allrounder: 'All-rounder' };
+  const HAND_LABEL        = { right: 'RHB', left: 'LHB' };
+
   const renderUser = ({ item }) => {
     const cfg = ROLE_CFG[item.role] || ROLE_CFG.player;
+    const isPlayer = item.role === 'player';
     return (
       <TouchableOpacity style={st.card} onPress={() => setSelected(item)} activeOpacity={0.75}>
         <View style={[st.avatar, { backgroundColor: cfg.color + '22' }]}>
@@ -209,6 +252,20 @@ const ManageUsersScreen = ({ navigation }) => {
             )}
           </View>
           <Text style={st.detail}>{item.email || item.phone || 'No contact'}</Text>
+          {isPlayer && (item.player_type || item.batting_hand) && (
+            <View style={st.playerMetaRow}>
+              {item.player_type ? (
+                <View style={st.metaChip}>
+                  <Text style={st.metaChipTxt}>{PLAYER_TYPE_LABEL[item.player_type] || item.player_type}</Text>
+                </View>
+              ) : null}
+              {item.batting_hand ? (
+                <View style={[st.metaChip, { borderColor: COLORS.gold + '60' }]}>
+                  <Text style={[st.metaChipTxt, { color: COLORS.gold }]}>{HAND_LABEL[item.batting_hand] || item.batting_hand}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
         </View>
         <View style={[st.badge, { borderColor: cfg.color, backgroundColor: cfg.color + '18' }]}>
           <Icon name={cfg.icon} size={11} color={cfg.color} style={{ marginRight: 3 }} />
@@ -226,12 +283,38 @@ const ManageUsersScreen = ({ navigation }) => {
           <Icon name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={st.title}>Manage Users</Text>
-        <TouchableOpacity onPress={() => setAddSheet(true)}>
-          <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={st.addBtn}>
-            <Icon name="account-plus" size={18} color={COLORS.navy} />
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={st.headerRight}>
+          <TouchableOpacity onPress={toggleSearch} style={st.searchIconBtn}>
+            <Icon name={searchVisible ? 'close' : 'magnify'} size={22} color={searchVisible ? COLORS.danger : COLORS.gold} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setAddSheet(true)}>
+            <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={st.addBtn}>
+              <Icon name="account-plus" size={18} color={COLORS.navy} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Animated Search Bar */}
+      {searchVisible && (
+        <Animated.View style={[st.searchBar, { opacity: searchAnim }]}>
+          <Icon name="magnify" size={18} color={COLORS.gray} />
+          <TextInput
+            ref={searchRef}
+            style={st.searchInput}
+            placeholder="Search by name, email, phone..."
+            placeholderTextColor={COLORS.gray}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Icon name="close-circle" size={16} color={COLORS.gray} />
+            </TouchableOpacity>
+          ) : null}
+        </Animated.View>
+      )}
 
       {/* Summary */}
       <View style={st.summary}>
@@ -248,23 +331,6 @@ const ManageUsersScreen = ({ navigation }) => {
             </View>
           </React.Fragment>
         ))}
-      </View>
-
-      {/* Search */}
-      <View style={st.searchBar}>
-        <Icon name="magnify" size={18} color={COLORS.gray} />
-        <TextInput
-          style={st.searchInput}
-          placeholder="Search by name, email, phone..."
-          placeholderTextColor={COLORS.gray}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search ? (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Icon name="close-circle" size={16} color={COLORS.gray} />
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       {/* Tabs */}
@@ -334,14 +400,16 @@ const ManageUsersScreen = ({ navigation }) => {
 const getStStyles = (COLORS) => StyleSheet.create({
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 12 },
   title:         { color: COLORS.white, fontSize: 18, fontWeight: '700' },
+  headerRight:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchIconBtn: { padding: 2 },
   addBtn:        { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder, height: 46 },
+  searchInput:   { flex: 1, color: COLORS.white, fontSize: 14 },
   summary:       { flexDirection: 'row', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
   summaryItem:   { flex: 1, alignItems: 'center' },
   summaryNum:    { fontWeight: '900', fontSize: 22 },
   summaryLabel:  { color: COLORS.gray, fontSize: 10, marginTop: 2 },
   summaryDivider:{ width: 1, backgroundColor: COLORS.cardBorder },
-  searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder, height: 46 },
-  searchInput:   { flex: 1, color: COLORS.white, fontSize: 14 },
   tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 4, gap: 8 },
   tabBtn:        { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
   tabActive:     { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
@@ -357,6 +425,9 @@ const getStStyles = (COLORS) => StyleSheet.create({
   badgeTxt:      { fontSize: 10, fontWeight: '700' },
   pendingBadge:  { backgroundColor: COLORS.warning + '33', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.warning },
   pendingTxt:    { color: COLORS.warning, fontSize: 9, fontWeight: '700' },
+  playerMetaRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  metaChip:      { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cardBorder, backgroundColor: COLORS.darkGray },
+  metaChipTxt:   { color: COLORS.gray, fontSize: 10, fontWeight: '600' },
   empty:         { alignItems: 'center', paddingTop: 50, gap: 12 },
   emptyTxt:      { color: COLORS.gray, fontSize: 14 },
   emptyBtn:      { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.royalBlue, borderRadius: 10 },

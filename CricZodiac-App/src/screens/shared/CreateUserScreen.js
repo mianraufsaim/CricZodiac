@@ -11,11 +11,15 @@ import {
   ScrollView, Alert, Modal, Clipboard,
   Linking, Share, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { PLAYER_TYPES, BATTING_HAND, BOWLING_STYLES } from '../../config/constants';
 import { createUserWithPlayer } from '../../database/queries/userQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 // ── Password Generator ────────────────────────────────────
 const generatePassword = () => {
@@ -62,6 +66,14 @@ const CredentialsModal = ({ visible, creds, onClose, COLORS, cr }) => {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={cr.overlay}>
         <View style={cr.sheet}>
+          {/* Close button — top right */}
+          <View style={cr.modalHeader}>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity style={cr.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Icon name="close" size={20} color={COLORS.gray} />
+            </TouchableOpacity>
+          </View>
+
           <View style={cr.iconRow}>
             <View style={cr.successIcon}>
               <Icon name="check-circle" size={40} color={COLORS.success} />
@@ -146,6 +158,7 @@ const Chips = ({ options, value, onChange, colorKey, COLORS, st }) => (
 // ── Main Screen ───────────────────────────────────────────
 const CreateUserScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
+  const { user, activeClub } = useAuth();
   const st = useMemo(() => getStStyles(COLORS), [COLORS]);
   const cr = useMemo(() => getCrStyles(COLORS), [COLORS]);
 
@@ -156,11 +169,17 @@ const CreateUserScreen = ({ navigation, route }) => {
   const [form, setForm]     = useState({
     name: '', email: '', phone: '',
     player_type: 'allrounder', batting_hand: 'right', bowling_style: '',
+    jersey_number: '', date_of_birth: '',
     password: generatePassword(),
   });
-  const [saving,  setSaving]  = useState(false);
-  const [creds,   setCreds]   = useState(null);
-  const [showCreds, setShowCreds] = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [creds,      setCreds]      = useState(null);
+  const [showCreds,  setShowCreds]  = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
+
+  // Date picker working value — keeps picker position while open
+  const [dobPickerDate, setDobPickerDate] = useState(new Date(2000, 0, 1));
+  const today = new Date();
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -176,7 +195,24 @@ const CreateUserScreen = ({ navigation, route }) => {
 
     setSaving(true);
     try {
-      await createUserWithPlayer({ ...form, role });
+      // Server duplicate check: same email + same club (offline → skip, server rejects on sync)
+      if (form.email.trim()) {
+        try {
+          const res = await ApiService.get(
+            `${API_ENDPOINTS.USERS_CHECK}?email=${encodeURIComponent(form.email.trim())}`
+          );
+          if (res.exists) {
+            Alert.alert('Already Exists', 'A user with this email address already exists in your club.');
+            setSaving(false);
+            return;
+          }
+        } catch (_) {
+          // Offline — proceed; server will reject duplicate on sync
+        }
+      }
+
+      const clubId = activeClub?.server_id || user?.club_id || null;
+      await createUserWithPlayer({ ...form, role, club_id: clubId });
       setCreds({ ...form, role });
       setShowCreds(true);
     } catch (e) {
@@ -218,7 +254,7 @@ const CreateUserScreen = ({ navigation, route }) => {
 
           {/* Identity */}
           <View style={st.card}>
-            <Text style={st.sectionLabel}>PERSONAL INFO</Text>
+            <Text style={st.sectionLabel}>PLAYER INFO</Text>
             {[
               { label: 'Full Name *',  key: 'name',  kb: 'default',       cap: 'words' },
               { label: 'Email',        key: 'email', kb: 'email-address',  cap: 'none'  },
@@ -270,6 +306,53 @@ const CreateUserScreen = ({ navigation, route }) => {
                 <Chips options={BATTING_HAND} value={form.batting_hand} onChange={v => set('batting_hand', v)} COLORS={COLORS} st={st} />
               </View>
 
+              {/* Jersey Number + Date of Birth */}
+              <View style={st.card}>
+                <Text style={st.sectionLabel}>ADDITIONAL INFO</Text>
+
+                {/* Jersey Number */}
+                <View style={st.field}>
+                  <Text style={st.label}>Jersey Number</Text>
+                  <TextInput
+                    style={st.input}
+                    value={form.jersey_number}
+                    onChangeText={v => set('jersey_number', v)}
+                    keyboardType="number-pad"
+                    placeholderTextColor={COLORS.gray}
+                    placeholder="e.g. 7"
+                    maxLength={3}
+                  />
+                </View>
+
+                {/* Date of Birth */}
+                <View style={st.field}>
+                  <Text style={st.label}>Date of Birth</Text>
+                  <TouchableOpacity
+                    style={st.dobBtn}
+                    onPress={() => {
+                      // seed picker at stored date or default
+                      if (form.date_of_birth) {
+                        setDobPickerDate(new Date(form.date_of_birth));
+                      }
+                      setShowDobPicker(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Icon name="calendar" size={18} color={form.date_of_birth ? COLORS.gold : COLORS.gray} />
+                    <Text style={[st.dobTxt, form.date_of_birth && { color: COLORS.white }]}>
+                      {form.date_of_birth
+                        ? new Date(form.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'Select date of birth'}
+                    </Text>
+                    {form.date_of_birth
+                      ? <TouchableOpacity onPress={() => set('date_of_birth', '')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                          <Icon name="close-circle" size={16} color={COLORS.gray} />
+                        </TouchableOpacity>
+                      : null}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View style={st.card}>
                 <Text style={st.sectionLabel}>BOWLING STYLE</Text>
                 <View style={st.styleGrid}>
@@ -316,6 +399,24 @@ const CreateUserScreen = ({ navigation, route }) => {
         COLORS={COLORS}
         cr={cr}
       />
+
+      {/* Date of Birth Picker */}
+      <DatePicker
+        modal
+        open={showDobPicker}
+        date={dobPickerDate}
+        mode="date"
+        maximumDate={today}
+        onDateChange={setDobPickerDate}
+        onConfirm={(date) => {
+          setShowDobPicker(false);
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          set('date_of_birth', `${y}-${m}-${d}`);
+        }}
+        onCancel={() => setShowDobPicker(false)}
+      />
     </LinearGradient>
   );
 };
@@ -346,11 +447,15 @@ const getStStyles = (COLORS) => StyleSheet.create({
   createBtn:     { borderRadius: 14, overflow: 'hidden', marginTop: 4 },
   createBtnInner:{ flexDirection: 'row', height: 56, alignItems: 'center', justifyContent: 'center' },
   createBtnTxt:  { color: COLORS.navy, fontWeight: '900', fontSize: 15, letterSpacing: 1 },
+  dobBtn:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.darkGray, borderRadius: 10, paddingHorizontal: 14, height: 48 },
+  dobTxt:        { flex: 1, color: COLORS.gray, fontSize: 15 },
 });
 
 const getCrStyles = (COLORS) => StyleSheet.create({
   overlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   sheet:       { backgroundColor: COLORS.navy, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  closeBtn:    { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.darkGray, alignItems: 'center', justifyContent: 'center' },
   iconRow:     { alignItems: 'center', marginBottom: 8 },
   successIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.success + '22', alignItems: 'center', justifyContent: 'center' },
   title:       { color: COLORS.white, fontSize: 22, fontWeight: '800', textAlign: 'center' },

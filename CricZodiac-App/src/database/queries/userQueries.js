@@ -130,17 +130,6 @@ export const deleteUserLocal = async (id) => {
 // data.role = 'umpire' | 'player'
 // data.password must be provided (plaintext, sent to server in sync payload only)
 export const createUserWithPlayer = async (data) => {
-  // Guard: email must be unique
-  if (data.email && data.email.trim()) {
-    const existing = await queryFirstRow(
-      'SELECT id FROM users WHERE LOWER(email) = ?',
-      [data.email.toLowerCase().trim()],
-    );
-    if (existing) {
-      throw new Error('A user with this email address already exists. Please use a different email.');
-    }
-  }
-
   const userId   = uuid.v4();
   const playerId = data.role === 'player' ? uuid.v4() : null;
 
@@ -177,26 +166,27 @@ export const createUserWithPlayer = async (data) => {
           password: data.password,   // plaintext — server hashes this
           status: 'active',
           is_approved: 1,
+          club_id: data.club_id || null,
         }),
         SYNC_STATUS.PENDING,
       ],
     },
   ];
 
-  // 3. If player role — also create player profile
+  // 3. If player role — create player profile (additional data only; name/email/phone live in users)
   if (data.role === 'player') {
     statements.push({
       sql: `INSERT INTO players
-              (id, user_id, full_name, email, phone, player_type, batting_hand, bowling_style, sync_status)
+              (id, user_id, club_id, player_type, batting_hand, bowling_style, jersey_number, date_of_birth, sync_status)
             VALUES (?,?,?,?,?,?,?,?,?)`,
       params: [
         playerId, userId,
-        data.name,
-        data.email       || null,
-        data.phone       || null,
-        data.player_type || 'allrounder',
-        data.batting_hand|| 'right',
-        data.bowling_style || null,
+        data.club_id         || null,
+        data.player_type     || 'allrounder',
+        data.batting_hand    || 'right',
+        data.bowling_style   || null,
+        data.jersey_number   || null,
+        data.date_of_birth   || null,
         SYNC_STATUS.PENDING,
       ],
     });
@@ -208,12 +198,12 @@ export const createUserWithPlayer = async (data) => {
         uuid.v4(), 'players', 'create', playerId,
         JSON.stringify({
           id: playerId, user_id: userId,
-          full_name: data.name,
-          email: data.email || null,
-          phone: data.phone || null,
-          player_type:  data.player_type   || 'allrounder',
-          batting_hand: data.batting_hand  || 'right',
-          bowling_style:data.bowling_style || null,
+          player_type:   data.player_type   || 'allrounder',
+          batting_hand:  data.batting_hand  || 'right',
+          bowling_style: data.bowling_style || null,
+          jersey_number: data.jersey_number || null,
+          date_of_birth: data.date_of_birth || null,
+          club_id:       data.club_id       || null,
         }),
         SYNC_STATUS.PENDING,
       ],

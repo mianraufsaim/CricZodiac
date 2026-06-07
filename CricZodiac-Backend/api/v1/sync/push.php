@@ -270,29 +270,77 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncPlayer(PDO $pdo, string $action, array $d): bool {
+    // Resolve MySQL user_id from the local UUID sent by the app
+    $mysqlUserId = null;
+    if (!empty($d['user_id'])) {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE local_id = ?");
+        $stmt->execute([$d['user_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $mysqlUserId = $row ? $row['id'] : null;
+    }
+
     if ($action === 'insert' || $action === 'create') {
+        // If a player row already exists for this user (e.g. created with NULL user_id on a
+        // previous failed sync), update it instead of inserting a duplicate.
+        if ($mysqlUserId) {
+            $check = $pdo->prepare("SELECT id FROM players WHERE user_id = ? LIMIT 1");
+            $check->execute([$mysqlUserId]);
+            $existingPlayer = $check->fetch(PDO::FETCH_ASSOC);
+            if ($existingPlayer) {
+                $pdo->prepare("
+                    UPDATE players
+                    SET local_id=?, club_id=COALESCE(?,club_id),
+                        player_type=?, batting_hand=?, bowling_style=?,
+                        jersey_number=?, date_of_birth=?, updated_at=NOW()
+                    WHERE user_id=?
+                ")->execute([
+                    $d['id'],
+                    $d['club_id']       ?? null,
+                    $d['player_type']   ?? 'allrounder',
+                    $d['batting_hand']  ?? 'right',
+                    $d['bowling_style'] ?? null,
+                    $d['jersey_number'] ?? null,
+                    $d['date_of_birth'] ?? null,
+                    $mysqlUserId,
+                ]);
+                return true;
+            }
+        }
+
         $pdo->prepare("
-            INSERT INTO players (local_id, full_name, email, phone, player_type, batting_hand, bowling_style, jersey_number, date_of_birth, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,NOW())
-            ON DUPLICATE KEY UPDATE full_name=VALUES(full_name), player_type=VALUES(player_type)
+            INSERT INTO players (local_id, user_id, club_id, player_type, batting_hand, bowling_style, jersey_number, date_of_birth, created_at)
+            VALUES (?,?,?,?,?,?,?,?,NOW())
+            ON DUPLICATE KEY UPDATE
+                player_type=VALUES(player_type),
+                batting_hand=VALUES(batting_hand), bowling_style=VALUES(bowling_style),
+                jersey_number=VALUES(jersey_number), date_of_birth=VALUES(date_of_birth),
+                club_id=VALUES(club_id),
+                user_id=COALESCE(VALUES(user_id), user_id)
         ")->execute([
-            $d['id'], $d['full_name'], $d['email'] ?? null, $d['phone'] ?? null,
-            $d['player_type'] ?? 'allrounder',
-            $d['batting_hand'] ?? 'right',
+            $d['id'],
+            $mysqlUserId,
+            $d['club_id']       ?? null,
+            $d['player_type']   ?? 'allrounder',
+            $d['batting_hand']  ?? 'right',
             $d['bowling_style'] ?? null,
             $d['jersey_number'] ?? null,
             $d['date_of_birth'] ?? null,
         ]);
     } elseif ($action === 'update') {
         $pdo->prepare("
-            UPDATE players SET full_name=?, email=?, phone=?, player_type=?, batting_hand=?, bowling_style=?, jersey_number=?, updated_at=NOW()
+            UPDATE players SET player_type=?, batting_hand=?, bowling_style=?, jersey_number=?, date_of_birth=?,
+                club_id=COALESCE(?,club_id),
+                user_id=COALESCE(?,user_id),
+                updated_at=NOW()
             WHERE local_id=?
         ")->execute([
-            $d['full_name'], $d['email'] ?? null, $d['phone'] ?? null,
-            $d['player_type'] ?? 'allrounder',
-            $d['batting_hand'] ?? 'right',
+            $d['player_type']   ?? 'allrounder',
+            $d['batting_hand']  ?? 'right',
             $d['bowling_style'] ?? null,
             $d['jersey_number'] ?? null,
+            $d['date_of_birth'] ?? null,
+            $d['club_id']       ?? null,
+            $mysqlUserId,
             $d['id'],
         ]);
     } elseif ($action === 'delete') {
@@ -305,10 +353,19 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
     // Handles: umpire/player creation by admin inside the app
     // Club admin self-registration goes through register.php directly
     if ($action === 'insert' || $action === 'create') {
-        // Check duplicate
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$d['email'] ?? '']);
-        if ($stmt->fetch()) return true; // already exists — treat as synced
+        // Duplicate rule: same email + same club_id (same email in a different club is allowed)
+        $stmt = $pdo->prepare("SELECT id, local_id FROM users WHERE LOWER(email) = ? AND club_id = ? LIMIT 1");
+        $stmt->execute([strtolower($d['email'] ?? ''), $d['club_id'] ?? null]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            // User already exists in this club.
+            // Map the app's local UUID → MySQL id so that the companion syncPlayer event
+            // (which resolves user_id via `WHERE local_id = ?`) can find this user.
+            $pdo->prepare("UPDATE users SET local_id = ?, updated_at = NOW() WHERE id = ?")
+                ->execute([$d['id'], $existing['id']]);
+            return true; // user record unchanged; player data handled by syncPlayer event
+        }
 
         $hash = isset($d['password']) ? password_hash($d['password'], PASSWORD_BCRYPT, ['cost' => 12]) : '';
         $pdo->prepare("

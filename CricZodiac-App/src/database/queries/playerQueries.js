@@ -10,9 +10,17 @@ export const createPlayer = async (data) => {
   const id = data.id || uuid.v4();
   await executeTransaction([
     {
-      sql: `INSERT INTO players (id, user_id, full_name, email, phone, player_type, profile_pic, sync_status)
+      // name/email/phone live in the users table — players stores additional data only
+      sql: `INSERT INTO players (id, user_id, club_id, player_type, batting_hand, bowling_style, profile_pic, sync_status)
             VALUES (?,?,?,?,?,?,?,?)`,
-      params: [id, data.user_id, data.full_name, data.email, data.phone, data.player_type || 'allrounder', data.profile_pic, SYNC_STATUS.PENDING],
+      params: [
+        id, data.user_id, data.club_id || null,
+        data.player_type   || 'allrounder',
+        data.batting_hand  || 'right',
+        data.bowling_style || null,
+        data.profile_pic   || null,
+        SYNC_STATUS.PENDING,
+      ],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
@@ -39,7 +47,7 @@ export const updatePlayer = async (id, data) => {
 };
 
 export const getAllPlayers = () =>
-  queryRows('SELECT * FROM players WHERE is_active = 1 ORDER BY full_name ASC');
+  queryRows('SELECT * FROM players WHERE is_active = 1 ORDER BY created_at ASC');
 
 export const getPlayer = (id) =>
   queryFirstRow('SELECT * FROM players WHERE id = ?', [id]);

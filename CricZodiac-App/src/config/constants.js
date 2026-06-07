@@ -76,8 +76,8 @@ export const PLAYER_TYPES = [
 
 // Batting Hand
 export const BATTING_HAND = [
-  { id: 'right', label: 'Right Hand', icon: 'hand-right' },
-  { id: 'left',  label: 'Left Hand',  icon: 'hand-left'  },
+  { id: 'right', label: 'Right Hand', icon: 'hand-back-right-outline' },
+  { id: 'left',  label: 'Left Hand',  icon: 'hand-back-left-outline'  },
 ];
 
 // Bowling Styles (arm + pace/type)
