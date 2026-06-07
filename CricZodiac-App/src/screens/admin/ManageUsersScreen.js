@@ -345,8 +345,11 @@ const ManageUsersScreen = ({ navigation }) => {
       {/* Summary */}
       <View style={st.summary}>
         {[
-          { label: 'Players', count: players.length, color: COLORS.gold },
-          { label: 'Total',   count: active.length,  color: COLORS.cyan },
+          { label: 'Pending',  count: active.filter(u => u.status === 'pending').length,  color: STATUS_COLOR.pending  },
+          { label: 'Active',   count: active.filter(u => u.status === 'active').length,   color: STATUS_COLOR.active   },
+          { label: 'Blocked',  count: active.filter(u => u.status === 'blocked').length,  color: STATUS_COLOR.blocked  },
+          { label: 'Inactive', count: active.filter(u => u.status === 'inactive').length, color: STATUS_COLOR.inactive },
+          { label: 'Total',    count: active.length,                                      color: COLORS.cyan           },
         ].map((s, i) => (
           <React.Fragment key={s.label}>
             {i > 0 && <View style={st.summaryDivider} />}
@@ -451,10 +454,10 @@ const getStStyles = (COLORS) => StyleSheet.create({
   addBtn:        { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder, height: 46 },
   searchInput:   { flex: 1, color: COLORS.white, fontSize: 14 },
-  summary:       { flexDirection: 'row', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
+  summary:       { flexDirection: 'row', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8, marginBottom: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
   summaryItem:   { flex: 1, alignItems: 'center' },
-  summaryNum:    { fontWeight: '900', fontSize: 22 },
-  summaryLabel:  { color: COLORS.gray, fontSize: 10, marginTop: 2 },
+  summaryNum:    { fontWeight: '900', fontSize: 18 },
+  summaryLabel:  { color: COLORS.gray, fontSize: 9, marginTop: 2 },
   summaryDivider:{ width: 1, backgroundColor: COLORS.cardBorder },
   tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 6, gap: 8, alignItems: 'center' },
   tabBtn:        { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },

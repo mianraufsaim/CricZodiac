@@ -30,31 +30,28 @@ export const getDatabase = async () => {
 };
 
 // ── Migrations (ALTER TABLE for schema changes) ───────────
-// Each migration is wrapped in try/catch — SQLite throws if
-// the column already exists, which is fine to ignore.
+// Every migration runs in its OWN transaction so one failure
+// (e.g. "duplicate column name") never blocks the others.
 const runMigrations = async (database) => {
-  const addColumnIfMissing = (tx, table, column, definition) => {
-    tx.executeSql(
-      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`,
-      [],
-      () => {},           // success — column was added
-      () => {}            // error  — column already exists, ignore
-    );
-  };
+  const migrations = [
+    'ALTER TABLE players ADD COLUMN full_name TEXT',
+    'ALTER TABLE players ADD COLUMN email     TEXT',
+    'ALTER TABLE players ADD COLUMN phone     TEXT',
+    'ALTER TABLE players ADD COLUMN server_id INTEGER',
+    'ALTER TABLE players ADD COLUMN user_id   TEXT',
+    'ALTER TABLE users   ADD COLUMN server_id INTEGER',
+    'ALTER TABLE users   ADD COLUMN profile_pic TEXT',
+  ];
 
-  await database.transaction(tx => {
-    // players: ensure full_name, email, phone exist
-    // (old schema may have been created without them)
-    addColumnIfMissing(tx, 'players', 'full_name', 'TEXT');
-    addColumnIfMissing(tx, 'players', 'email',     'TEXT');
-    addColumnIfMissing(tx, 'players', 'phone',     'TEXT');
-    addColumnIfMissing(tx, 'players', 'server_id', 'INTEGER');
-    addColumnIfMissing(tx, 'players', 'user_id',   'TEXT');
-
-    // users: ensure server_id exists (older installs may lack it)
-    addColumnIfMissing(tx, 'users',   'server_id', 'INTEGER');
-    addColumnIfMissing(tx, 'users',   'profile_pic', 'TEXT');
-  });
+  for (const sql of migrations) {
+    await new Promise(resolve => {
+      database.transaction(
+        tx => { tx.executeSql(sql, []); },
+        () => resolve(),   // transaction error (column exists) — ignore
+        () => resolve()    // transaction success
+      );
+    });
+  }
 };
 
 // ── Create All Tables ─────────────────────────────────────
