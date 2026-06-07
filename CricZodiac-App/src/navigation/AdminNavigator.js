@@ -16,6 +16,7 @@ import EditClubScreen          from '../screens/admin/EditClubScreen';
 import ManageClubScreen        from '../screens/admin/ManageClubScreen';
 import ManageUsersScreen       from '../screens/admin/ManageUsersScreen';
 import CreateUserScreen        from '../screens/shared/CreateUserScreen';
+import EditUserScreen          from '../screens/shared/EditUserScreen';
 import ManagePlayersScreen     from '../screens/admin/ManagePlayersScreen';
 import AddEditPlayerScreen     from '../screens/admin/AddEditPlayerScreen';
 import AllMatchesScreen        from '../screens/admin/AllMatchesScreen';
@@ -78,6 +79,7 @@ const UsersStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="ManageUsers"       component={ManageUsersScreen} />
     <Stack.Screen name="CreateUser"        component={CreateUserScreen} />
+    <Stack.Screen name="EditUser"          component={EditUserScreen} />
     <Stack.Screen name="ManagePlayers"     component={ManagePlayersScreen} />
     <Stack.Screen name="AddEditPlayer"     component={AddEditPlayerScreen} />
     <Stack.Screen name="PlayerProfileView" component={PlayerProfileViewScreen} />

@@ -390,8 +390,6 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
         ]);
     } elseif ($action === 'update') {
         // Only update fields that are actually present in the payload.
-        // deactivateUser sends {id, status:'inactive'} — we must NOT clobber
-        // name/role/is_approved with defaults when they are absent.
         $allowed = ['name', 'phone', 'email', 'role', 'status', 'is_approved'];
         $sets = []; $params = [];
         foreach ($allowed as $col) {
@@ -399,6 +397,11 @@ function syncUser(PDO $pdo, string $action, array $d): bool {
                 $sets[]   = "$col = ?";
                 $params[] = $d[$col];
             }
+        }
+        // Optional password reset — only if payload contains 'password'
+        if (!empty($d['password'])) {
+            $sets[]   = "password_hash = ?";
+            $params[] = password_hash($d['password'], PASSWORD_BCRYPT, ['cost' => 12]);
         }
         if ($sets) {
             $params[] = $d['id'];

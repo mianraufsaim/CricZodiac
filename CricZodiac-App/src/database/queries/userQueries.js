@@ -213,3 +213,137 @@ export const createUserWithPlayer = async (data) => {
   await executeTransaction(statements);
   return { userId, playerId };
 };
+
+// ── Update an existing user + player profile ──────────────
+// localUserId  — SQLite UUID (local_id from server or id from local)
+// data.role    — used to decide whether to upsert player profile
+// data.player_local_id — player row's SQLite UUID (from server list response)
+export const updateUserWithPlayer = async (localUserId, data) => {
+  const statements = [
+    // Update user record
+    {
+      sql: `UPDATE users
+            SET name=?, email=?, phone=?, status=?, is_approved=?,
+                updated_at=datetime('now'), sync_status=?
+            WHERE id=?`,
+      params: [
+        data.name,
+        data.email       || null,
+        data.phone       || null,
+        data.status      || 'active',
+        data.is_approved != null ? (data.is_approved ? 1 : 0) : 1,
+        SYNC_STATUS.PENDING,
+        localUserId,
+      ],
+    },
+    // Sync queue — user update (includes optional new password)
+    {
+      sql: `INSERT INTO sync_queue
+              (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        uuid.v4(), 'users', 'update', localUserId,
+        JSON.stringify({
+          id:          localUserId,
+          name:        data.name,
+          email:       data.email       || null,
+          phone:       data.phone       || null,
+          status:      data.status      || 'active',
+          is_approved: data.is_approved != null ? (data.is_approved ? 1 : 0) : 1,
+          ...(data.new_password ? { password: data.new_password } : {}),
+        }),
+        SYNC_STATUS.PENDING,
+      ],
+    },
+  ];
+
+  if (data.role === 'player') {
+    // Prefer server-returned player_local_id; fall back to local SQLite lookup
+    let playerLocalId = data.player_local_id || null;
+    if (!playerLocalId) {
+      const existing = await queryFirstRow(
+        `SELECT id FROM players WHERE user_id = ?`, [localUserId]
+      );
+      playerLocalId = existing?.id || null;
+    }
+
+    if (playerLocalId) {
+      // UPDATE existing player profile
+      statements.push({
+        sql: `UPDATE players
+              SET player_type=?, batting_hand=?, bowling_style=?,
+                  jersey_number=?, date_of_birth=?,
+                  updated_at=datetime('now'), sync_status=?
+              WHERE id=?`,
+        params: [
+          data.player_type   || 'allrounder',
+          data.batting_hand  || 'right',
+          data.bowling_style || null,
+          data.jersey_number || null,
+          data.date_of_birth || null,
+          SYNC_STATUS.PENDING,
+          playerLocalId,
+        ],
+      });
+      statements.push({
+        sql: `INSERT INTO sync_queue
+                (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+              VALUES (?,?,?,?,?,?,datetime('now'))`,
+        params: [
+          uuid.v4(), 'players', 'update', playerLocalId,
+          JSON.stringify({
+            id:            playerLocalId,
+            user_id:       localUserId,
+            player_type:   data.player_type   || 'allrounder',
+            batting_hand:  data.batting_hand  || 'right',
+            bowling_style: data.bowling_style || null,
+            jersey_number: data.jersey_number || null,
+            date_of_birth: data.date_of_birth || null,
+            club_id:       data.club_id       || null,
+          }),
+          SYNC_STATUS.PENDING,
+        ],
+      });
+    } else {
+      // No player profile yet — create one
+      const newPlayerId = uuid.v4();
+      statements.push({
+        sql: `INSERT INTO players
+                (id, user_id, club_id, player_type, batting_hand, bowling_style,
+                 jersey_number, date_of_birth, sync_status)
+              VALUES (?,?,?,?,?,?,?,?,?)`,
+        params: [
+          newPlayerId, localUserId,
+          data.club_id       || null,
+          data.player_type   || 'allrounder',
+          data.batting_hand  || 'right',
+          data.bowling_style || null,
+          data.jersey_number || null,
+          data.date_of_birth || null,
+          SYNC_STATUS.PENDING,
+        ],
+      });
+      statements.push({
+        sql: `INSERT INTO sync_queue
+                (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+              VALUES (?,?,?,?,?,?,datetime('now'))`,
+        params: [
+          uuid.v4(), 'players', 'create', newPlayerId,
+          JSON.stringify({
+            id:            newPlayerId,
+            user_id:       localUserId,
+            player_type:   data.player_type   || 'allrounder',
+            batting_hand:  data.batting_hand  || 'right',
+            bowling_style: data.bowling_style || null,
+            jersey_number: data.jersey_number || null,
+            date_of_birth: data.date_of_birth || null,
+            club_id:       data.club_id       || null,
+          }),
+          SYNC_STATUS.PENDING,
+        ],
+      });
+    }
+  }
+
+  await executeTransaction(statements);
+};

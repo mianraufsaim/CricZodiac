@@ -30,8 +30,14 @@ const TABS = [
 const getRoleCfg = (COLORS) => ({
   admin:  { color: COLORS.gold,    icon: 'shield-crown'  },
   umpire: { color: COLORS.cyan,    icon: 'account-tie'   },
-  player: { color: COLORS.gray,    icon: 'account'       },
+  player: { color: COLORS.gold,    icon: 'account'       },
 });
+
+const STATUS_COLOR = {
+  active:  '#22C55E',
+  blocked: '#EF4444',
+  pending: '#F59E0B',
+};
 
 // ── Add Type Sheet ────────────────────────────────────────
 const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
@@ -68,7 +74,7 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
 );
 
 // ── User Action Sheet ─────────────────────────────────────
-const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
+const UserActionSheet = ({ user, visible, onClose, onRefresh, onEdit, COLORS, ac }) => {
   if (!user) return null;
   const isUmpire = user.role === 'umpire';
   const isAdmin  = user.role === 'admin';
@@ -129,6 +135,12 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, COLORS, ac }) => {
 
           {!isAdmin && (
             <>
+              {/* Edit Profile — always first */}
+              <TouchableOpacity style={ac.action} onPress={() => { onClose(); onEdit(user); }}>
+                <Icon name="account-edit" size={20} color={COLORS.gold} />
+                <Text style={ac.actionTxt}>Edit Profile</Text>
+              </TouchableOpacity>
+              <View style={ac.divider} />
               <TouchableOpacity style={ac.action} onPress={handleChangeRole}>
                 <Icon name={isUmpire ? 'arrow-down-circle' : 'arrow-up-circle'} size={20} color={COLORS.cyan} />
                 <Text style={ac.actionTxt}>{isUmpire ? 'Demote to Player' : 'Promote to Umpire'}</Text>
@@ -210,7 +222,7 @@ const ManageUsersScreen = ({ navigation }) => {
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
-  // Always enforce role filter client-side regardless of data source
+  // Filter: exclude admin roles and self; show all statuses and approval states
   const active = users.filter(u =>
     u.role !== 'admin' &&
     u.role !== 'super_admin' &&
@@ -231,28 +243,37 @@ const ManageUsersScreen = ({ navigation }) => {
     navigation.navigate('CreateUser', { defaultRole: role });
   };
 
+  const handleEdit = (user) => {
+    navigation.navigate('EditUser', { user });
+  };
+
   const PLAYER_TYPE_LABEL = { batsman: 'Batsman', bowler: 'Bowler', allrounder: 'All-rounder' };
   const HAND_LABEL        = { right: 'RHB', left: 'LHB' };
 
   const renderUser = ({ item }) => {
-    const cfg = ROLE_CFG[item.role] || ROLE_CFG.player;
-    const isPlayer = item.role === 'player';
+    const cfg        = ROLE_CFG[item.role] || ROLE_CFG.player;
+    const isPlayer   = item.role === 'player';
+    const statusClr  = STATUS_COLOR[item.status] || COLORS.gray;
+    const approved   = item.is_approved == null ? true : !!Number(item.is_approved);
+
     return (
       <TouchableOpacity style={st.card} onPress={() => setSelected(item)} activeOpacity={0.75}>
         <View style={[st.avatar, { backgroundColor: cfg.color + '22' }]}>
           <Text style={[st.avatarTxt, { color: cfg.color }]}>{item.name?.[0]?.toUpperCase() || '?'}</Text>
         </View>
+
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <View style={st.nameRow}>
-            <Text style={st.name}>{item.name}</Text>
-            {!item.is_approved && (
-              <View style={st.pendingBadge}>
-                <Text style={st.pendingTxt}>PENDING</Text>
-              </View>
-            )}
-          </View>
-          <Text style={st.detail}>{item.email || item.phone || 'No contact'}</Text>
-          {isPlayer && (item.player_type || item.batting_hand) && (
+          {/* Name row */}
+          <Text style={st.name} numberOfLines={1}>{item.name}</Text>
+
+          {/* Email */}
+          {item.email ? <Text style={st.detail} numberOfLines={1}>{item.email}</Text> : null}
+          {/* Phone */}
+          {item.phone ? <Text style={st.detail} numberOfLines={1}>{item.phone}</Text> : null}
+          {!item.email && !item.phone ? <Text style={st.detail}>No contact</Text> : null}
+
+          {/* Player meta chips */}
+          {isPlayer && (
             <View style={st.playerMetaRow}>
               {item.player_type ? (
                 <View style={st.metaChip}>
@@ -264,12 +285,32 @@ const ManageUsersScreen = ({ navigation }) => {
                   <Text style={[st.metaChipTxt, { color: COLORS.gold }]}>{HAND_LABEL[item.batting_hand] || item.batting_hand}</Text>
                 </View>
               ) : null}
+              {item.jersey_number ? (
+                <View style={[st.metaChip, { borderColor: COLORS.cyan + '60' }]}>
+                  <Text style={[st.metaChipTxt, { color: COLORS.cyan }]}>#{item.jersey_number}</Text>
+                </View>
+              ) : null}
             </View>
           )}
         </View>
-        <View style={[st.badge, { borderColor: cfg.color, backgroundColor: cfg.color + '18' }]}>
-          <Icon name={cfg.icon} size={11} color={cfg.color} style={{ marginRight: 3 }} />
-          <Text style={[st.badgeTxt, { color: cfg.color }]}>{item.role?.toUpperCase()}</Text>
+
+        {/* Right column: role + status + approval */}
+        <View style={st.rightCol}>
+          {/* Role badge */}
+          <View style={[st.badge, { borderColor: cfg.color, backgroundColor: cfg.color + '18' }]}>
+            <Icon name={cfg.icon} size={11} color={cfg.color} style={{ marginRight: 3 }} />
+            <Text style={[st.badgeTxt, { color: cfg.color }]}>{item.role?.toUpperCase()}</Text>
+          </View>
+          {/* Status badge */}
+          <View style={[st.badge, { borderColor: statusClr, backgroundColor: statusClr + '18', marginTop: 4 }]}>
+            <Text style={[st.badgeTxt, { color: statusClr }]}>{(item.status || 'active').toUpperCase()}</Text>
+          </View>
+          {/* Approval badge */}
+          {!approved && (
+            <View style={[st.badge, { borderColor: COLORS.warning, backgroundColor: COLORS.warning + '18', marginTop: 4 }]}>
+              <Text style={[st.badgeTxt, { color: COLORS.warning }]}>PENDING</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -333,7 +374,7 @@ const ManageUsersScreen = ({ navigation }) => {
         ))}
       </View>
 
-      {/* Tabs */}
+      {/* Tabs + Refresh */}
       <View style={st.tabRow}>
         {TABS.map(t => (
           <TouchableOpacity
@@ -344,6 +385,9 @@ const ManageUsersScreen = ({ navigation }) => {
             <Text style={[st.tabTxt, tab === t.id && st.tabTxtActive]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity onPress={load} style={st.refreshBtn} disabled={loading}>
+          <Icon name="refresh" size={20} color={loading ? COLORS.gray : COLORS.cyan} />
+        </TouchableOpacity>
       </View>
 
       {/* List */}
@@ -389,6 +433,7 @@ const ManageUsersScreen = ({ navigation }) => {
         visible={!!selected}
         onClose={() => setSelected(null)}
         onRefresh={() => { setSelected(null); load(); }}
+        onEdit={handleEdit}
         COLORS={COLORS}
         ac={ac}
       />
@@ -410,22 +455,24 @@ const getStStyles = (COLORS) => StyleSheet.create({
   summaryNum:    { fontWeight: '900', fontSize: 22 },
   summaryLabel:  { color: COLORS.gray, fontSize: 10, marginTop: 2 },
   summaryDivider:{ width: 1, backgroundColor: COLORS.cardBorder },
-  tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 4, gap: 8 },
+  tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 4, gap: 8, alignItems: 'center' },
   tabBtn:        { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
   tabActive:     { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
   tabTxt:        { color: COLORS.gray, fontWeight: '600', fontSize: 13 },
   tabTxtActive:  { color: COLORS.white },
-  card:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
+  refreshBtn:    { marginLeft: 'auto', padding: 4 },
+  card:          { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   avatar:        { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   avatarTxt:     { fontWeight: '800', fontSize: 20 },
   nameRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
-  name:          { color: COLORS.white, fontWeight: '700', fontSize: 15 },
+  name:          { color: COLORS.white, fontWeight: '700', fontSize: 15, marginBottom: 2 },
   detail:        { color: COLORS.gray, fontSize: 12 },
+  rightCol:      { alignItems: 'flex-end', justifyContent: 'flex-start', marginLeft: 8 },
   badge:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
   badgeTxt:      { fontSize: 10, fontWeight: '700' },
   pendingBadge:  { backgroundColor: COLORS.warning + '33', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.warning },
   pendingTxt:    { color: COLORS.warning, fontSize: 9, fontWeight: '700' },
-  playerMetaRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  playerMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   metaChip:      { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cardBorder, backgroundColor: COLORS.darkGray },
   metaChipTxt:   { color: COLORS.gray, fontSize: 10, fontWeight: '600' },
   empty:         { alignItems: 'center', paddingTop: 50, gap: 12 },
