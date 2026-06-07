@@ -358,19 +358,42 @@ function syncPlayer(PDO $pdo, string $action, array $d): bool {
 
         // Fallback: if local_id matched nothing, update using players.user_id = users.id
         if ($stmt->rowCount() === 0 && $mysqlUserId) {
-            $pdo->prepare("
+            $fallback = $pdo->prepare("
                 UPDATE players
                 SET player_type=?, batting_hand=?, bowling_style=?,
                     jersey_number=?, date_of_birth=?,
                     club_id=COALESCE(?,club_id),
                     updated_at=NOW()
                 WHERE user_id=?
-            ")->execute(array_merge(
-                [$d['player_type'] ?? 'allrounder', $d['batting_hand'] ?? 'right',
-                 $d['bowling_style'] ?? null, $d['jersey_number'] ?? null,
-                 $d['date_of_birth'] ?? null, $d['club_id'] ?? null],
-                [$mysqlUserId]
-            ));
+            ");
+            $fallback->execute([
+                $d['player_type']   ?? 'allrounder',
+                $d['batting_hand']  ?? 'right',
+                $d['bowling_style'] ?? null,
+                $d['jersey_number'] ?? null,
+                $d['date_of_birth'] ?? null,
+                $d['club_id']       ?? null,
+                $mysqlUserId,
+            ]);
+
+            // No existing player row at all — insert one
+            if ($fallback->rowCount() === 0) {
+                $pdo->prepare("
+                    INSERT INTO players
+                        (local_id, user_id, club_id, player_type, batting_hand, bowling_style,
+                         jersey_number, date_of_birth, created_at)
+                    VALUES (?,?,?,?,?,?,?,?,NOW())
+                ")->execute([
+                    $d['id']            ?: null,
+                    $mysqlUserId,
+                    $d['club_id']       ?? null,
+                    $d['player_type']   ?? 'allrounder',
+                    $d['batting_hand']  ?? 'right',
+                    $d['bowling_style'] ?? null,
+                    $d['jersey_number'] ?? null,
+                    $d['date_of_birth'] ?? null,
+                ]);
+            }
         }
     } elseif ($action === 'delete') {
         $pdo->prepare("UPDATE players SET is_active=0, updated_at=NOW() WHERE local_id=?")->execute([$d['id']]);
