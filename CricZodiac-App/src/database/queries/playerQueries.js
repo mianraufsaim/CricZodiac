@@ -47,7 +47,49 @@ export const updatePlayer = async (id, data) => {
 };
 
 export const getAllPlayers = () =>
-  queryRows('SELECT * FROM players WHERE is_active = 1 ORDER BY created_at ASC');
+  queryRows('SELECT * FROM players WHERE is_active = 1 ORDER BY full_name ASC');
+
+// ── Sync players from server API response ─────────────────
+// serverUsers: array returned by GET /users/list.php
+// Each item has: id, local_id, name, email, phone, role, status, is_approved,
+//                player_db_id, player_local_id, player_type, player_pic, is_active
+export const upsertPlayersFromServer = async (serverUsers) => {
+  if (!serverUsers?.length) return;
+
+  for (const u of serverUsers) {
+    // Use local_id as SQLite PK; fall back to server id as string
+    const userId = u.local_id || String(u.id);
+
+    // Upsert user row
+    await executeQuery(
+      `INSERT OR REPLACE INTO users
+         (id, server_id, name, email, phone, role, status, is_approved, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+      [userId, u.id, u.name, u.email || null, u.phone || null,
+       u.role, u.status, u.is_approved ? 1 : 0]
+    );
+
+    // Upsert player row if a player profile exists on the server
+    if (u.player_db_id || u.player_local_id) {
+      const playerId = u.player_local_id || String(u.player_db_id);
+      await executeQuery(
+        `INSERT OR REPLACE INTO players
+           (id, server_id, user_id, full_name, email, phone,
+            player_type, profile_pic, is_active, sync_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+        [
+          playerId, u.player_db_id || null, userId,
+          u.name,                          // full_name = user's name
+          u.email        || null,
+          u.phone        || null,
+          u.player_type  || 'allrounder',
+          u.player_pic   || null,
+          u.is_active != null ? (u.is_active ? 1 : 0) : 1,
+        ]
+      );
+    }
+  }
+};
 
 export const getPlayer = (id) =>
   queryFirstRow('SELECT * FROM players WHERE id = ?', [id]);

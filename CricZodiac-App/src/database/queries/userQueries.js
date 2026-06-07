@@ -71,7 +71,7 @@ export const deactivateUser = async (id) => {
   await executeTransaction([
     {
       sql: `UPDATE users
-            SET status = 'inactive', updated_at = datetime('now'), sync_status = ?
+            SET status = 'blocked', updated_at = datetime('now'), sync_status = ?
             WHERE id = ?`,
       params: [SYNC_STATUS.PENDING, id],
     },
@@ -81,7 +81,7 @@ export const deactivateUser = async (id) => {
             VALUES (?,?,?,?,?,?,datetime('now'))`,
       params: [
         uuid.v4(), 'users', 'update', id,
-        JSON.stringify({ id, status: 'inactive' }),
+        JSON.stringify({ id, status: 'blocked' }),
         SYNC_STATUS.PENDING,
       ],
     },
@@ -140,20 +140,20 @@ export const createUserWithPlayer = async (data) => {
     },
   ];
 
-  // 3. If player role — create player profile (additional data only; name/email/phone live in users)
+  // 3. If player role — create player profile
+  //    SQLite players table: id, server_id, user_id, full_name, email, phone,
+  //                          player_type, profile_pic, is_active, sync_status
   if (data.role === 'player') {
     statements.push({
       sql: `INSERT INTO players
-              (id, user_id, club_id, player_type, batting_hand, bowling_style, jersey_number, date_of_birth, sync_status)
-            VALUES (?,?,?,?,?,?,?,?,?)`,
+              (id, user_id, full_name, email, phone, player_type, sync_status)
+            VALUES (?,?,?,?,?,?,?)`,
       params: [
         playerId, userId,
-        data.club_id         || null,
-        data.player_type     || 'allrounder',
-        data.batting_hand    || 'right',
-        data.bowling_style   || null,
-        data.jersey_number   || null,
-        data.date_of_birth   || null,
+        data.name,                    // full_name comes from users data
+        data.email       || null,
+        data.phone       || null,
+        data.player_type || 'allrounder',
         SYNC_STATUS.PENDING,
       ],
     });

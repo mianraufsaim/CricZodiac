@@ -102,9 +102,10 @@ export const addPlayerToTeam = async (teamId, playerId, battingOrder = 0) => {
 
 export const getTeamPlayers = (teamId) =>
   queryRows(`
-    SELECT tp.*, p.full_name, p.player_type, p.profile_pic
+    SELECT tp.*, u.name AS full_name, p.player_type, p.profile_pic
     FROM team_players tp
     JOIN players p ON tp.player_id = p.id
+    LEFT JOIN users u ON p.user_id = u.id
     WHERE tp.team_id = ?
     ORDER BY tp.batting_order ASC
   `, [teamId]);
@@ -396,18 +397,20 @@ export const saveMatchResult = async (resultData) => {
 
 export const getBattingScorecard = (inningsId) =>
   queryRows(`
-    SELECT bs.*, p.full_name, p.player_type
+    SELECT bs.*, u.name AS full_name, p.player_type
     FROM batting_scorecards bs
     JOIN players p ON bs.player_id = p.id
+    LEFT JOIN users u ON p.user_id = u.id
     WHERE bs.innings_id = ?
     ORDER BY bs.batting_order ASC, bs.runs_scored DESC
   `, [inningsId]);
 
 export const getBowlingScorecard = (inningsId) =>
   queryRows(`
-    SELECT bs.*, p.full_name
+    SELECT bs.*, u.name AS full_name
     FROM bowling_scorecards bs
     JOIN players p ON bs.player_id = p.id
+    LEFT JOIN users u ON p.user_id = u.id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
   `, [inningsId]);
@@ -419,13 +422,16 @@ export const getInningsBalls = (inningsId) =>
 export const getBallsWithPlayers = (inningsId) =>
   queryRows(`
     SELECT b.*,
-           s.full_name  AS striker_name,
-           ns.full_name AS non_striker_name,
-           bw.full_name AS bowler_name
+           us.name  AS striker_name,
+           uns.name AS non_striker_name,
+           ubw.name AS bowler_name
     FROM balls b
-    LEFT JOIN players s  ON b.striker_id      = s.id
-    LEFT JOIN players ns ON b.non_striker_id  = ns.id
-    LEFT JOIN players bw ON b.bowler_id       = bw.id
+    LEFT JOIN players s   ON b.striker_id     = s.id
+    LEFT JOIN players ns  ON b.non_striker_id = ns.id
+    LEFT JOIN players bw  ON b.bowler_id      = bw.id
+    LEFT JOIN users us    ON s.user_id        = us.id
+    LEFT JOIN users uns   ON ns.user_id       = uns.id
+    LEFT JOIN users ubw   ON bw.user_id       = ubw.id
     WHERE b.innings_id = ?
     ORDER BY b.created_at ASC
   `, [inningsId]);

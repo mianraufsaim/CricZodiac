@@ -3,12 +3,14 @@
 // ============================================================
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, TextInput, Animated, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, TextInput, Animated, Modal, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getAllPlayers } from '../../database/queries/playerQueries';
+import { getAllPlayers, upsertPlayersFromServer } from '../../database/queries/playerQueries';
 import { createTeam, addPlayerToTeam } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 // ── Role Picker Modal ─────────────────────────────────────
 const RolePickerModal = ({ visible, player, captainId, wkId, onAssign, onClear, onCancel, COLORS }) => {
@@ -111,6 +113,7 @@ const TeamSelectionScreen = ({ navigation, route }) => {
   const limit = parseInt(form.players_per_team) || 11;
 
   const [players, setPlayers]       = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [teamAPlayers, setTeamA]    = useState([]);
   const [teamBPlayers, setTeamB]    = useState([]);
   const [captainA, setCaptainA]     = useState(null);
@@ -128,8 +131,25 @@ const TeamSelectionScreen = ({ navigation, route }) => {
   useEffect(() => { loadPlayers(); }, []);
 
   const loadPlayers = async () => {
-    const all = await getAllPlayers();
-    setPlayers(all);
+    setLoadingPlayers(true);
+    try {
+      // 1. Fetch fresh player list from server and save to SQLite
+      try {
+        const res = await ApiService.get(API_ENDPOINTS.USERS_LIST);
+        if (res?.success && res?.data?.users?.length) {
+          await upsertPlayersFromServer(res.data.users);
+        }
+      } catch (_) {
+        // Offline or server error — fall through to cached SQLite data
+      }
+      // 2. Load from local SQLite (now populated with full_name)
+      const all = await getAllPlayers();
+      setPlayers(all || []);
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setLoadingPlayers(false);
+    }
   };
 
   const toggleSearch = () => {
@@ -366,18 +386,25 @@ const TeamSelectionScreen = ({ navigation, route }) => {
         </Text>
       )}
 
-      <FlatList
-        data={filteredPlayers}
-        renderItem={renderPlayer}
-        keyExtractor={i => i.id}
-        contentContainerStyle={styles.list}
-        keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchQuery.trim() ? `No players found for "${searchQuery}"` : 'No players available'}
-          </Text>
-        }
-      />
+      {loadingPlayers ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={COLORS.gold} />
+          <Text style={styles.loadingTxt}>Loading players...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredPlayers}
+          renderItem={renderPlayer}
+          keyExtractor={i => i.id}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {searchQuery.trim() ? `No players found for "${searchQuery}"` : 'No players found. Make sure players are approved in Manage Users.'}
+            </Text>
+          }
+        />
+      )}
 
       {/* Role Picker Modal */}
       <RolePickerModal
@@ -412,6 +439,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   hint:              { color: COLORS.gray, fontSize: 12, textAlign: 'center', marginBottom: 8 },
   list:              { paddingHorizontal: 20, paddingBottom: 30 },
   emptyText:         { color: COLORS.gray, textAlign: 'center', marginTop: 40, fontSize: 14 },
+  loadingWrap:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  loadingTxt:        { color: COLORS.gray, marginTop: 12, fontSize: 14 },
   playerRow:         { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   playerRowSelected: { borderColor: COLORS.gold, backgroundColor: COLORS.darkGray },
   playerAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },

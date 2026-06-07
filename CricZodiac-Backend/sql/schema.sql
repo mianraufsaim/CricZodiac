@@ -47,14 +47,12 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB;
 
 -- ── Players ───────────────────────────────────────────────
+-- name / email / phone live in the users table (joined via user_id)
 CREATE TABLE IF NOT EXISTS players (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id        VARCHAR(36) UNIQUE,
     club_id         INT UNSIGNED,
     user_id         INT UNSIGNED,
-    full_name       VARCHAR(100) NOT NULL,
-    email           VARCHAR(150),
-    phone           VARCHAR(20),
     player_type     ENUM('batsman','bowler','allrounder') NOT NULL DEFAULT 'allrounder',
     batting_hand    ENUM('right','left') NOT NULL DEFAULT 'right',
     bowling_style   ENUM('ra_fast','ra_medium','ra_spin','leg_spin','la_fast','la_medium','la_spin','chinaman','none'),

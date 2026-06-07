@@ -1,5 +1,7 @@
 // ============================================================
 // CricZodiac — Leaderboard & Stats Queries
+// NOTE: full_name comes from users table (u.name AS full_name)
+//       because players table only holds additional data.
 // ============================================================
 
 import { queryRows, queryFirstRow } from '../DatabaseHelper';
@@ -29,13 +31,14 @@ export const getMyStats = (playerId) =>
 // ── Top Averages (batting) ────────────────────────────────
 export const getTopAverages = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       COUNT(CASE WHEN bs.is_out=1 THEN 1 END) AS outs,
       SUM(bs.runs_scored) AS total_runs,
       CASE WHEN COUNT(CASE WHEN bs.is_out=1 THEN 1 END) > 0
         THEN ROUND(SUM(bs.runs_scored)*1.0 / COUNT(CASE WHEN bs.is_out=1 THEN 1 END), 1)
         ELSE SUM(bs.runs_scored) END AS average
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id HAVING COUNT(bs.id) >= 1
@@ -45,9 +48,10 @@ export const getTopAverages = (limit = 10) =>
 // ── Top Scores ────────────────────────────────────────────
 export const getTopScores = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bs.runs_scored) AS total_runs
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY total_runs DESC LIMIT ?
@@ -55,9 +59,10 @@ export const getTopScores = (limit = 10) =>
 
 export const getLeastScores = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bs.runs_scored) AS total_runs
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY total_runs ASC LIMIT ?
@@ -66,9 +71,10 @@ export const getLeastScores = (limit = 10) =>
 // ── Most Sixes / Fours ────────────────────────────────────
 export const getMostSixes = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bs.sixes) AS total_sixes
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY total_sixes DESC LIMIT ?
@@ -76,9 +82,10 @@ export const getMostSixes = (limit = 10) =>
 
 export const getMostFours = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bs.fours) AS total_fours
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY total_fours DESC LIMIT ?
@@ -87,9 +94,10 @@ export const getMostFours = (limit = 10) =>
 // ── Top Wicket Takers ────────────────────────────────────
 export const getTopWicketTakers = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bwl.wickets) AS total_wickets
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN bowling_scorecards bwl ON bwl.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY total_wickets DESC LIMIT ?
@@ -98,9 +106,10 @@ export const getTopWicketTakers = (limit = 10) =>
 // ── Top Economy / Least Economy ───────────────────────────
 export const getTopEconomy = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       ROUND(SUM(bwl.runs_conceded)*1.0 / SUM(bwl.overs_bowled), 1) AS economy
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN bowling_scorecards bwl ON bwl.player_id = p.id
     WHERE p.is_active = 1 AND bwl.overs_bowled > 0
     GROUP BY p.id HAVING SUM(bwl.overs_bowled) >= 1
@@ -109,9 +118,10 @@ export const getTopEconomy = (limit = 10) =>
 
 export const getLeastEconomy = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       ROUND(SUM(bwl.runs_conceded)*1.0 / SUM(bwl.overs_bowled), 1) AS economy
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN bowling_scorecards bwl ON bwl.player_id = p.id
     WHERE p.is_active = 1 AND bwl.overs_bowled > 0
     GROUP BY p.id HAVING SUM(bwl.overs_bowled) >= 1
@@ -121,9 +131,10 @@ export const getLeastEconomy = (limit = 10) =>
 // ── Top / Least Bowler (by total runs conceded) ──────────
 export const getTopBowler = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bwl.runs_conceded) AS runs_conceded
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN bowling_scorecards bwl ON bwl.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY runs_conceded ASC LIMIT ?
@@ -131,9 +142,10 @@ export const getTopBowler = (limit = 10) =>
 
 export const getLeastBowler = (limit = 10) =>
   queryRows(`
-    SELECT p.id, p.full_name, p.profile_pic,
+    SELECT p.id, u.name AS full_name, p.profile_pic,
       SUM(bwl.runs_conceded) AS runs_conceded
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     JOIN bowling_scorecards bwl ON bwl.player_id = p.id
     WHERE p.is_active = 1
     GROUP BY p.id ORDER BY runs_conceded DESC LIMIT ?
@@ -143,7 +155,7 @@ export const getLeastBowler = (limit = 10) =>
 export const getFullPlayerStats = (playerId) =>
   queryFirstRow(`
     SELECT
-      p.id, p.full_name, p.profile_pic, p.player_type,
+      p.id, u.name AS full_name, p.profile_pic, p.player_type,
       -- Series & Matches
       (SELECT COUNT(DISTINCT m.series_id) FROM batting_scorecards bs2
         JOIN innings i2 ON bs2.innings_id = i2.id
@@ -173,6 +185,7 @@ export const getFullPlayerStats = (playerId) =>
       COUNT(CASE WHEN bs.dismissal_type='run_out' THEN 1 END)  AS run_out,
       COUNT(CASE WHEN bs.dismissal_type='mankad' THEN 1 END)   AS mankad
     FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
     LEFT JOIN batting_scorecards bs ON bs.player_id = p.id
     WHERE p.id = ?
     GROUP BY p.id
