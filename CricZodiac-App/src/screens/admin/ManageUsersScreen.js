@@ -34,10 +34,21 @@ const getRoleCfg = (COLORS) => ({
 });
 
 const STATUS_COLOR = {
-  active:  '#22C55E',
-  blocked: '#EF4444',
-  pending: '#F59E0B',
+  active:   '#22C55E',
+  blocked:  '#EF4444',
+  pending:  '#F59E0B',
+  inactive: '#6B7280',
 };
+
+const STATUS_ORDER = { pending: 0, active: 1, blocked: 2, inactive: 3 };
+
+const STATUS_FILTERS = [
+  { id: 'all',      label: 'All'      },
+  { id: 'pending',  label: 'Pending'  },
+  { id: 'active',   label: 'Active'   },
+  { id: 'blocked',  label: 'Blocked'  },
+  { id: 'inactive', label: 'Inactive' },
+];
 
 // ── Add Type Sheet ────────────────────────────────────────
 const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
@@ -177,6 +188,7 @@ const ManageUsersScreen = ({ navigation }) => {
   const [users,         setUsers]         = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [tab,           setTab]           = useState('all');
+  const [statusFilter,  setStatusFilter]  = useState('all');
   const [search,        setSearch]        = useState('');
   const [addSheet,      setAddSheet]      = useState(false);
   const [selected,      setSelected]      = useState(null);
@@ -206,7 +218,6 @@ const ManageUsersScreen = ({ navigation }) => {
       try {
         const local = await getAllUsers();
         const filtered = local.filter(u =>
-          u.status !== 'inactive' &&
           u.role !== 'admin' &&
           u.role !== 'super_admin' &&
           u.club_id === currentUser?.club_id
@@ -231,13 +242,18 @@ const ManageUsersScreen = ({ navigation }) => {
   const umpires = active.filter(u => u.role === 'umpire');
   const players = active.filter(u => u.role === 'player');
 
-  const filtered = active.filter(u => {
-    const matchTab = tab === 'all' || u.role === tab;
-    const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase())
-      || u.email?.toLowerCase().includes(search.toLowerCase())
-      || u.phone?.includes(search);
-    return matchTab && matchSearch;
-  });
+  const filtered = active
+    .filter(u => {
+      const matchTab    = tab === 'all' || u.role === tab;
+      const matchStatus = statusFilter === 'all' || u.status === statusFilter;
+      const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase())
+        || u.email?.toLowerCase().includes(search.toLowerCase())
+        || u.phone?.includes(search);
+      return matchTab && matchStatus && matchSearch;
+    })
+    .sort((a, b) =>
+      (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+    );
 
   const handleAddSelect = (role) => {
     navigation.navigate('CreateUser', { defaultRole: role });
@@ -374,7 +390,7 @@ const ManageUsersScreen = ({ navigation }) => {
         ))}
       </View>
 
-      {/* Tabs + Refresh */}
+      {/* Role Tabs + Refresh */}
       <View style={st.tabRow}>
         {TABS.map(t => (
           <TouchableOpacity
@@ -388,6 +404,23 @@ const ManageUsersScreen = ({ navigation }) => {
         <TouchableOpacity onPress={load} style={st.refreshBtn} disabled={loading}>
           <Icon name="refresh" size={20} color={loading ? COLORS.gray : COLORS.cyan} />
         </TouchableOpacity>
+      </View>
+
+      {/* Status Filter */}
+      <View style={st.statusRow}>
+        {STATUS_FILTERS.map(s => {
+          const isActive = statusFilter === s.id;
+          const color    = s.id === 'all' ? COLORS.cyan : (STATUS_COLOR[s.id] || COLORS.gray);
+          return (
+            <TouchableOpacity
+              key={s.id}
+              style={[st.statusBtn, isActive && { borderColor: color, backgroundColor: color + '22' }]}
+              onPress={() => setStatusFilter(s.id)}
+            >
+              <Text style={[st.statusTxt, isActive && { color }]}>{s.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* List */}
@@ -455,11 +488,14 @@ const getStStyles = (COLORS) => StyleSheet.create({
   summaryNum:    { fontWeight: '900', fontSize: 22 },
   summaryLabel:  { color: COLORS.gray, fontSize: 10, marginTop: 2 },
   summaryDivider:{ width: 1, backgroundColor: COLORS.cardBorder },
-  tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 4, gap: 8, alignItems: 'center' },
+  tabRow:        { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 6, gap: 8, alignItems: 'center' },
   tabBtn:        { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
   tabActive:     { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
   tabTxt:        { color: COLORS.gray, fontWeight: '600', fontSize: 13 },
   tabTxtActive:  { color: COLORS.white },
+  statusRow:     { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 6, alignItems: 'center', flexWrap: 'nowrap' },
+  statusBtn:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
+  statusTxt:     { color: COLORS.gray, fontWeight: '600', fontSize: 12 },
   refreshBtn:    { marginLeft: 'auto', padding: 4 },
   card:          { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   avatar:        { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },

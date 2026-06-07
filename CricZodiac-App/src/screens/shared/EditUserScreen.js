@@ -31,22 +31,23 @@ const STATUS_OPTIONS = [
   { id: 'active',   label: 'Active',   color: '#22C55E' },
   { id: 'blocked',  label: 'Blocked',  color: '#EF4444' },
   { id: 'pending',  label: 'Pending',  color: '#F59E0B' },
+  { id: 'inactive', label: 'Inactive', color: '#0c51da' },
 ];
 
 // ── Chip Selector ─────────────────────────────────────────
-const Chips = ({ options, value, onChange, COLORS, st, colorKey }) => (
-  <View style={st.chips}>
+const Chips = ({ options, value, onChange, COLORS, st, colorKey, noWrap }) => (
+  <View style={[st.chips, noWrap && { flexWrap: 'nowrap' }]}>
     {options.map(o => {
       const active = value === o.id;
       const color  = colorKey ? o[colorKey] : COLORS.cyan;
       return (
         <TouchableOpacity
           key={o.id}
-          style={[st.chip, active && { borderColor: color, backgroundColor: color + '22' }]}
+          style={[st.chip, noWrap && st.chipCompact, active && { borderColor: color, backgroundColor: color + '22' }]}
           onPress={() => onChange(o.id)}
         >
           {o.icon && <Icon name={o.icon} size={12} color={active ? color : COLORS.gray} style={{ marginRight: 3 }} />}
-          <Text style={[st.chipTxt, active && { color }]}>{o.label}</Text>
+          <Text style={[st.chipTxt, noWrap && st.chipTxtCompact, active && { color }]}>{o.label}</Text>
         </TouchableOpacity>
       );
     })}
@@ -173,6 +174,7 @@ const EditUserScreen = ({ navigation, route }) => {
                 colorKey="color"
                 COLORS={COLORS}
                 st={st}
+                noWrap
               />
             </View>
 
@@ -361,6 +363,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   chips:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: COLORS.darkGray, borderWidth: 1, borderColor: COLORS.cardBorder },
   chipTxt:       { color: COLORS.gray, fontWeight: '600', fontSize: 13 },
+  chipCompact:   { flex: 1, justifyContent: 'center', paddingHorizontal: 6, paddingVertical: 7 },
+  chipTxtCompact:{ fontSize: 11, textAlign: 'center' },
   passHeader:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 0 },
   passRow:       { flexDirection: 'row', alignItems: 'center', gap: 10 },
   regenBtn:      { width: 48, height: 48, borderRadius: 10, backgroundColor: COLORS.darkGray, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.gold },
