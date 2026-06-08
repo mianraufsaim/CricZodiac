@@ -78,7 +78,6 @@ const BatterRow = ({ batter, isStriker, COLORS, sc }) => {
 
 const BowlerRow = ({ bowler, legalBalls, COLORS, sc }) => {
   if (!bowler) return null;
-  const completedOvers = Math.floor(legalBalls / 6);
   const completedOvers = bowler.overs ?? 0;           // completed full overs from bowlerStats
   const rem            = legalBalls;                  // balls in current over (already 0-5)
   const oversStr       = `${completedOvers}.${rem}`;
