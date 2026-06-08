@@ -693,6 +693,22 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
 function syncOver(PDO $pdo, string $action, array $d): bool {
     // Resolve innings UUID → integer id + club_id + series_id + match_id
     $inningsRow = resolveInningsRow($pdo, $d['innings_id'] ?? null);
+
+    // Fallback: if innings UUID not found (UUID mismatch), resolve via match + innings_number
+    if (!$inningsRow && !empty($d['match_id'])) {
+        $matchRow = resolveMatchRow($pdo, $d['match_id']);
+        $fbMatchId = $matchRow['id'] ?? null;
+        if ($fbMatchId) {
+            $inningsNumber = isset($d['innings_number']) ? (int)$d['innings_number'] : 1;
+            $st = $pdo->prepare("
+                SELECT id, club_id, series_id, match_id FROM innings
+                WHERE match_id = ? AND innings_number = ? LIMIT 1
+            ");
+            $st->execute([$fbMatchId, $inningsNumber]);
+            $inningsRow = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+    }
+
     $inningsId  = $inningsRow['id']        ?? null;
     $matchId    = $inningsRow['match_id']  ?? null;
     $clubId     = $inningsRow['club_id']   ?? null;

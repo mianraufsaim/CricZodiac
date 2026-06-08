@@ -679,9 +679,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
     // If over.is_completed → a new over is needed, increment.
     const newOverNum = over ? overNumRef.current + 1 : overNumRef.current;
     const overId = await createOver({
-      innings_id:  inningsRef.current.id,
-      over_number: newOverNum,
-      bowler_id:   bwl.id,
+      innings_id:     inningsRef.current.id,
+      innings_number: inningsRef.current.innings_number || inningsNumber,
+      match_id:       match.id,
+      club_id:        match.club_id   || null,
+      series_id:      match.series_id || null,
+      over_number:    newOverNum,
+      bowler_id:      bwl.id,
     });
     const newOver = { id: overId, over_number: newOverNum, bowler_id: bwl.id, balls_bowled: 0, runs_conceded: 0 };
     // Update refs IMMEDIATELY so recordBall reads correct values this same tick

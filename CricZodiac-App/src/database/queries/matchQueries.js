@@ -385,6 +385,18 @@ export const getMatchInnings = (matchId) =>
 
 export const createOver = async (overData) => {
   const id = overData.id || uuid.v4();
+  // Resolve match context — needed by server to resolve innings when UUID mismatches
+  const inningsRow = await queryFirstRow('SELECT match_id FROM innings WHERE id = ?', [overData.innings_id]);
+  const matchRow   = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?',
+                       [overData.match_id || inningsRow?.match_id]);
+  const payload = {
+    ...overData,
+    id,
+    match_id:       overData.match_id       || inningsRow?.match_id || null,
+    club_id:        overData.club_id        || matchRow?.club_id    || null,
+    series_id:      overData.series_id      || matchRow?.series_id  || null,
+    innings_number: overData.innings_number || null,
+  };
   await executeTransaction([
     {
       sql: `INSERT INTO overs (id, innings_id, over_number, bowler_id, sync_status)
@@ -394,7 +406,7 @@ export const createOver = async (overData) => {
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'overs', 'create', id, JSON.stringify({ ...overData, id }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'overs', 'create', id, JSON.stringify(payload), SYNC_STATUS.PENDING],
     },
   ]);
   return id;
