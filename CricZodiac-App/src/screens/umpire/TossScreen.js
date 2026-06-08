@@ -246,8 +246,12 @@ const TossScreen = ({ navigation, route }) => {
                 onPress={() => { setSelectedCaptain(label); setPhase('call'); }}
               >
                 <Icon name="account-tie" size={22} color={selectedCaptain === label ? COLORS.gold : COLORS.gray} style={{ marginBottom: 6 }} />
-                <Text style={styles.captainBtnText}>{team?.captain_name || team?.team_name}</Text>
-                <Text style={styles.captainBtnSub}>{team?.team_name} · Captain</Text>
+                <Text style={styles.captainBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                  {team?.captain_name || team?.team_name}
+                </Text>
+                <Text style={styles.captainBtnSub} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                  {team?.team_name} · Captain
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -388,10 +392,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   phaseTitle:        { fontSize: 18, fontWeight: '700', color: COLORS.white, marginBottom: 10, textAlign: 'center' },
   chooseSubtitle:    { color: COLORS.gray, fontSize: 12, marginBottom: 10, textAlign: 'center' },
   captainRow:        { flexDirection: 'row', gap: 16, width: '100%' },
-  captainBtn:        { flex: 1, backgroundColor: COLORS.card, borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
+  captainBtn:        { flex: 1, backgroundColor: COLORS.card, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
   captainBtnSelected:{ borderColor: COLORS.gold, backgroundColor: COLORS.darkGray },
-  captainBtnText:    { color: COLORS.white, fontWeight: '700', fontSize: 15 },
-  captainBtnSub:     { color: COLORS.gray, fontSize: 12, marginTop: 4 },
+  captainBtnText:    { width: '100%', color: COLORS.white, fontWeight: '700', fontSize: 15, textAlign: 'center' },
+  captainBtnSub:     { width: '100%', color: COLORS.gray, fontSize: 12, marginTop: 4, textAlign: 'center' },
   callRow:           { flexDirection: 'row', gap: 16, width: '100%', marginTop: 8 },
   callSection:       { paddingHorizontal: 0, marginBottom: 8 },
   callSectionTitle:  { color: COLORS.white, fontWeight: '600', fontSize: 14, textAlign: 'center', marginBottom: 10 },
