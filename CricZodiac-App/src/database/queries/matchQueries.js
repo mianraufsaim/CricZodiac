@@ -224,6 +224,14 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
         sp.is_active != null ? (sp.is_active ? 1 : 0) : 1,
       ]
     );
+    // Always refresh name + user_id from server in case the row was previously
+    // cached with an empty full_name (INSERT OR IGNORE would have skipped it)
+    if (sp.full_name) {
+      await executeQuery(
+        `UPDATE players SET full_name = ?, user_id = COALESCE(?, user_id), sync_status = 'synced' WHERE id = ?`,
+        [sp.full_name, sqliteUserId || null, playerId]
+      );
+    }
 
     // Ensure team_player row exists in SQLite
     await executeQuery(
@@ -305,6 +313,10 @@ export const saveTossResult = async (tossData) => {
 
 export const createInnings = async (inningsData) => {
   const id = inningsData.id || uuid.v4();
+  // Resolve club_id + series_id from match if not provided
+  const matchRow = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [inningsData.match_id]);
+  const clubId   = inningsData.club_id   || matchRow?.club_id   || null;
+  const seriesId = inningsData.series_id || matchRow?.series_id || null;
   await executeTransaction([
     {
       sql: `INSERT INTO innings (id, match_id, innings_number, batting_team_id, bowling_team_id, sync_status)
@@ -319,7 +331,9 @@ export const createInnings = async (inningsData) => {
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'innings', 'create', id, JSON.stringify({ ...inningsData, id }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'innings', 'create', id,
+               JSON.stringify({ ...inningsData, id, club_id: clubId, series_id: seriesId }),
+               SYNC_STATUS.PENDING],
     },
   ]);
   return id;

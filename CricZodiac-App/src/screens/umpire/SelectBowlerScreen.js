@@ -3,7 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getTeamPlayers } from '../../database/queries/matchQueries';
+import { getTeamPlayers, upsertTeamPlayersFromServer } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
 
 const SelectBowlerScreen = ({ navigation, route }) => {
@@ -25,11 +27,48 @@ const SelectBowlerScreen = ({ navigation, route }) => {
   const searchAnim = useRef(new Animated.Value(0)).current;
   const searchRef  = useRef(null);
 
-  useEffect(() => {
-    getTeamPlayers(team.id).then(p =>
-      setPlayers(p.map(tp => ({ id: tp.player_id, full_name: tp.full_name, player_type: tp.player_type })))
-    );
-  }, []);
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    let teamPlayers = [];
+
+    // 1. Fetch from API server first
+    try {
+      const qParts = [`team_id=${encodeURIComponent(team.id)}`];
+      if (team.match_id)   qParts.push(`match_id=${encodeURIComponent(team.match_id)}`);
+      if (team.team_label) qParts.push(`team_label=${encodeURIComponent(team.team_label)}`);
+      if (team.club_id)    qParts.push(`club_id=${encodeURIComponent(team.club_id)}`);
+
+      const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
+      const serverList = res?.players || res?.data?.players || [];
+
+      if (serverList.length) {
+        // Build list directly from server response
+        teamPlayers = serverList.map(sp => ({
+          player_id:   sp.player_uuid || String(sp.player_id),
+          full_name:   sp.full_name   || 'Unknown',
+          player_type: sp.player_type || 'allrounder',
+        }));
+        // Save to SQLite in background
+        upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
+      }
+    } catch (apiErr) {
+      console.warn('[SelectBowler] API fetch failed, falling back to SQLite:', apiErr?.message);
+      // 2. Fallback to SQLite if API fails
+      const local = await getTeamPlayers(team.id);
+      teamPlayers = (local || []).map(tp => ({
+        player_id:   tp.player_id,
+        full_name:   tp.full_name   || 'Unknown',
+        player_type: tp.player_type || 'allrounder',
+      }));
+    }
+
+    setPlayers(teamPlayers.map(tp => ({
+      id:          tp.player_id,
+      full_name:   tp.full_name   || 'Unknown',
+      player_type: tp.player_type || 'allrounder',
+    })));
+  };
 
   const toggleSearch = () => {
     const opening = !searchVisible;
@@ -118,7 +157,7 @@ const SelectBowlerScreen = ({ navigation, route }) => {
               onPress={() => !isCurrent && setSelected(item)}
               disabled={isCurrent}
             >
-              <View style={styles.avatar}><Text style={styles.avatarText}>{item.full_name[0]}</Text></View>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{(item.full_name || '?')[0]}</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.full_name}</Text>
                 <Text style={styles.type}>{item.player_type}</Text>

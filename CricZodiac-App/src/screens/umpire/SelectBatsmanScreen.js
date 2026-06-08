@@ -54,37 +54,37 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   }, [players, searchQuery]);
 
   const load = async () => {
-    // 1. Try SQLite first
-    let teamPlayers = await getTeamPlayers(team.id);
+    let teamPlayers = [];
 
-    // 2. SQLite empty → fetch from MySQL via API
-    if (!teamPlayers?.length) {
-      try {
-        const qParts = [`team_id=${encodeURIComponent(team.id)}`];
-        if (team.match_id)   qParts.push(`match_id=${encodeURIComponent(team.match_id)}`);
-        if (team.team_label) qParts.push(`team_label=${encodeURIComponent(team.team_label)}`);
-        if (team.club_id)    qParts.push(`club_id=${encodeURIComponent(team.club_id)}`);
+    // 1. Fetch from API server first
+    try {
+      const qParts = [`team_id=${encodeURIComponent(team.id)}`];
+      if (team.match_id)   qParts.push(`match_id=${encodeURIComponent(team.match_id)}`);
+      if (team.team_label) qParts.push(`team_label=${encodeURIComponent(team.team_label)}`);
+      if (team.club_id)    qParts.push(`club_id=${encodeURIComponent(team.club_id)}`);
 
-        const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
-        const serverList = res?.players || res?.data?.players || [];
+      const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
+      const serverList = res?.players || res?.data?.players || [];
 
-        if (serverList.length) {
-          // Cache into SQLite so subsequent loads hit local DB
-          await upsertTeamPlayersFromServer(serverList, team.id);
-          // Reload from SQLite to get the joined full_name/player_type
-          teamPlayers = await getTeamPlayers(team.id);
-          // If join still empty (player rows not cached yet), build directly from server response
-          if (!teamPlayers?.length) {
-            teamPlayers = serverList.map(sp => ({
-              player_id:   sp.player_uuid || String(sp.player_id),
-              full_name:   sp.full_name   || 'Unknown',
-              player_type: sp.player_type || 'allrounder',
-            }));
-          }
-        }
-      } catch (apiErr) {
-        console.warn('[SelectBatsman] API fallback failed:', apiErr?.message);
+      if (serverList.length) {
+        // Build list directly from server response
+        teamPlayers = serverList.map(sp => ({
+          player_id:   sp.player_uuid || String(sp.player_id),
+          full_name:   sp.full_name   || 'Unknown',
+          player_type: sp.player_type || 'allrounder',
+        }));
+        // Save to SQLite in background
+        upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
       }
+    } catch (apiErr) {
+      console.warn('[SelectBatsman] API fetch failed, falling back to SQLite:', apiErr?.message);
+      // 2. Fallback to SQLite if API fails
+      const local = await getTeamPlayers(team.id);
+      teamPlayers = (local || []).map(tp => ({
+        player_id:   tp.player_id,
+        full_name:   tp.full_name   || 'Unknown',
+        player_type: tp.player_type || 'allrounder',
+      }));
     }
 
     // 3. Filter out already-batting and dismissed players
