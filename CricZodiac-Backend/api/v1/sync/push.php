@@ -819,6 +819,16 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
         $existing = $st->fetch(PDO::FETCH_ASSOC);
     }
 
+    // Cast all boolean fields to int — PHP false from JSON becomes '' in PDO otherwise
+    $isWicket   = (int)(bool)($d['is_wicket']   ?? 0);
+    $isExtra    = (int)(bool)($d['is_extra']    ?? 0);
+    $isFour     = (int)(bool)($d['is_four']     ?? 0);
+    $isSix      = (int)(bool)($d['is_six']      ?? 0);
+    $isValid    = (int)(bool)($d['is_valid_ball'] ?? 1);
+    $runsScored = (int)($d['runs_scored'] ?? 0);
+    $extraRuns  = (int)($d['extra_runs']  ?? 0);
+    $extraType  = ($d['extra_type'] !== '' && $d['extra_type'] !== null) ? $d['extra_type'] : null;
+
     if ($existing) {
         $pdo->prepare("
             UPDATE balls
@@ -837,11 +847,9 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             WHERE id = ?
         ")->execute([
             $strikerId, $nonStrikerId, $bowlerId,
-            $d['runs_scored'] ?? 0, $d['is_wicket'] ?? 0,
-            $d['is_extra'] ?? 0, $d['extra_type'] ?? null, $d['extra_runs'] ?? 0,
-            $d['is_four'] ?? 0, $d['is_six'] ?? 0, $d['is_valid_ball'] ?? 1,
-            $d['id'],
-            $existing['id'],
+            $runsScored, $isWicket, $isExtra, $extraType, $extraRuns,
+            $isFour, $isSix, $isValid,
+            $d['id'], $existing['id'],
         ]);
     } else {
         $pdo->prepare("
@@ -866,9 +874,8 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             $strikerId,    $d['striker_id']     ?? null,
             $nonStrikerId, $d['non_striker_id'] ?? null,
             $bowlerId,     $d['bowler_id']      ?? null,
-            $d['runs_scored'] ?? 0, $d['is_wicket'] ?? 0,
-            $d['is_extra'] ?? 0, $d['extra_type'] ?? null, $d['extra_runs'] ?? 0,
-            $d['is_four'] ?? 0, $d['is_six'] ?? 0, $d['is_valid_ball'] ?? 1,
+            $runsScored, $isWicket, $isExtra, $extraType, $extraRuns,
+            $isFour, $isSix, $isValid,
         ]);
     }
 

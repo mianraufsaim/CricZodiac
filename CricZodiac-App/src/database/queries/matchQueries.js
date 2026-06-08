@@ -412,6 +412,38 @@ export const createOver = async (overData) => {
   return id;
 };
 
+// Re-queue an existing over for sync — use when SQLite has the over but MySQL doesn't,
+// or when innings UUID mismatch means previous sync stored NULLs.
+export const enqueueOverSync = async (overRow, inningsRow, match) => {
+  const matchRow = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?',
+                     [match?.id || overRow.match_id]);
+  const clubId   = match?.club_id   || matchRow?.club_id   || null;
+  const seriesId = match?.series_id || matchRow?.series_id || null;
+  await executeQuery(
+    `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+     VALUES (?,?,?,?,?,?,datetime('now'))`,
+    [
+      uuid.v4(), 'overs', 'create', overRow.id,
+      JSON.stringify({
+        id:             overRow.id,
+        innings_id:     overRow.innings_id || inningsRow?.id || null,
+        innings_number: inningsRow?.innings_number || null,
+        match_id:       match?.id || overRow.match_id || null,
+        club_id:        clubId,
+        series_id:      seriesId,
+        over_number:    overRow.over_number,
+        bowler_id:      overRow.bowler_id,
+        runs_conceded:  overRow.runs_conceded  || 0,
+        wickets:        overRow.wickets        || 0,
+        balls_bowled:   overRow.balls_bowled   || 0,
+        is_maiden:      overRow.is_maiden      || 0,
+        is_completed:   overRow.is_completed   || 0,
+      }),
+      SYNC_STATUS.PENDING,
+    ]
+  );
+};
+
 export const updateOver = async (id, data) => {
   const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
   await executeQuery(

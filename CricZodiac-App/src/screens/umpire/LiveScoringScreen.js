@@ -21,7 +21,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import {
-  createInnings, enqueueInningsSync, createOver, updateOver, updateInnings,
+  createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
   saveBall, getCurrentOver, getMatchInnings, getTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings,
@@ -628,6 +628,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
         setCurrentOver(existingOver);
         setOverNumber(existingOver.over_number);
         setLegalBalls(existingOver.balls_bowled || 0);
+        // Re-queue with full match context so MySQL resolves innings_id correctly
+        await enqueueOverSync(existingOver, active, match);
+        processSyncQueue().catch(() => {});
       }
 
       // Load ball history
@@ -687,6 +690,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
       over_number:    newOverNum,
       bowler_id:      bwl.id,
     });
+    // Immediately push over to MySQL
+    processSyncQueue().catch(() => {});
     const newOver = { id: overId, over_number: newOverNum, bowler_id: bwl.id, balls_bowled: 0, runs_conceded: 0 };
     // Update refs IMMEDIATELY so recordBall reads correct values this same tick
     overRef.current    = newOver;
