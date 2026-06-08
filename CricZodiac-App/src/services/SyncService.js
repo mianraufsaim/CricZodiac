@@ -129,17 +129,17 @@ export const processSyncQueue = async () => {
 
     console.log(`[Sync] Processing ${pendingItems.length} pending items`);
 
-    // Batch items by table for efficient API calls
-    const batches = groupByTable(pendingItems);
+    // Batch items by table for efficient API calls. Some child rows need a
+    // lightweight parent refresh when the original parent event was already ACKed.
+    const syncItems = await expandItemsWithDependencies(pendingItems);
+    const batches = groupByTable(syncItems);
 
     for (const [tableName, items] of sortBatchesForDependencies(batches)) {
       try {
-        const payload = items.map(item => ({
-          event_id:   item.event_id,
-          table_name: item.table_name,
-          action:     item.action_type,
-          data:       JSON.parse(item.payload_json),
-        }));
+        const payload = [];
+        for (const item of items) {
+          payload.push(buildApiSyncItem(item));
+        }
 
         const response = await ApiService.post(API_ENDPOINTS.SYNC_PUSH, {
           items: payload,
@@ -148,11 +148,16 @@ export const processSyncQueue = async () => {
         if (response.success) {
           const syncedIds = response.synced_event_ids || [];
           const syncedIdSet = new Set(syncedIds);
+          const errorByEventId = getErrorByEventId(response);
           for (const item of items) {
+            if (item.synthetic) continue;
             if (response.all_synced || syncedIdSet.has(item.event_id)) {
               await markSyncItemSynced(item.id);
               await _updateMainRecordSyncStatus(item.table_name, item.local_id);
               totalSynced++;
+            } else if (errorByEventId.has(item.event_id)) {
+              await markSyncItemFailed(item.id, errorByEventId.get(item.event_id));
+              totalFailed++;
             }
           }
           console.log(`[Sync] ✓ ${tableName}: ${syncedIds.length} items synced`);
@@ -160,6 +165,7 @@ export const processSyncQueue = async () => {
       } catch (tableError) {
         console.error(`[Sync] ✗ ${tableName} batch failed:`, tableError.message);
         for (const item of items) {
+          if (item.synthetic) continue;
           await markSyncItemFailed(item.id, tableError.message);
           totalFailed++;
         }
@@ -228,25 +234,35 @@ export const retrySingleItem = async (item) => {
   }
 
   try {
+    const retryItems = await expandItemsWithDependencies([item], parsedPayload);
+    const requestItems = [];
+    for (const retryItem of retryItems) {
+      requestItems.push(buildApiSyncItem(retryItem));
+    }
+
     const response = await ApiService.post(API_ENDPOINTS.SYNC_PUSH, {
-      items: [{
-        event_id:   item.event_id,
-        table_name: item.table_name,
-        action:     item.action_type,
-        data:       parsedPayload,
-      }],
+      items: requestItems,
     });
 
     const succeeded =
       response?.success &&
-      (response?.all_synced || (response?.synced_event_ids || []).includes(item.event_id));
+      (response?.all_synced || new Set(response?.synced_event_ids || []).has(item.event_id));
 
     if (succeeded) {
-      await markSyncItemSynced(item.id);
-      await _updateMainRecordSyncStatus(item.table_name, item.local_id);
+      const syncedIdSet = new Set(response?.synced_event_ids || []);
+      for (const retryItem of retryItems) {
+        if (retryItem.synthetic) continue;
+        if (response?.all_synced || syncedIdSet.has(retryItem.event_id)) {
+          await markSyncItemSynced(retryItem.id);
+          await _updateMainRecordSyncStatus(retryItem.table_name, retryItem.local_id);
+        }
+      }
     } else {
       // Server responded but didn't confirm sync
-      const reason = response?.error || response?.message || 'Server did not confirm this item as synced.';
+      const reason = getErrorByEventId(response).get(item.event_id) ||
+        response?.error ||
+        response?.message ||
+        'Server did not confirm this item as synced.';
       await markSyncItemFailed(item.id, reason);
     }
 
@@ -330,4 +346,132 @@ const groupByTable = (items) => {
     groups[key].push(item);
     return groups;
   }, {});
+};
+
+const buildApiSyncItem = (item) => ({
+  event_id:   item.event_id,
+  table_name: item.table_name,
+  action:     item.action_type,
+  data:       JSON.parse(item.payload_json),
+});
+
+const getErrorByEventId = (response) => {
+  const errors = response?.errors || [];
+  const errorMap = new Map();
+  for (const error of errors) {
+    if (error?.event_id) {
+      errorMap.set(error.event_id, error.error || 'Sync failed.');
+    }
+  }
+  return errorMap;
+};
+
+const expandItemsWithDependencies = async (items, singleParsedPayload = null) => {
+  const expanded = [];
+  const queuedTeamIds = new Set();
+  const syntheticTeamIds = new Set();
+
+  for (const item of items) {
+    if (item.table_name === 'teams' && item.local_id) {
+      queuedTeamIds.add(item.local_id);
+    }
+  }
+
+  for (const item of items) {
+    let payload = null;
+    if (item.table_name === 'team_players') {
+      payload = singleParsedPayload && items.length === 1
+        ? singleParsedPayload
+        : safeParsePayload(item.payload_json);
+
+      const teamLocalId = payload?.team_id;
+      if (teamLocalId && !queuedTeamIds.has(teamLocalId) && !syntheticTeamIds.has(teamLocalId)) {
+        const dependency = await buildTeamDependencyItem(teamLocalId, payload);
+        if (dependency) {
+          expanded.push(dependency);
+          syntheticTeamIds.add(teamLocalId);
+        }
+      }
+    }
+
+    expanded.push(item);
+  }
+
+  return expanded;
+};
+
+const safeParsePayload = (payloadJson) => {
+  try {
+    return JSON.parse(payloadJson);
+  } catch {
+    return null;
+  }
+};
+
+const buildTeamDependencyItem = async (teamLocalId, fallbackPayload = {}) => {
+  const teamPayload = await getQueuedTeamPayload(teamLocalId, fallbackPayload) ||
+    await getLocalTeamPayload(teamLocalId, fallbackPayload);
+
+  if (!teamPayload) return null;
+
+  return {
+    event_id: teamLocalId,
+    table_name: 'teams',
+    action_type: 'create',
+    local_id: teamLocalId,
+    payload_json: JSON.stringify(teamPayload),
+    synthetic: true,
+  };
+};
+
+const getQueuedTeamPayload = async (teamLocalId, fallbackPayload) => {
+  const rows = await queryRows(`
+    SELECT payload_json
+    FROM sync_queue
+    WHERE table_name = 'teams'
+      AND local_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+  `, [teamLocalId]);
+
+  const payload = rows[0]?.payload_json ? safeParsePayload(rows[0].payload_json) : null;
+  if (!payload) return null;
+
+  return {
+    ...payload,
+    id: payload.id || teamLocalId,
+    club_id: payload.club_id || fallbackPayload?.club_id || null,
+    series_id: payload.series_id || fallbackPayload?.series_id || null,
+    match_id: payload.match_id || fallbackPayload?.match_id || null,
+  };
+};
+
+const getLocalTeamPayload = async (teamLocalId, fallbackPayload) => {
+  const rows = await queryRows(`
+    SELECT
+      t.id,
+      COALESCE(t.club_id, m.club_id) AS club_id,
+      COALESCE(t.series_id, m.series_id) AS series_id,
+      t.match_id,
+      t.team_name,
+      t.team_label,
+      t.captain_id
+    FROM teams t
+    LEFT JOIN matches m ON m.id = t.match_id
+    WHERE t.id = ?
+    LIMIT 1
+  `, [teamLocalId]);
+
+  const team = rows[0];
+  if (!team) return null;
+
+  return {
+    id: team.id,
+    club_id: team.club_id || fallbackPayload?.club_id || null,
+    series_id: team.series_id || fallbackPayload?.series_id || null,
+    match_id: team.match_id || fallbackPayload?.match_id || null,
+    team_name: team.team_name || '',
+    team_label: team.team_label || 'A',
+    captain_id: team.captain_id || null,
+  };
 };

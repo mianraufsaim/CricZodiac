@@ -330,12 +330,14 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
                 wk_id         = ?,
                 wk_local      = ?,
                 series_id     = ?,
-                local_id      = COALESCE(local_id, ?)
+                match_local_id = ?,
+                local_id      = COALESCE(?, local_id)
             WHERE id = ?
         ")->execute([
             $teamName, $captainId, $captainLocal,
             $wkId, $wkLocal,
             $seriesId,
+            $matchLocalId,
             $localId,
             $existing['id'],
         ]);
