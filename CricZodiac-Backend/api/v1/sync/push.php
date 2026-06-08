@@ -540,10 +540,10 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
     $pdo->prepare("
         UPDATE matches
         SET toss_winner_id = ?,
-            toss_choice = ?,
-            batting_first = COALESCE(?, batting_first),
-            status = 'toss',
-            updated_at = NOW()
+            toss_choice    = ?,
+            batting_first  = COALESCE(?, batting_first),
+            status         = 'live',
+            updated_at     = NOW()
         WHERE id = ?
     ")->execute([$tossWinnerId, $d['elected_to'], $battingFirstId, $matchId]);
 
