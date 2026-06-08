@@ -339,6 +339,34 @@ export const createInnings = async (inningsData) => {
   return id;
 };
 
+// Re-queue an existing innings for sync to MySQL.
+// Called when the innings already exists in SQLite but we need to guarantee
+// MySQL has it (e.g. after toss, on app reopen, or after a sync failure).
+export const enqueueInningsSync = async (inningsRow, match) => {
+  const matchRow = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [inningsRow.match_id]);
+  const clubId   = match?.club_id   || matchRow?.club_id   || null;
+  const seriesId = match?.series_id || matchRow?.series_id || null;
+  await executeQuery(
+    `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+     VALUES (?,?,?,?,?,?,datetime('now'))`,
+    [
+      uuid.v4(), 'innings', 'create', inningsRow.id,
+      JSON.stringify({
+        id:              inningsRow.id,
+        match_id:        inningsRow.match_id,
+        club_id:         clubId,
+        series_id:       seriesId,
+        innings_number:  inningsRow.innings_number,
+        batting_team_id: inningsRow.batting_team_id,
+        bowling_team_id: inningsRow.bowling_team_id,
+        total_runs:      inningsRow.total_runs      || 0,
+        total_wickets:   inningsRow.total_wickets   || 0,
+      }),
+      SYNC_STATUS.PENDING,
+    ]
+  );
+};
+
 export const updateInnings = async (id, data) => {
   const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
   await executeQuery(

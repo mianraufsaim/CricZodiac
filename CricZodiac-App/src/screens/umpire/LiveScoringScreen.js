@@ -21,7 +21,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import {
-  createInnings, createOver, updateOver, updateInnings,
+  createInnings, enqueueInningsSync, createOver, updateOver, updateInnings,
   saveBall, getCurrentOver, getMatchInnings, getTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings,
@@ -602,9 +602,23 @@ const LiveScoringScreen = ({ navigation, route }) => {
           bowling_team_id: bowlingTeam.id,
         });
         active = { id: inningsId, total_runs: 0, total_wickets: 0, extras: 0 };
-        // Immediately push innings to MySQL — don't wait for background timer
-        processSyncQueue().catch(() => {});
+      } else {
+        // Innings already in SQLite — overwrite teams from toss result then re-queue.
+        // The SQLite row may have been created before the toss so batting/bowling
+        // teams might be wrong; always overwrite with what LiveScoring received.
+        await updateInnings(active.id, {
+          batting_team_id: battingTeam.id,
+          bowling_team_id: bowlingTeam.id,
+        });
+        active = {
+          ...active,
+          batting_team_id: battingTeam.id,
+          bowling_team_id: bowlingTeam.id,
+        };
+        await enqueueInningsSync(active, match);
       }
+      // Always trigger immediate sync to MySQL after toss/innings init
+      processSyncQueue().catch(() => {});
       setInnings(active);
       setTotalRuns(active.total_runs || 0);
       setTotalWickets(active.total_wickets || 0);

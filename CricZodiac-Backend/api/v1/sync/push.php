@@ -595,8 +595,8 @@ function resolveOverRow(PDO $pdo, $value): ?array {
 function syncInnings(PDO $pdo, string $action, array $d): bool {
     // Resolve match UUID → integer id + club_id + series_id
     $matchRow  = resolveMatchRow($pdo, $d['match_id'] ?? null);
-    $matchId   = $matchRow['id']       ?? null;
-    $clubId    = $matchRow['club_id']  ?? null;
+    $matchId   = $matchRow['id']        ?? null;
+    $clubId    = $matchRow['club_id']   ?? (isset($d['club_id']) && is_numeric($d['club_id']) ? (int)$d['club_id'] : null);
     $seriesId  = $matchRow['series_id'] ?? null;
 
     // Resolve team UUIDs → integer ids
@@ -619,12 +619,13 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
         }
 
         if ($existing) {
+            // Always overwrite batting/bowling team — toss result must win over stale data
             $pdo->prepare("
                 UPDATE innings
-                SET batting_team_id    = COALESCE(?, batting_team_id),
-                    batting_team_local = COALESCE(?, batting_team_local),
-                    bowling_team_id    = COALESCE(?, bowling_team_id),
-                    bowling_team_local = COALESCE(?, bowling_team_local),
+                SET batting_team_id    = ?,
+                    batting_team_local = ?,
+                    bowling_team_id    = ?,
+                    bowling_team_local = ?,
                     total_runs         = ?,
                     total_wickets      = ?,
                     local_id           = COALESCE(local_id, ?),
