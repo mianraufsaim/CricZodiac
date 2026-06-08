@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS teams (
   id            TEXT PRIMARY KEY,
   server_id     INTEGER,
   match_id      TEXT REFERENCES matches(id),
+  series_id     TEXT REFERENCES series(id),
   team_name     TEXT NOT NULL,
   team_label    TEXT NOT NULL DEFAULT 'A',  -- A | B
   captain_id    TEXT REFERENCES players(id),

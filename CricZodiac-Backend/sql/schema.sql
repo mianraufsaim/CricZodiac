@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS teams (
     local_id        VARCHAR(36) UNIQUE,
     club_id         INT UNSIGNED,
     match_id        INT UNSIGNED,
+    series_id       INT UNSIGNED,
     match_local_id  VARCHAR(36),
     team_name       VARCHAR(100) NOT NULL,
     team_label      VARCHAR(2) NOT NULL DEFAULT 'A',
@@ -147,8 +148,10 @@ CREATE TABLE IF NOT EXISTS teams (
     wk_local        VARCHAR(36),
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_match  (match_id),
+    INDEX idx_series (series_id),
     INDEX idx_local  (local_id),
-    INDEX idx_club   (club_id)
+    INDEX idx_club   (club_id),
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- ── Team Players ──────────────────────────────────────────

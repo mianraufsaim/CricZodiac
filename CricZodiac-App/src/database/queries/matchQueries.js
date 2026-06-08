@@ -116,16 +116,18 @@ export const upsertMatchesFromServer = async (serverMatches) => {
 
 export const createTeam = async (teamData) => {
   const id = teamData.id || uuid.v4();
+  const match = await queryFirstRow('SELECT series_id FROM matches WHERE id = ?', [teamData.match_id]);
+  const seriesId = teamData.series_id || match?.series_id || null;
   await executeTransaction([
     {
-      sql: `INSERT INTO teams (id, match_id, team_name, team_label, captain_id, sync_status)
-            VALUES (?,?,?,?,?,?)`,
-      params: [id, teamData.match_id, teamData.team_name, teamData.team_label, teamData.captain_id, SYNC_STATUS.PENDING],
+      sql: `INSERT INTO teams (id, match_id, series_id, team_name, team_label, captain_id, sync_status)
+            VALUES (?,?,?,?,?,?,?)`,
+      params: [id, teamData.match_id, seriesId, teamData.team_name, teamData.team_label, teamData.captain_id, SYNC_STATUS.PENDING],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'teams', 'create', id, JSON.stringify({ ...teamData, id }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'teams', 'create', id, JSON.stringify({ ...teamData, id, series_id: seriesId }), SYNC_STATUS.PENDING],
     },
   ]);
   return id;

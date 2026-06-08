@@ -239,10 +239,10 @@ function resolveMatchRow(PDO $pdo, $value): ?array {
 
     $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
     if ($isUuid) {
-        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE local_id = ? LIMIT 1");
         $st->execute([$value]);
     } else {
-        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
         $st->execute([(string) $value, (int) $value]);
     }
 
@@ -287,6 +287,7 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
     $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
     $matchId = $matchRow['id']     ?? null;
     $clubId  = $matchRow['club_id'] ?? null;
+    $seriesId = resolveSeriesId($pdo, $d['series_id'] ?? null) ?? ($matchRow['series_id'] ?? null);
 
     // 2. Resolve captain UUID → MySQL integer id
     $captainId = resolvePlayerId($pdo, $d['captain_id'] ?? null);
@@ -318,11 +319,13 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
                 captain_local = ?,
                 wk_id         = ?,
                 wk_local      = ?,
+                series_id     = ?,
                 local_id      = COALESCE(local_id, ?)
             WHERE id = ?
         ")->execute([
             $teamName, $captainId, $captainLocal,
             $wkId, $wkLocal,
+            $seriesId,
             $localId,
             $existing['id'],
         ]);
@@ -330,14 +333,14 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
         // 5b. INSERT new row
         $pdo->prepare("
             INSERT INTO teams
-                (local_id, club_id, match_id, match_local_id,
+                (local_id, club_id, match_id, series_id, match_local_id,
                  team_name, team_label,
                  captain_id, captain_local,
                  wk_id, wk_local,
                  created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
         ")->execute([
-            $localId, $clubId, $matchId, $matchLocalId,
+            $localId, $clubId, $matchId, $seriesId, $matchLocalId,
             $teamName, $teamLabel,
             $captainId, $captainLocal,
             $wkId, $wkLocal,

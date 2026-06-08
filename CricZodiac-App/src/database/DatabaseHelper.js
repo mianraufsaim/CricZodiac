@@ -117,6 +117,7 @@ const initializeTables = async (database) => {
         id            TEXT PRIMARY KEY,
         server_id     INTEGER,
         match_id      TEXT,
+        series_id     TEXT,
         team_name     TEXT NOT NULL,
         team_label    TEXT NOT NULL DEFAULT 'A',
         captain_id    TEXT,
@@ -408,6 +409,7 @@ const initializeTables = async (database) => {
     `ALTER TABLE matches  ADD COLUMN club_id TEXT;`,
     `ALTER TABLE series   ADD COLUMN club_id TEXT;`,
     `ALTER TABLE teams    ADD COLUMN club_id TEXT;`,
+    `ALTER TABLE teams    ADD COLUMN series_id TEXT;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }
@@ -418,9 +420,22 @@ const initializeTables = async (database) => {
     `CREATE INDEX IF NOT EXISTS idx_players_club  ON players(club_id);`,
     `CREATE INDEX IF NOT EXISTS idx_matches_club  ON matches(club_id);`,
     `CREATE INDEX IF NOT EXISTS idx_series_club   ON series(club_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_teams_series  ON teams(series_id);`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(idxSql); }); } catch (_) { /* exists */ }
   }
+
+  try {
+    await database.transaction(tx => {
+      tx.executeSql(`
+        UPDATE teams
+        SET series_id = (
+          SELECT m.series_id FROM matches m WHERE m.id = teams.match_id
+        )
+        WHERE series_id IS NULL
+      `);
+    });
+  } catch (_) { /* best-effort cache backfill */ }
 
   // Migration: local_password — allows offline login for locally-registered users
   try {

@@ -253,8 +253,8 @@ const TeamSelectionScreen = ({ navigation, route }) => {
     }
     setSaving(true);
     try {
-      const teamAId = await createTeam({ match_id: matchId, team_name: form.team_a_name, team_label: 'A', captain_id: captainA.id, wk_id: wkA?.id });
-      const teamBId = await createTeam({ match_id: matchId, team_name: form.team_b_name, team_label: 'B', captain_id: captainB.id, wk_id: wkB?.id });
+      const teamAId = await createTeam({ match_id: matchId, series_id: form.series_id, team_name: form.team_a_name, team_label: 'A', captain_id: captainA.id, wk_id: wkA?.id });
+      const teamBId = await createTeam({ match_id: matchId, series_id: form.series_id, team_name: form.team_b_name, team_label: 'B', captain_id: captainB.id, wk_id: wkB?.id });
 
       for (let i = 0; i < teamAPlayers.length; i++) await addPlayerToTeam(teamAId, teamAPlayers[i].id, i + 1);
       for (let i = 0; i < teamBPlayers.length; i++) await addPlayerToTeam(teamBId, teamBPlayers[i].id, i + 1);

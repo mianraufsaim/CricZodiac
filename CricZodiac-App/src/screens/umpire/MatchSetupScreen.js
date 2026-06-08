@@ -147,7 +147,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
         });
       }
 
-      navigation.navigate('TeamSelection', { matchId, form, matchNumber });
+      navigation.navigate('TeamSelection', { matchId, form: matchData, matchNumber });
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {
