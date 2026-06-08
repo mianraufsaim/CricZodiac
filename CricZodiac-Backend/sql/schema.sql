@@ -201,6 +201,8 @@ CREATE TABLE IF NOT EXISTS toss_results (
 CREATE TABLE IF NOT EXISTS innings (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id            VARCHAR(36) UNIQUE,
+    club_id             INT UNSIGNED,
+    series_id           INT UNSIGNED,
     match_id            INT UNSIGNED,
     match_local_id      VARCHAR(36),
     innings_number      TINYINT UNSIGNED NOT NULL,
@@ -216,14 +218,18 @@ CREATE TABLE IF NOT EXISTS innings (
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_match_innings (match_id, innings_number),
-    INDEX idx_match  (match_id),
-    INDEX idx_local  (local_id)
+    INDEX idx_match       (match_id),
+    INDEX idx_club_series (club_id, series_id),
+    INDEX idx_local       (local_id)
 ) ENGINE=InnoDB;
 
 -- ── Overs ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS overs (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id         VARCHAR(36) UNIQUE,
+    club_id          INT UNSIGNED,
+    series_id        INT UNSIGNED,
+    match_id         INT UNSIGNED,
     innings_id       INT UNSIGNED,
     innings_local_id VARCHAR(36),
     over_number      TINYINT UNSIGNED NOT NULL,
@@ -235,15 +241,19 @@ CREATE TABLE IF NOT EXISTS overs (
     balls_bowled     TINYINT UNSIGNED DEFAULT 0,
     is_completed     TINYINT(1) DEFAULT 0,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_innings_over (innings_id, over_number),
-    INDEX idx_innings (innings_id),
-    INDEX idx_local   (local_id)
+    UNIQUE KEY uq_innings_over    (innings_id, over_number),
+    INDEX idx_match               (match_id),
+    INDEX idx_innings             (innings_id),
+    INDEX idx_overs_club_series   (club_id, series_id),
+    INDEX idx_local               (local_id)
 ) ENGINE=InnoDB;
 
 -- ── Balls ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS balls (
     id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id             VARCHAR(36) UNIQUE,
+    club_id              INT UNSIGNED,
+    series_id            INT UNSIGNED,
     over_id              INT UNSIGNED,
     over_local_id        VARCHAR(36),
     innings_id           INT UNSIGNED,
@@ -266,9 +276,10 @@ CREATE TABLE IF NOT EXISTS balls (
     is_six               TINYINT(1) DEFAULT 0,
     is_valid_ball        TINYINT(1) DEFAULT 1,
     created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_innings  (innings_id),
-    INDEX idx_over     (over_id),
-    INDEX idx_local    (local_id)
+    INDEX idx_innings       (innings_id),
+    INDEX idx_over          (over_id),
+    INDEX idx_balls_club_series (club_id, series_id),
+    INDEX idx_local         (local_id)
 ) ENGINE=InnoDB;
 
 -- ── Wickets ───────────────────────────────────────────────
@@ -297,6 +308,9 @@ CREATE TABLE IF NOT EXISTS wickets (
 CREATE TABLE IF NOT EXISTS batting_scorecards (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id         VARCHAR(36) UNIQUE,
+    club_id          INT UNSIGNED,
+    series_id        INT UNSIGNED,
+    match_id         INT UNSIGNED,
     innings_id       INT UNSIGNED,
     innings_local_id VARCHAR(36),
     player_id        INT UNSIGNED,
@@ -313,15 +327,20 @@ CREATE TABLE IF NOT EXISTS batting_scorecards (
     fielder_id       INT UNSIGNED,
     batting_order    TINYINT UNSIGNED DEFAULT 0,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_innings_player (innings_id, player_id),
-    INDEX idx_innings (innings_id),
-    INDEX idx_player  (player_id)
+    UNIQUE KEY uq_innings_player      (innings_id, player_id),
+    INDEX idx_innings                 (innings_id),
+    INDEX idx_player                  (player_id),
+    INDEX idx_batting_match           (match_id),
+    INDEX idx_batting_club_series     (club_id, series_id)
 ) ENGINE=InnoDB;
 
 -- ── Bowling Scorecards ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS bowling_scorecards (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id         VARCHAR(36) UNIQUE,
+    club_id          INT UNSIGNED,
+    series_id        INT UNSIGNED,
+    match_id         INT UNSIGNED,
     innings_id       INT UNSIGNED,
     innings_local_id VARCHAR(36),
     player_id        INT UNSIGNED,
@@ -334,9 +353,11 @@ CREATE TABLE IF NOT EXISTS bowling_scorecards (
     no_balls         TINYINT UNSIGNED DEFAULT 0,
     wides            TINYINT UNSIGNED DEFAULT 0,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_innings_player (innings_id, player_id),
-    INDEX idx_innings (innings_id),
-    INDEX idx_player  (player_id)
+    UNIQUE KEY uq_innings_player      (innings_id, player_id),
+    INDEX idx_innings                 (innings_id),
+    INDEX idx_player                  (player_id),
+    INDEX idx_bowling_match           (match_id),
+    INDEX idx_bowling_club_series     (club_id, series_id)
 ) ENGINE=InnoDB;
 
 -- ── Match Results ─────────────────────────────────────────

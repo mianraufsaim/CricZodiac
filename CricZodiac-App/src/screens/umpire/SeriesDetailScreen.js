@@ -158,8 +158,28 @@ const SeriesDetailScreen = ({ navigation, route }) => {
         }
         navigation.navigate('Toss', {
           match:        item,
-          teamA:        { id: teamA.local_id || String(teamA.id), team_name: teamA.team_name, captain_id: teamA.captain_local || String(teamA.captain_id), captain_name: teamA.captain_name },
-          teamB:        { id: teamB.local_id || String(teamB.id), team_name: teamB.team_name, captain_id: teamB.captain_local || String(teamB.captain_id), captain_name: teamB.captain_name },
+          teamA: {
+            id:           teamA.local_id || String(teamA.id),
+            server_id:    teamA.id,
+            team_name:    teamA.team_name,
+            team_label:   'A',
+            captain_id:   teamA.captain_local || String(teamA.captain_id),
+            captain_name: teamA.captain_name,
+            match_id:     item.id,
+            club_id:      item.club_id,
+            series_id:    item.series_id,
+          },
+          teamB: {
+            id:           teamB.local_id || String(teamB.id),
+            server_id:    teamB.id,
+            team_name:    teamB.team_name,
+            team_label:   'B',
+            captain_id:   teamB.captain_local || String(teamB.captain_id),
+            captain_name: teamB.captain_name,
+            match_id:     item.id,
+            club_id:      item.club_id,
+            series_id:    item.series_id,
+          },
           isFirstMatch: index === 0,
         });
       } catch (e) {

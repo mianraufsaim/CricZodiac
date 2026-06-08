@@ -186,6 +186,44 @@ export const getTeamPlayers = (teamId) =>
     ORDER BY tp.batting_order ASC
   `, [teamId]);
 
+// Cache team players received from the server into SQLite.
+// serverPlayers: array from GET /teams/players.php
+// teamLocalId: the SQLite UUID for this team
+export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) => {
+  if (!serverPlayers?.length) return;
+  for (const sp of serverPlayers) {
+    // Prefer local UUIDs; fall back to string of server integer id
+    const playerId = sp.player_uuid || String(sp.player_id);
+    const tpId     = sp.local_id    || String(sp.id);
+
+    // Ensure player row exists in SQLite
+    await executeQuery(
+      `INSERT OR IGNORE INTO players
+         (id, server_id, user_id, full_name, player_type, batting_hand, bowling_style, profile_pic, is_active, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+      [
+        playerId,
+        sp.player_id   || null,
+        sp.user_uuid   || null,
+        sp.full_name   || '',
+        sp.player_type || 'allrounder',
+        sp.batting_hand || 'right',
+        sp.bowling_style || null,
+        sp.profile_pic  || null,
+        sp.is_active != null ? (sp.is_active ? 1 : 0) : 1,
+      ]
+    );
+
+    // Ensure team_player row exists in SQLite
+    await executeQuery(
+      `INSERT OR IGNORE INTO team_players
+         (id, team_id, player_id, batting_order, sync_status)
+       VALUES (?, ?, ?, ?, 'synced')`,
+      [tpId, teamLocalId, playerId, sp.batting_order || 0]
+    );
+  }
+};
+
 export const getMatchTeams = (matchId) =>
   queryRows('SELECT * FROM teams WHERE match_id = ?', [matchId]);
 

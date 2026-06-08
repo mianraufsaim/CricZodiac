@@ -61,6 +61,7 @@ export const API_ENDPOINTS = {
   TEAMS_CREATE:   `${API_BASE_URL}/teams/create.php`,
   TEAMS_UPDATE:   `${API_BASE_URL}/teams/update.php`,
   TEAMS_LIST:     `${API_BASE_URL}/teams/list.php`,
+  TEAMS_PLAYERS:  `${API_BASE_URL}/teams/players.php`,
 
   // Matches
   MATCHES_CREATE: `${API_BASE_URL}/matches/create.php`,

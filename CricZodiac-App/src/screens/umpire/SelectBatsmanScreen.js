@@ -3,8 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, TextInput, A
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getTeamPlayers } from '../../database/queries/matchQueries';
+import { getTeamPlayers, upsertTeamPlayersFromServer } from '../../database/queries/matchQueries';
 import { getBattingScorecard } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
 
 const SelectBatsmanScreen = ({ navigation, route }) => {
@@ -52,8 +54,44 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   }, [players, searchQuery]);
 
   const load = async () => {
-    const teamPlayers = await getTeamPlayers(team.id);
-    const scorecard   = await getBattingScorecard(inningsId);
+    // 1. Try SQLite first
+    let teamPlayers = await getTeamPlayers(team.id);
+
+    // 2. SQLite empty → fetch from MySQL via API
+    if (!teamPlayers?.length) {
+      try {
+        const params = new URLSearchParams();
+        // Prefer team UUID; API also accepts integer server_id
+        params.set('team_id',    team.id);
+        // Also send match + label as fallback inside the API
+        if (team.match_id)   params.set('match_id',   String(team.match_id));
+        if (team.team_label) params.set('team_label',  team.team_label);
+        if (team.club_id)    params.set('club_id',     String(team.club_id));
+
+        const res        = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${params.toString()}`);
+        const serverList = res?.players || res?.data?.players || [];
+
+        if (serverList.length) {
+          // Cache into SQLite so subsequent loads hit local DB
+          await upsertTeamPlayersFromServer(serverList, team.id);
+          // Reload from SQLite to get the joined full_name/player_type
+          teamPlayers = await getTeamPlayers(team.id);
+          // If join still empty (player rows not cached yet), build directly from server response
+          if (!teamPlayers?.length) {
+            teamPlayers = serverList.map(sp => ({
+              player_id:   sp.player_uuid || String(sp.player_id),
+              full_name:   sp.full_name   || 'Unknown',
+              player_type: sp.player_type || 'allrounder',
+            }));
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[SelectBatsman] API fallback failed:', apiErr?.message);
+      }
+    }
+
+    // 3. Filter out already-batting and dismissed players
+    const scorecard    = await getBattingScorecard(inningsId);
     const outPlayerIds = new Set();
     for (const score of scorecard) {
       if (score.is_out) outPlayerIds.add(score.player_id);
@@ -65,13 +103,11 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
         player.player_id === existingStrikerId ||
         player.player_id === existingNonStrikerId ||
         outPlayerIds.has(player.player_id)
-      ) {
-        continue;
-      }
+      ) continue;
 
       availablePlayers.push({
-        id: player.player_id,
-        full_name: player.full_name,
+        id:          player.player_id,
+        full_name:   player.full_name,
         player_type: player.player_type,
       });
     }
