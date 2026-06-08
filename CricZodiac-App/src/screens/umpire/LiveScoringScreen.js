@@ -507,6 +507,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const overNumRef    = useRef(1);
   const totalRunsRef  = useRef(0);
   const totalWktsRef  = useRef(0);
+  const processedBatsmanSelectionRef = useRef(null);
+  const processedBowlerSelectionRef  = useRef(null);
+  const processedWicketDismissedRef  = useRef(null);
 
   useEffect(() => { initScoring(); }, []);
 
@@ -521,6 +524,50 @@ const LiveScoringScreen = ({ navigation, route }) => {
   useEffect(() => { totalRunsRef.current  = totalRuns;  }, [totalRuns]);
   useEffect(() => { totalWktsRef.current  = totalWickets;}, [totalWickets]);
 
+  useEffect(() => {
+    const selection = route.params?.batsmanSelection;
+    if (!selection?.requestId || processedBatsmanSelectionRef.current === selection.requestId) return;
+
+    processedBatsmanSelectionRef.current = selection.requestId;
+    if (selection.type === 'new_batsman') {
+      setStriker(selection.striker || null);
+      setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+    } else if (selection.striker && selection.nonStriker) {
+      setStriker(selection.striker);
+      setNonStriker(selection.nonStriker);
+      setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+    }
+    navigation.setParams({ batsmanSelection: null });
+  }, [navigation, route.params?.batsmanSelection]);
+
+  useEffect(() => {
+    const selection = route.params?.bowlerSelection;
+    if (!selection?.requestId || processedBowlerSelectionRef.current === selection.requestId) return;
+
+    processedBowlerSelectionRef.current = selection.requestId;
+    if (selection.bowler) {
+      setBowler(selection.bowler);
+      setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
+    }
+    if (selection.resetOver) {
+      setOverBalls([]);
+      setLegalBalls(0);
+      legalRef.current = 0;
+    }
+    navigation.setParams({ bowlerSelection: null });
+  }, [navigation, route.params?.bowlerSelection]);
+
+  useEffect(() => {
+    const dismissed = route.params?.wicketDismissed;
+    if (!dismissed?.requestId || processedWicketDismissedRef.current === dismissed.requestId) return;
+
+    processedWicketDismissedRef.current = dismissed.requestId;
+    setStriker(null);
+    setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+    navigation.setParams({ wicketDismissed: null });
+  }, [navigation, route.params?.wicketDismissed]);
+
   // After both batsmen are set and there is no bowler yet → ask for bowler
   useEffect(() => {
     if (!striker || !nonStriker) return;
@@ -531,10 +578,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
       navigation.navigate('SelectBowler', {
         inningsId: inningsRef.current.id,
         team:      bowlingTeam,
-        onSelect:  (b) => {
-          setBowler(b);
-          setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
-        },
+        requestId: uuid.v4(),
+        returnScreen: 'LiveScoring',
       });
     }, 300);
     return () => clearTimeout(t);
@@ -583,12 +628,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
         navigation.navigate('SelectBatsman', {
           inningsId: active.id,
           team: battingTeam,
-          onSelect: (s, ns) => {
-            setStriker(s);
-            setNonStriker(ns);
-            setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-            setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-          },
+          requestId: uuid.v4(),
+          returnScreen: 'LiveScoring',
+          selectionType: 'opening_pair',
         });
       }, 300);
     } catch (err) {
@@ -607,13 +649,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
       navigation.navigate('SelectBowler', {
         inningsId: inningsRef.current?.id,
         team: bowlingTeam,
-        onSelect: (b) => {
-          setBowler(b);
-          setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
-          setOverBalls([]);
-          setLegalBalls(0);
-          legalRef.current = 0;
-        },
+        requestId: uuid.v4(),
+        returnScreen: 'LiveScoring',
+        resetOver: true,
       });
       return null;
     }
@@ -805,14 +843,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
           inningsId:       inn.id,
           team:            bowlingTeam,
           currentBowlerId: bwl.id,
-          onSelect: (b) => {
-            setBowler(b);
-            setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
-            // Explicitly clear over display so dots reset immediately
-            setOverBalls([]);
-            setLegalBalls(0);
-            legalRef.current = 0;
-          },
+          requestId:       uuid.v4(),
+          returnScreen:    'LiveScoring',
+          resetOver:       true,
         });
       }
     } catch (err) {
@@ -891,10 +924,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
         bowler:      bwl,
         totalRuns:   totRuns,
         overAtFall:  `${ovNum}.${newLegal}`,
-        onDismissed: (newBatsman) => {
-          setStriker(newBatsman);
-          setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-        },
+        requestId:   uuid.v4(),
+        returnScreen:'LiveScoring',
       });
 
       // Over complete after wicket ball
@@ -1079,12 +1110,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
     navigation.navigate('SelectBatsman', {
       inningsId: inningsRef.current.id,
       team:      battingTeam,
-      onSelect:  (s, ns) => {
-        setStriker(s);
-        setNonStriker(ns);
-        setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-        setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-      },
+      requestId: uuid.v4(),
+      returnScreen: 'LiveScoring',
+      selectionType: 'opening_pair',
     });
   };
 
@@ -1094,10 +1122,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
     navigation.navigate('SelectBowler', {
       inningsId: inningsRef.current.id,
       team:      bowlingTeam,
-      onSelect:  (b) => {
-        setBowler(b);
-        setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
-      },
+      requestId: uuid.v4(),
+      returnScreen: 'LiveScoring',
     });
   };
 

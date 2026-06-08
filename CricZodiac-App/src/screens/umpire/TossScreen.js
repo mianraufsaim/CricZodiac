@@ -377,7 +377,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   teamChipText:      { color: COLORS.white, fontWeight: '700', fontSize: 13 },
   vsText:            { color: COLORS.gold, fontWeight: '800', fontSize: 16 },
   coinArea:          { alignItems: 'center', justifyContent: 'center', height: 200, marginVertical: 20 },
-  coinContainer:     { shadowColor: COLORS.gold, shadowOpacity: 0.8, shadowRadius: 20, elevation: 20 },
+  coinContainer:     { width: 150, height: 150, borderRadius: 75, backgroundColor: COLORS.gold, shadowColor: COLORS.gold, shadowOpacity: 0.8, shadowRadius: 20, elevation: 20 },
   coin:              { width: 150, height: 150, borderRadius: 75, alignItems: 'center', justifyContent: 'center' },
   coinInner:         { alignItems: 'center' },
   coinSymbol:        { fontSize: 40 },

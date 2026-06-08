@@ -98,7 +98,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   circle1:        { position: 'absolute', top: -80, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(0,240,255,0.05)' },
   circle2:        { position: 'absolute', bottom: -100, left: -100, width: 400, height: 400, borderRadius: 200, backgroundColor: 'rgba(75,42,161,0.08)' },
   logoContainer:  { marginBottom: 32, alignItems: 'center' },
-  logoBox:        { width: 100, height: 100, borderRadius: 24, overflow: 'hidden', shadowColor: COLORS.cyan, shadowOpacity: 0.8, shadowRadius: 20, elevation: 20 },
+  logoBox:        { width: 100, height: 100, borderRadius: 24, overflow: 'hidden', backgroundColor: COLORS.navy, shadowColor: COLORS.cyan, shadowOpacity: 0.8, shadowRadius: 20, elevation: 20 },
   logoGradient:   { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logoLetter:     { fontSize: 64, fontWeight: '900', color: COLORS.white, fontStyle: 'italic' },
   goldSwash:      { position: 'absolute', bottom: 12, right: -10, width: 80, height: 4, backgroundColor: COLORS.gold, borderRadius: 2, transform: [{ rotate: '-15deg' }] },

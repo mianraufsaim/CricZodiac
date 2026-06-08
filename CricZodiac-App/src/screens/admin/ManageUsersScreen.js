@@ -490,7 +490,7 @@ const getStStyles = (COLORS) => StyleSheet.create({
   emptyBtn:      { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: COLORS.royalBlue, borderRadius: 10 },
   emptyBtnTxt:   { color: COLORS.white, fontWeight: '700' },
   fab:           { position: 'absolute', bottom: 28, right: 24 },
-  fabInner:      { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 8 },
+  fabInner:      { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.royalBlue, elevation: 8 },
 });
 
 const getShStyles = (COLORS) => StyleSheet.create({

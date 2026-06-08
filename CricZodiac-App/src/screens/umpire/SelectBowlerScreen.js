@@ -4,12 +4,20 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getTeamPlayers } from '../../database/queries/matchQueries';
+import uuid from 'react-native-uuid';
 
 const SelectBowlerScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { inningsId, team, onSelect, currentBowlerId } = route.params;
+  const {
+    inningsId,
+    team,
+    currentBowlerId,
+    requestId,
+    returnScreen = 'LiveScoring',
+    resetOver = false,
+  } = route.params;
   const [players, setPlayers]             = useState([]);
   const [selected, setSelected]           = useState(null);
   const [searchQuery, setSearchQuery]     = useState('');
@@ -45,8 +53,17 @@ const SelectBowlerScreen = ({ navigation, route }) => {
 
   const confirm = () => {
     if (!selected) return;
-    onSelect?.(selected);
-    navigation.goBack();
+    navigation.navigate({
+      name: returnScreen,
+      params: {
+        bowlerSelection: {
+          requestId: requestId || uuid.v4(),
+          bowler: selected,
+          resetOver,
+        },
+      },
+      merge: true,
+    });
   };
 
   return (

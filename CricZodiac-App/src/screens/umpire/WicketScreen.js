@@ -15,7 +15,16 @@ const WicketScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { inningsId, batsman, bowler, totalRuns, overAtFall, onDismissed, bowlingTeam } = route.params;
+  const {
+    inningsId,
+    batsman,
+    bowler,
+    totalRuns,
+    overAtFall,
+    bowlingTeam,
+    requestId,
+    returnScreen = 'LiveScoring',
+  } = route.params;
   const [selectedType, setSelectedType]   = useState(null);
   const [fielder, setFielder]             = useState(null);
   const [fieldingTeam, setFieldingTeam]   = useState([]);
@@ -42,8 +51,15 @@ const WicketScreen = ({ navigation, route }) => {
         runs_at_fall: totalRuns,
         over_at_fall: overAtFall,
       });
-      navigation.goBack();
-      onDismissed?.(null); // trigger batsman selection
+      navigation.navigate({
+        name: returnScreen,
+        params: {
+          wicketDismissed: {
+            requestId: requestId || uuid.v4(),
+          },
+        },
+        merge: true,
+      });
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {

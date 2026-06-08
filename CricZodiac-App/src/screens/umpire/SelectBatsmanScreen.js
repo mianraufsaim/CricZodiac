@@ -5,12 +5,22 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getTeamPlayers } from '../../database/queries/matchQueries';
 import { getBattingScorecard } from '../../database/queries/matchQueries';
+import uuid from 'react-native-uuid';
 
 const SelectBatsmanScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { inningsId, team, onSelect, existingStrikerId, existingNonStrikerId, mode } = route.params;
+  const {
+    inningsId,
+    team,
+    existingStrikerId,
+    existingNonStrikerId,
+    mode,
+    requestId,
+    returnScreen = 'LiveScoring',
+    selectionType,
+  } = route.params;
   const [players, setPlayers]   = useState([]);
   const [striker, setStriker]   = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
@@ -72,13 +82,32 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   const handleConfirm = () => {
     if (mode === 'new_batsman') {
       if (!striker) { Alert.alert('Select a batsman'); return; }
-      onSelect?.(striker);
-      navigation.goBack();
+      navigation.navigate({
+        name: returnScreen,
+        params: {
+          batsmanSelection: {
+            requestId: requestId || uuid.v4(),
+            type: 'new_batsman',
+            striker,
+          },
+        },
+        merge: true,
+      });
     } else {
       if (!striker) { Alert.alert('Selection Incomplete', 'Please select the Striker.'); return; }
       if (!nonStriker) { Alert.alert('Selection Incomplete', 'Please select the Non-Striker.'); return; }
-      onSelect?.(striker, nonStriker);
-      navigation.goBack();
+      navigation.navigate({
+        name: returnScreen,
+        params: {
+          batsmanSelection: {
+            requestId: requestId || uuid.v4(),
+            type: selectionType || 'opening_pair',
+            striker,
+            nonStriker,
+          },
+        },
+        merge: true,
+      });
     }
   };
 
