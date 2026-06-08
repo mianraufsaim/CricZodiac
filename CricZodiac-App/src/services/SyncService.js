@@ -22,7 +22,7 @@ import { queryRows, executeQuery } from '../database/DatabaseHelper';
 
 // Tables that have a sync_status column and should be updated after sync
 const SYNCABLE_TABLES = [
-  'series', 'matches', 'players', 'teams', 'innings', 'balls',
+  'clubs', 'users', 'series', 'matches', 'players', 'teams', 'innings', 'balls',
   'batting_scorecards', 'bowling_scorecards', 'wickets', 'overs',
   'team_players', 'toss_results', 'match_results',
 ];
@@ -324,6 +324,8 @@ export const getSyncStatus = async () => {
 // ── Helpers ───────────────────────────────────────────────
 const SYNC_TABLE_ORDER = [
   'clubs',
+  'users',
+  'players',
   'series',
   'matches',
   'teams',
@@ -336,8 +338,6 @@ const SYNC_TABLE_ORDER = [
   'batting_scorecards',
   'bowling_scorecards',
   'match_results',
-  'players',
-  'users',
 ];
 
 const sortBatchesForDependencies = (batches) => {

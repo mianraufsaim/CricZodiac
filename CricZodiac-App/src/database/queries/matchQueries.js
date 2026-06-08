@@ -176,23 +176,11 @@ export const addPlayerToTeam = async (teamId, playerId, battingOrder = 0) => {
   return id;
 };
 
-export const getTeamPlayers = (teamId) =>
-  queryRows(`
+export const getTeamPlayers = async (teamId) => {
+  const rows = await queryRows(`
     SELECT
       tp.*,
-      COALESCE(
-        (
-          SELECT NULLIF(TRIM(u.name), '')
-          FROM users u
-          WHERE u.id = p.user_id
-             OR CAST(u.server_id AS TEXT) = CAST(p.user_id AS TEXT)
-             OR p.user_id = ('u_' || u.server_id)
-          ORDER BY CASE WHEN u.id = p.user_id THEN 0 ELSE 1 END
-          LIMIT 1
-        ),
-        NULLIF(TRIM(p.full_name), ''),
-        'Unknown'
-      ) AS full_name,
+      p.user_id AS player_user_id,
       p.player_type,
       p.profile_pic
     FROM team_players tp
@@ -200,6 +188,42 @@ export const getTeamPlayers = (teamId) =>
     WHERE tp.team_id = ?
     ORDER BY tp.batting_order ASC
   `, [teamId]);
+
+  const userColumns = await queryRows('PRAGMA table_info(users)');
+  let hasServerId = false;
+  for (const column of userColumns) {
+    if (column.name === 'server_id') {
+      hasServerId = true;
+      break;
+    }
+  }
+
+  const users = await queryRows(
+    `SELECT id, ${hasServerId ? 'server_id' : 'NULL AS server_id'}, name FROM users`
+  );
+  const namesByUserRef = new Map();
+  for (const user of users) {
+    const name = (user.name || '').trim();
+    if (!name) continue;
+
+    if (user.id != null) namesByUserRef.set(String(user.id), name);
+    if (user.server_id != null) {
+      namesByUserRef.set(String(user.server_id), name);
+      namesByUserRef.set(`u_${user.server_id}`, name);
+    }
+  }
+
+  const resolved = [];
+  for (const row of rows) {
+    const userRef = row.player_user_id != null ? String(row.player_user_id) : '';
+    resolved.push({
+      ...row,
+      full_name: namesByUserRef.get(userRef) || 'Unknown',
+    });
+  }
+
+  return resolved;
+};
 
 // Cache team players received from the server into SQLite.
 // serverPlayers: array from GET /teams/players.php

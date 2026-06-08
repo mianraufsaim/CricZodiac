@@ -1331,7 +1331,8 @@ function syncPlayer(PDO $pdo, string $action, array $d): bool {
     // Resolve MySQL user_id.
     // user_id in payload is either a UUID (app-created user) or a plain integer (user with no local_id).
     $mysqlUserId = null;
-    if (!empty($d['user_id'])) {
+    $hasUserRef = array_key_exists('user_id', $d) && $d['user_id'] !== null && $d['user_id'] !== '';
+    if ($hasUserRef) {
         $isUuid = (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $d['user_id']);
         if ($isUuid) {
             $stmt = $pdo->prepare("SELECT id FROM users WHERE local_id = ? LIMIT 1");
@@ -1342,6 +1343,13 @@ function syncPlayer(PDO $pdo, string $action, array $d): bool {
         }
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $mysqlUserId = $row ? $row['id'] : null;
+    }
+
+    // If the app gave a user_id but that user has not reached MySQL yet,
+    // do not create an orphan player row. Return false so the queue retries
+    // after the users batch has synced.
+    if ($hasUserRef && !$mysqlUserId) {
+        return false;
     }
 
     if ($action === 'insert' || $action === 'create') {
