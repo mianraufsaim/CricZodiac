@@ -16,6 +16,20 @@ import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
+const normalizeSeriesRow = (row) => ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  team_a_id: row.team_a_local || (row.team_a_id != null ? String(row.team_a_id) : null),
+  team_b_id: row.team_b_local || (row.team_b_id != null ? String(row.team_b_id) : null),
+  match_count: Number(row.match_count || 0),
+  live_count: Number(row.live_count || 0),
+  completed_count: Number(row.completed_count || 0),
+  team_a_wins: Number(row.team_a_wins || 0),
+  team_b_wins: Number(row.team_b_wins || 0),
+});
+
 const SeriesListScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -29,13 +43,22 @@ const SeriesListScreen = ({ navigation }) => {
       try {
         const res = await ApiService.get(API_ENDPOINTS.SERIES_LIST);
         const serverSeries = res?.series || res?.data?.series || [];
-        if (serverSeries.length) await upsertSeriesFromServer(serverSeries);
-        const matchRes = await ApiService.get(API_ENDPOINTS.MATCHES_LIST);
-        const serverMatches = matchRes?.matches || matchRes?.data?.matches || [];
-        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
-      } catch (_) {
-        // Offline/server issue: show cached SQLite data.
+        setSeries(serverSeries.map(normalizeSeriesRow));
+
+        try {
+          if (serverSeries.length) await upsertSeriesFromServer(serverSeries);
+          const matchRes = await ApiService.get(API_ENDPOINTS.MATCHES_LIST);
+          const serverMatches = matchRes?.matches || matchRes?.data?.matches || [];
+          if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+        } catch (cacheError) {
+          console.warn('SeriesListScreen cache refresh:', cacheError.message);
+        }
+
+        return;
+      } catch (apiError) {
+        console.warn('SeriesListScreen API load:', apiError.message);
       }
+
       const rows = await getAllSeries();
       setSeries(rows);
     } catch (e) {
@@ -70,7 +93,7 @@ const SeriesListScreen = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => navigation.navigate('SeriesDetail', { seriesId: item.id, seriesName: item.name })}
+        onPress={() => navigation.navigate('SeriesDetail', { seriesId: item.id, seriesName: item.name, series: item })}
       >
         <View style={styles.cardLeft}>
           <LinearGradient colors={[COLORS.royalBlue, COLORS.purple]} style={styles.iconWrap}>

@@ -207,47 +207,92 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         }
 
     } elseif ($action === 'update') {
-        $allowed = ['title','venue','match_date','overs','status','toss_winner_id','batting_first','result_text','winner_team_id'];
+        $matchRow = resolveMatchRow($pdo, $d['id'] ?? null);
+        if (!$matchRow) return true;
+
+        $allowed = [
+            'club_id', 'title', 'venue', 'match_date', 'overs', 'players_per_team',
+            'max_overs_per_bowler', 'wide_value', 'no_ball_value', 'status',
+            'toss_winner_id', 'batting_first', 'result_text', 'winner_team_id',
+            'player_of_match',
+        ];
         $sets = []; $params = [];
         foreach ($allowed as $col) {
             if (array_key_exists($col, $d)) { $sets[] = "$col = ?"; $params[] = $d[$col]; }
         }
+        if (array_key_exists('series_id', $d)) {
+            $sets[] = "series_id = ?";
+            $params[] = resolveSeriesId($pdo, $d['series_id']);
+            $sets[] = "series_local_id = ?";
+            $params[] = $d['series_id'] ?: null;
+        }
         if ($sets) {
-            $params[] = $d['id'];
-            $pdo->prepare("UPDATE matches SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE local_id=?")->execute($params);
+            $params[] = $matchRow['id'];
+            $pdo->prepare("UPDATE matches SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?")->execute($params);
         }
     }
     return true;
 }
 
+function resolveMatchRow(PDO $pdo, $value): ?array {
+    if ($value === null || $value === '') return null;
+
+    $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
+    if ($isUuid) {
+        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? LIMIT 1");
+        $st->execute([$value]);
+    } else {
+        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
+        $st->execute([(string) $value, (int) $value]);
+    }
+
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
+function resolvePlayerId(PDO $pdo, $value): ?int {
+    if ($value === null || $value === '') return null;
+
+    $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
+    if ($isUuid) {
+        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? LIMIT 1");
+        $st->execute([$value]);
+    } else {
+        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? OR id = ? LIMIT 1");
+        $st->execute([(string) $value, (int) $value]);
+    }
+
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ? (int) $row['id'] : null;
+}
+
+function resolveTeamId(PDO $pdo, $value): ?int {
+    if ($value === null || $value === '') return null;
+
+    $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
+    if ($isUuid) {
+        $st = $pdo->prepare("SELECT id FROM teams WHERE local_id = ? LIMIT 1");
+        $st->execute([$value]);
+    } else {
+        $st = $pdo->prepare("SELECT id FROM teams WHERE local_id = ? OR id = ? LIMIT 1");
+        $st->execute([(string) $value, (int) $value]);
+    }
+
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ? (int) $row['id'] : null;
+}
+
 function syncTeam(PDO $pdo, string $action, array $d): bool {
     // 1. Resolve match UUID → MySQL integer id + club_id
-    $matchRow = null;
-    if (!empty($d['match_id'])) {
-        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? LIMIT 1");
-        $st->execute([$d['match_id']]);
-        $matchRow = $st->fetch(PDO::FETCH_ASSOC);
-    }
+    $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
     $matchId = $matchRow['id']     ?? null;
     $clubId  = $matchRow['club_id'] ?? null;
 
     // 2. Resolve captain UUID → MySQL integer id
-    $captainId = null;
-    if (!empty($d['captain_id'])) {
-        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? LIMIT 1");
-        $st->execute([$d['captain_id']]);
-        $row = $st->fetch(PDO::FETCH_ASSOC);
-        $captainId = $row['id'] ?? null;
-    }
+    $captainId = resolvePlayerId($pdo, $d['captain_id'] ?? null);
 
     // 3. Resolve wk UUID → MySQL integer id
-    $wkId = null;
-    if (!empty($d['wk_id'])) {
-        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? LIMIT 1");
-        $st->execute([$d['wk_id']]);
-        $row = $st->fetch(PDO::FETCH_ASSOC);
-        $wkId = $row['id'] ?? null;
-    }
+    $wkId = resolvePlayerId($pdo, $d['wk_id'] ?? null);
 
     $teamLabel    = $d['team_label']  ?? 'A';
     $teamName     = $d['team_name']   ?? '';
@@ -304,9 +349,16 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
 
 function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
     $pdo->prepare("
-        INSERT IGNORE INTO team_players (local_id, team_local_id, player_local_id, batting_order, created_at)
-        VALUES (?,?,?,?,NOW())
-    ")->execute([$d['id'], $d['team_id'], $d['player_id'], $d['batting_order'] ?? 0]);
+        INSERT IGNORE INTO team_players (local_id, team_id, team_local_id, player_id, player_local_id, batting_order, created_at)
+        VALUES (?,?,?,?,?,?,NOW())
+    ")->execute([
+        $d['id'],
+        resolveTeamId($pdo, $d['team_id'] ?? null),
+        $d['team_id'] ?? null,
+        resolvePlayerId($pdo, $d['player_id'] ?? null),
+        $d['player_id'] ?? null,
+        $d['batting_order'] ?? 0,
+    ]);
     return true;
 }
 

@@ -19,6 +19,35 @@ import { API_ENDPOINTS } from '../../config/api';
 
 const FORMAT_LABELS = { bestOf1: 'Best of 1', bestOf3: 'Best of 3', bestOf5: 'Best of 5' };
 
+const normalizeSeriesRow = (row) => ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  team_a_id: row.team_a_local || (row.team_a_id != null ? String(row.team_a_id) : null),
+  team_b_id: row.team_b_local || (row.team_b_id != null ? String(row.team_b_id) : null),
+  match_count: Number(row.match_count || 0),
+  live_count: Number(row.live_count || 0),
+  completed_count: Number(row.completed_count || 0),
+  team_a_wins: Number(row.team_a_wins || 0),
+  team_b_wins: Number(row.team_b_wins || 0),
+});
+
+const normalizeMatchRow = (row) => ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  series_id: row.series_local_id || (row.series_id != null ? String(row.series_id) : null),
+  team_a_id: row.team_a_local || (row.team_a_id != null ? String(row.team_a_id) : null),
+  team_b_id: row.team_b_local || (row.team_b_id != null ? String(row.team_b_id) : null),
+  overs: Number(row.overs || 6),
+  players_per_team: Number(row.players_per_team || 6),
+  max_overs_per_bowler: Number(row.max_overs_per_bowler || 0),
+  wide_value: Number(row.wide_value || 1),
+  no_ball_value: Number(row.no_ball_value || 1),
+});
+
 const winsNeededFor = (format) => {
   if (format === 'bestOf5') return 3;
   if (format === 'bestOf3') return 2;
@@ -29,8 +58,8 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { seriesId, seriesName } = route.params;
-  const [series, setSeries]   = useState(null);
+  const { seriesId, seriesName, series: routeSeries = null } = route.params;
+  const [series, setSeries]   = useState(routeSeries);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,12 +67,40 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       try {
-        const res = await ApiService.get(`${API_ENDPOINTS.MATCHES_LIST}?series_id=${encodeURIComponent(seriesId)}`);
-        const serverMatches = res?.matches || res?.data?.matches || [];
-        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
-      } catch (_) {
-        // Offline/server issue: show cached SQLite data.
+        const [seriesRes, matchRes] = await Promise.all([
+          routeSeries ? Promise.resolve(null) : ApiService.get(API_ENDPOINTS.SERIES_LIST),
+          ApiService.get(`${API_ENDPOINTS.MATCHES_LIST}?series_id=${encodeURIComponent(seriesId)}`),
+        ]);
+        const serverSeries = seriesRes?.series || seriesRes?.data?.series || [];
+        const serverMatches = matchRes?.matches || matchRes?.data?.matches || [];
+        const resolvedSeries = routeSeries || serverSeries
+          .map(normalizeSeriesRow)
+          .find(s => s.id === String(seriesId) || s.server_id === String(seriesId));
+
+        if (!resolvedSeries) {
+          const [localSeries, localMatches] = await Promise.all([
+            getSeriesById(seriesId),
+            getSeriesMatches(seriesId),
+          ]);
+          setSeries(localSeries);
+          setMatches(localMatches);
+          return;
+        }
+
+        setSeries(resolvedSeries);
+        setMatches(serverMatches.map(normalizeMatchRow));
+
+        try {
+          if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+        } catch (cacheError) {
+          console.warn('SeriesDetail cache refresh:', cacheError.message);
+        }
+
+        return;
+      } catch (apiError) {
+        console.warn('SeriesDetail API load:', apiError.message);
       }
+
       const [s, m] = await Promise.all([
         getSeriesById(seriesId),
         getSeriesMatches(seriesId),
@@ -83,7 +140,14 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     <TouchableOpacity
       style={styles.matchCard}
       onPress={() => {
-        if (item.status === 'live') {
+        if (item.status === MATCH_STATUS?.SETUP || item.status === 'setup') {
+          navigation.navigate('MatchSetup', {
+            match: item,
+            seriesId,
+            seriesName,
+            matchNumber: index + 1,
+          });
+        } else if (item.status === 'live') {
           navigation.navigate('LiveScoring', { matchId: item.id });
         } else {
           navigation.navigate('Scorecard', { matchId: item.id });

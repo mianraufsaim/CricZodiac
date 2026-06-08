@@ -11,7 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
-import { createMatch } from '../../database/queries/matchQueries';
+import { createMatch, updateMatch } from '../../database/queries/matchQueries';
 import { useAuth } from '../../context/AuthContext';
 
 // ── Stepper Component ─────────────────────────────────────
@@ -74,25 +74,42 @@ const Field = ({ label, keyName, placeholder, keyboardType = 'default', form, se
   </View>
 );
 
+const toDateOnly = (value) => {
+  if (!value) return new Date().toISOString().split('T')[0];
+  return String(value).split('T')[0].split(' ')[0];
+};
+
+const toNumber = (value, fallback) => {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+};
+
 // ── Main Screen ───────────────────────────────────────────
 const MatchSetupScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
   const { user, activeClub } = useAuth();
-  const { seriesId = null, seriesName = null, matchNumber = 1 } = route.params || {};
-  const [form, setForm] = useState({
-    title:              seriesId ? `Match ${matchNumber}` : '',
-    venue:              '',
-    match_date:         new Date().toISOString().split('T')[0],
-    overs:              7,
-    players_per_team:   7,
-    max_overs_per_bowler: 0,   // 0 = no limit
-    wide_value:         1,
-    no_ball_value:      1,
-    team_a_name:        '',
-    team_b_name:        '',
-  });
+  const {
+    seriesId: routeSeriesId = null,
+    seriesName = null,
+    matchNumber = 1,
+    match: existingMatch = null,
+  } = route.params || {};
+  const isEditingSetup = !!existingMatch?.id;
+  const seriesId = routeSeriesId || existingMatch?.series_id || null;
+  const [form, setForm] = useState(() => ({
+    title:              existingMatch?.title || (seriesId ? `Match ${matchNumber}` : ''),
+    venue:              existingMatch?.venue || '',
+    match_date:         toDateOnly(existingMatch?.match_date),
+    overs:              toNumber(existingMatch?.overs, 7),
+    players_per_team:   toNumber(existingMatch?.players_per_team, 7),
+    max_overs_per_bowler: toNumber(existingMatch?.max_overs_per_bowler, 0),
+    wide_value:         toNumber(existingMatch?.wide_value, 1),
+    no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
+    team_a_name:        existingMatch?.team_a_name || '',
+    team_b_name:        existingMatch?.team_b_name || '',
+  }));
   const [loading, setLoading]       = useState(false);
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -104,13 +121,32 @@ const MatchSetupScreen = ({ navigation, route }) => {
     }
     setLoading(true);
     try {
-      const matchId = await createMatch({
+      const matchData = {
         ...form,
         overs:            form.overs,
         players_per_team: form.players_per_team,
         series_id:        seriesId,
-        club_id:          activeClub?.server_id || user?.club_id || null,
-      });
+        club_id:          existingMatch?.club_id || activeClub?.server_id || user?.club_id || null,
+      };
+      const matchId = isEditingSetup
+        ? existingMatch.id
+        : await createMatch(matchData);
+
+      if (isEditingSetup) {
+        await updateMatch(matchId, {
+          club_id:              matchData.club_id,
+          title:                matchData.title,
+          venue:                matchData.venue,
+          match_date:           matchData.match_date,
+          overs:                matchData.overs,
+          players_per_team:     matchData.players_per_team,
+          series_id:            matchData.series_id,
+          wide_value:           matchData.wide_value,
+          no_ball_value:        matchData.no_ball_value,
+          max_overs_per_bowler: matchData.max_overs_per_bowler,
+        });
+      }
+
       navigation.navigate('TeamSelection', { matchId, form, matchNumber });
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -126,7 +162,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
           <Icon name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>Match Setup</Text>
+          <Text style={styles.headerTitle}>{isEditingSetup ? 'Finish Match Setup' : 'Match Setup'}</Text>
           {seriesName
             ? <Text style={styles.seriesTag}>📋 {seriesName}  ·  Match #{matchNumber}</Text>
             : null}
@@ -246,7 +282,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
           >
             <LinearGradient colors={[COLORS.gold, '#B8942A']} style={styles.btnGradient}>
               <Text style={styles.btnText}>
-                {loading ? 'Creating...' : 'CONTINUE → SELECT TEAMS'}
+                {loading ? 'Saving...' : 'CONTINUE → SELECT TEAMS'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

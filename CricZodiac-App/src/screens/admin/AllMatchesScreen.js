@@ -13,6 +13,18 @@ import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
+const normalizeMatchRow = (row) => ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  series_id: row.series_local_id || (row.series_id != null ? String(row.series_id) : null),
+  team_a_id: row.team_a_local || (row.team_a_id != null ? String(row.team_a_id) : null),
+  team_b_id: row.team_b_local || (row.team_b_id != null ? String(row.team_b_id) : null),
+  overs: Number(row.overs || 6),
+  players_per_team: Number(row.players_per_team || 6),
+});
+
 const AllMatchesScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -26,10 +38,19 @@ const AllMatchesScreen = ({ navigation }) => {
       try {
         const res = await ApiService.get(API_ENDPOINTS.MATCHES_LIST);
         const serverMatches = res?.matches || res?.data?.matches || [];
-        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
-      } catch (_) {
-        // Offline/server issue: show cached SQLite data.
+        setMatches(serverMatches.map(normalizeMatchRow));
+
+        try {
+          if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+        } catch (cacheError) {
+          console.warn('AllMatchesScreen cache refresh:', cacheError.message);
+        }
+
+        return;
+      } catch (apiError) {
+        console.warn('AllMatchesScreen API load:', apiError.message);
       }
+
       const rows = await queryRows(
         `SELECT m.*,
           t1.team_name AS team_a_name,
@@ -59,7 +80,16 @@ const AllMatchesScreen = ({ navigation }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('Scorecard', { matchId: item.id })}
+      onPress={() => {
+        if (item.status === MATCH_STATUS.SETUP || item.status === 'setup') {
+          navigation.navigate('MatchSetup', {
+            match: item,
+            seriesId: item.series_id,
+          });
+        } else {
+          navigation.navigate('Scorecard', { matchId: item.id });
+        }
+      }}
     >
       <View style={styles.cardTop}>
         <Text style={styles.teams}>
