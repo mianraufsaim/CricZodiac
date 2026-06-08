@@ -10,12 +10,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, ScrollView,
   RefreshControl, Modal, ActivityIndicator,
+  Alert,
   LayoutAnimation, UIManager, Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getSyncHistory, getSyncStats } from '../../database/queries/syncQueries';
+import { clearSyncQueueByStatuses, getSyncHistory } from '../../database/queries/syncQueries';
 import { retrySingleItem, retryAllWithProgress, getSyncStatus } from '../../services/SyncService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -413,18 +414,59 @@ const SyncStatusScreen = ({ navigation }) => {
     load();
   };
 
+  const handleClearSyncQueue = ({ label, statuses, count }) => {
+    if (!count) {
+      Alert.alert('Nothing to Clear', `There are no ${label.toLowerCase()} sync items.`);
+      return;
+    }
+
+    const risky = statuses.includes('pending') || statuses.includes('failed');
+    const message = risky
+      ? `This will clear ${count} ${label.toLowerCase()} sync queue item${count !== 1 ? 's' : ''}. Pending or failed items will stop retrying, but cricket data already saved in the app will not be deleted.`
+      : `This will clear ${count} ${label.toLowerCase()} sync history item${count !== 1 ? 's' : ''}. Cricket data will not be deleted.`;
+
+    Alert.alert(`Clear ${label}?`, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await clearSyncQueueByStatuses(statuses);
+            if (filter && statuses.includes(filter)) setFilter(null);
+            await load();
+          } catch (error) {
+            Alert.alert('Clear Failed', error.message || 'Could not clear sync items.');
+          }
+        },
+      },
+    ]);
+  };
+
   const toggleFilter = (f) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setFilter(prev => prev === f ? null : f);
   };
 
   const filtered = filter ? history.filter(h => h.sync_status === filter) : history;
+  const totalCount = Number(stats.total || 0);
+  const syncedCount = Number(stats.synced || 0);
+  const pendingCount = Number(stats.pending || 0);
+  const failedCount = Number(stats.failed || 0);
+  const clearableTotal = syncedCount + pendingCount + failedCount;
 
   const STAT_CARDS = [
-    { label: 'Total',   value: stats.total,   color: COLORS.lightGray, key: null },
-    { label: 'Synced',  value: stats.synced,  color: COLORS.success,   key: 'synced' },
-    { label: 'Pending', value: stats.pending, color: COLORS.warning,   key: 'pending' },
-    { label: 'Failed',  value: stats.failed,  color: COLORS.danger,    key: 'failed' },
+    { label: 'Total',   value: totalCount,   color: COLORS.lightGray, key: null },
+    { label: 'Synced',  value: syncedCount,  color: COLORS.success,   key: 'synced' },
+    { label: 'Pending', value: pendingCount, color: COLORS.warning,   key: 'pending' },
+    { label: 'Failed',  value: failedCount,  color: COLORS.danger,    key: 'failed' },
+  ];
+
+  const CLEAR_ACTIONS = [
+    { label: 'Synced',  statuses: ['synced'],                      count: syncedCount,    color: COLORS.success, icon: 'check-circle-outline' },
+    { label: 'Pending', statuses: ['pending'],                     count: pendingCount,   color: COLORS.warning, icon: 'clock-remove-outline' },
+    { label: 'Failed',  statuses: ['failed'],                      count: failedCount,    color: COLORS.danger,  icon: 'alert-remove-outline' },
+    { label: 'All',     statuses: ['synced', 'pending', 'failed'], count: clearableTotal, color: COLORS.gold,    icon: 'delete-sweep-outline' },
   ];
 
   return (
@@ -477,7 +519,7 @@ const SyncStatusScreen = ({ navigation }) => {
       )}
 
       {/* Auto-retry countdown bar */}
-      {(stats.failed > 0 || stats.pending > 0) && (
+      {(failedCount > 0 || pendingCount > 0) && (
         <View style={styles.countdownBar}>
           <View style={styles.countdownLeft}>
             <Icon name="timer-outline" size={14} color={COLORS.cyan} />
@@ -500,13 +542,44 @@ const SyncStatusScreen = ({ navigation }) => {
       )}
 
       {/* Retry All button */}
-      {(stats.failed > 0 || stats.pending > 0) && (
+      {(failedCount > 0 || pendingCount > 0) && (
         <TouchableOpacity style={styles.retryAllBtn} onPress={handleRetryAll}>
           <Icon name="refresh" size={18} color={COLORS.navy} />
           <Text style={styles.retryAllBtnText}>
-            RETRY ALL PENDING & FAILED ({stats.pending + stats.failed})
+            RETRY ALL PENDING & FAILED ({pendingCount + failedCount})
           </Text>
         </TouchableOpacity>
+      )}
+
+      {clearableTotal > 0 && (
+        <View style={styles.clearPanel}>
+          <View style={styles.clearHeader}>
+            <Icon name="delete-clock-outline" size={15} color={COLORS.gray} />
+            <Text style={styles.clearTitle}>CLEAR SYNC QUEUE</Text>
+          </View>
+          <View style={styles.clearGrid}>
+            {CLEAR_ACTIONS.map(action => {
+              const disabled = action.count === 0;
+              return (
+                <TouchableOpacity
+                  key={action.label}
+                  style={[
+                    styles.clearBtn,
+                    { borderColor: action.color + '55', backgroundColor: action.color + '12' },
+                    disabled && styles.clearBtnDisabled,
+                  ]}
+                  onPress={() => handleClearSyncQueue(action)}
+                  disabled={disabled}
+                >
+                  <Icon name={action.icon} size={15} color={disabled ? COLORS.gray : action.color} />
+                  <Text style={[styles.clearBtnText, { color: disabled ? COLORS.gray : action.color }]}>
+                    {action.label} ({action.count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
       )}
 
       {/* Item list */}
@@ -571,6 +644,14 @@ const getStyles = (COLORS) => StyleSheet.create({
 
   retryAllBtn:     { marginHorizontal: 16, marginBottom: 10, backgroundColor: COLORS.gold, borderRadius: 12, height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   retryAllBtnText: { color: COLORS.navy, fontWeight: '800', fontSize: 12 },
+
+  clearPanel:      { marginHorizontal: 16, marginBottom: 10, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.cardBorder, padding: 10 },
+  clearHeader:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  clearTitle:      { color: COLORS.gray, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  clearGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  clearBtn:        { width: '48%', minHeight: 36, borderRadius: 9, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 8 },
+  clearBtnDisabled:{ opacity: 0.45 },
+  clearBtnText:    { fontSize: 11, fontWeight: '800' },
 
   // History item
   historyItem:     { backgroundColor: COLORS.card, borderRadius: 14, marginBottom: 8, borderWidth: 1, overflow: 'hidden' },

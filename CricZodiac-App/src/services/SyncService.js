@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+import uuid from 'react-native-uuid';
 import ApiService from './ApiService';
 import { API_ENDPOINTS, SYNC_INTERVAL, RETRY_DELAYS, MAX_RETRY_COUNT } from '../config/api';
 import { SYNC_STATUS, STORAGE_KEYS } from '../config/constants';
@@ -149,8 +150,11 @@ export const processSyncQueue = async () => {
           const syncedIds = response.synced_event_ids || [];
           const syncedIdSet = new Set(syncedIds);
           const errorByEventId = getErrorByEventId(response);
+          const failedAnchorIds = await markFailedSyntheticAnchors(items, errorByEventId);
+          totalFailed += failedAnchorIds.size;
           for (const item of items) {
             if (item.synthetic) continue;
+            if (failedAnchorIds.has(item.id)) continue;
             if (response.all_synced || syncedIdSet.has(item.event_id)) {
               await markSyncItemSynced(item.id);
               await _updateMainRecordSyncStatus(item.table_name, item.local_id);
@@ -244,12 +248,15 @@ export const retrySingleItem = async (item) => {
       items: requestItems,
     });
 
+    const syncedIdSet = new Set(response?.synced_event_ids || []);
+    const errorByEventId = getErrorByEventId(response);
+    const dependencyError = getFirstSyntheticError(retryItems, errorByEventId);
     const succeeded =
       response?.success &&
-      (response?.all_synced || new Set(response?.synced_event_ids || []).has(item.event_id));
+      !dependencyError &&
+      isRetryItemConfirmed(retryItems, item.id, response, syncedIdSet);
 
     if (succeeded) {
-      const syncedIdSet = new Set(response?.synced_event_ids || []);
       for (const retryItem of retryItems) {
         if (retryItem.synthetic) continue;
         if (response?.all_synced || syncedIdSet.has(retryItem.event_id)) {
@@ -259,7 +266,8 @@ export const retrySingleItem = async (item) => {
       }
     } else {
       // Server responded but didn't confirm sync
-      const reason = getErrorByEventId(response).get(item.event_id) ||
+      const reason = dependencyError ||
+        errorByEventId.get(item.event_id) ||
         response?.error ||
         response?.message ||
         'Server did not confirm this item as synced.';
@@ -366,35 +374,109 @@ const getErrorByEventId = (response) => {
   return errorMap;
 };
 
+const markFailedSyntheticAnchors = async (items, errorByEventId) => {
+  const failedAnchorIds = new Set();
+
+  for (const item of items) {
+    if (!item.synthetic || !errorByEventId.has(item.event_id)) continue;
+
+    const anchorIds = item.anchor_ids || (item.anchor_id ? [item.anchor_id] : []);
+    for (const anchorId of anchorIds) {
+      if (!anchorId || failedAnchorIds.has(anchorId)) continue;
+
+      await markSyncItemFailed(anchorId, errorByEventId.get(item.event_id));
+      failedAnchorIds.add(anchorId);
+    }
+  }
+
+  return failedAnchorIds;
+};
+
+const getFirstSyntheticError = (items, errorByEventId) => {
+  for (const item of items) {
+    if (item.synthetic && errorByEventId.has(item.event_id)) {
+      return errorByEventId.get(item.event_id);
+    }
+  }
+  return null;
+};
+
+const isRetryItemConfirmed = (retryItems, originalItemId, response, syncedIdSet) => {
+  if (response?.all_synced) return true;
+
+  for (const retryItem of retryItems) {
+    if (retryItem.synthetic || retryItem.id !== originalItemId) continue;
+    if (syncedIdSet.has(retryItem.event_id)) return true;
+  }
+
+  return false;
+};
+
 const expandItemsWithDependencies = async (items, singleParsedPayload = null) => {
   const expanded = [];
   const queuedTeamIds = new Set();
   const syntheticTeamIds = new Set();
+  const expandedTeamPlayerTeamIds = new Set();
+  const teamPlayerItemsByLocalId = new Map();
 
   for (const item of items) {
     if (item.table_name === 'teams' && item.local_id) {
       queuedTeamIds.add(item.local_id);
     }
+
+    if (item.table_name === 'team_players') {
+      const payload = singleParsedPayload && items.length === 1
+        ? singleParsedPayload
+        : safeParsePayload(item.payload_json);
+      const localId = item.local_id || payload?.id;
+      if (localId) {
+        teamPlayerItemsByLocalId.set(localId, item);
+      }
+    }
   }
 
   for (const item of items) {
-    let payload = null;
-    if (item.table_name === 'team_players') {
-      payload = singleParsedPayload && items.length === 1
-        ? singleParsedPayload
-        : safeParsePayload(item.payload_json);
+    if (item.table_name !== 'team_players') {
+      expanded.push(item);
+      continue;
+    }
 
-      const teamLocalId = payload?.team_id;
-      if (teamLocalId && !queuedTeamIds.has(teamLocalId) && !syntheticTeamIds.has(teamLocalId)) {
-        const dependency = await buildTeamDependencyItem(teamLocalId, payload);
-        if (dependency) {
-          expanded.push(dependency);
-          syntheticTeamIds.add(teamLocalId);
-        }
+    const payload = singleParsedPayload && items.length === 1
+      ? singleParsedPayload
+      : safeParsePayload(item.payload_json);
+
+    const teamLocalId = payload?.team_id;
+    if (!teamLocalId) {
+      expanded.push(item);
+      continue;
+    }
+
+    if (expandedTeamPlayerTeamIds.has(teamLocalId)) continue;
+
+    if (!queuedTeamIds.has(teamLocalId) && !syntheticTeamIds.has(teamLocalId)) {
+      const dependency = await buildTeamDependencyItem(teamLocalId, payload);
+      if (dependency) {
+        expanded.push(dependency);
+        syntheticTeamIds.add(teamLocalId);
       }
     }
 
-    expanded.push(item);
+    const rosterItems = await buildTeamPlayerRosterItems(
+      teamLocalId,
+      teamPlayerItemsByLocalId,
+      payload,
+      item.id
+    );
+
+    if (rosterItems.length > 0) {
+      for (const rosterItem of rosterItems) {
+        expanded.push(rosterItem);
+      }
+    } else {
+      expanded.push(item);
+    }
+
+    expandedTeamPlayerTeamIds.add(teamLocalId);
   }
 
   return expanded;
@@ -415,7 +497,7 @@ const buildTeamDependencyItem = async (teamLocalId, fallbackPayload = {}) => {
   if (!teamPayload) return null;
 
   return {
-    event_id: teamLocalId,
+    event_id: uuid.v4(),
     table_name: 'teams',
     action_type: 'create',
     local_id: teamLocalId,
@@ -474,4 +556,76 @@ const getLocalTeamPayload = async (teamLocalId, fallbackPayload) => {
     team_label: team.team_label || 'A',
     captain_id: team.captain_id || null,
   };
+};
+
+const buildTeamPlayerRosterItems = async (
+  teamLocalId,
+  teamPlayerItemsByLocalId,
+  fallbackPayload = {},
+  defaultAnchorId = null
+) => {
+  const payloads = await getLocalTeamPlayerPayloads(teamLocalId, fallbackPayload);
+  if (payloads.length === 0) return [];
+
+  const anchorIds = [];
+  const anchorIdSet = new Set();
+  for (const payload of payloads) {
+    const originalItem = teamPlayerItemsByLocalId.get(payload.id);
+    if (originalItem?.id && !anchorIdSet.has(originalItem.id)) {
+      anchorIds.push(originalItem.id);
+      anchorIdSet.add(originalItem.id);
+    }
+  }
+  if (anchorIds.length === 0 && defaultAnchorId) {
+    anchorIds.push(defaultAnchorId);
+  }
+
+  const rosterItems = [];
+  for (const payload of payloads) {
+    const originalItem = teamPlayerItemsByLocalId.get(payload.id);
+    rosterItems.push({
+      id: originalItem?.id,
+      event_id: uuid.v4(),
+      table_name: 'team_players',
+      action_type: originalItem?.action_type || 'create',
+      local_id: payload.id,
+      payload_json: JSON.stringify(payload),
+      synthetic: !originalItem,
+      anchor_ids: originalItem ? null : anchorIds,
+    });
+  }
+
+  return rosterItems;
+};
+
+const getLocalTeamPlayerPayloads = async (teamLocalId, fallbackPayload = {}) => {
+  const rows = await queryRows(`
+    SELECT
+      id,
+      club_id,
+      series_id,
+      match_id,
+      team_id,
+      player_id,
+      batting_order
+    FROM team_players
+    WHERE team_id = ?
+    ORDER BY batting_order ASC, created_at ASC, id ASC
+  `, [teamLocalId]);
+
+  const payloads = [];
+  for (const row of rows) {
+    if (!row.player_id) continue;
+    payloads.push({
+      id: row.id,
+      club_id: row.club_id || fallbackPayload?.club_id || null,
+      series_id: row.series_id || fallbackPayload?.series_id || null,
+      match_id: row.match_id || fallbackPayload?.match_id || null,
+      team_id: row.team_id || teamLocalId,
+      player_id: row.player_id,
+      batting_order: row.batting_order || 0,
+    });
+  }
+
+  return payloads;
 };

@@ -179,16 +179,22 @@ CREATE TABLE IF NOT EXISTS team_players (
 CREATE TABLE IF NOT EXISTS toss_results (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id            VARCHAR(36) UNIQUE,
+    club_id             INT UNSIGNED,
+    series_id           INT UNSIGNED,
     match_id            INT UNSIGNED,
     match_local_id      VARCHAR(36),
     calling_captain     VARCHAR(36),                       -- local player id who called
+    calling_captain_id  INT UNSIGNED,
     toss_call           ENUM('heads','tails') NOT NULL,
     toss_outcome        ENUM('heads','tails') NOT NULL,
     toss_winner         INT UNSIGNED,
+    toss_winner_id      INT UNSIGNED,
     toss_winner_local   VARCHAR(36),
     elected_to          ENUM('bat','bowl') NOT NULL,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_match (match_id)
+    INDEX idx_club   (club_id),
+    INDEX idx_series (series_id),
+    INDEX idx_match  (match_id)
 ) ENGINE=InnoDB;
 
 -- ── Innings ───────────────────────────────────────────────

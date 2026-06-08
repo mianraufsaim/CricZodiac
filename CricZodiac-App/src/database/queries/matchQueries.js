@@ -193,12 +193,37 @@ export const getMatchTeams = (matchId) =>
 
 export const saveTossResult = async (tossData) => {
   const id = tossData.id || uuid.v4();
+  const match = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [tossData.match_id]);
+  const clubId = tossData.club_id || match?.club_id || null;
+  const seriesId = tossData.series_id || match?.series_id || null;
+  const callingCaptainId = tossData.calling_captain_id || tossData.calling_captain || null;
+  const tossWinnerId = tossData.toss_winner_id || tossData.toss_winner || null;
+  const payload = {
+    ...tossData,
+    id,
+    club_id: clubId,
+    series_id: seriesId,
+    calling_captain_id: callingCaptainId,
+    toss_winner_id: tossWinnerId,
+  };
+
   await executeTransaction([
     {
-      sql: `INSERT INTO toss_results (id, match_id, calling_captain, toss_call, toss_outcome, toss_winner, elected_to, sync_status)
-            VALUES (?,?,?,?,?,?,?,?)`,
-      params: [id, tossData.match_id, tossData.calling_captain, tossData.toss_call,
-               tossData.toss_outcome, tossData.toss_winner, tossData.elected_to, SYNC_STATUS.PENDING],
+      sql: `INSERT INTO toss_results (
+              id, club_id, series_id, match_id,
+              calling_captain, calling_captain_id,
+              toss_call, toss_outcome,
+              toss_winner, toss_winner_id,
+              elected_to, sync_status
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      params: [
+        id, clubId, seriesId, tossData.match_id,
+        tossData.calling_captain, callingCaptainId,
+        tossData.toss_call, tossData.toss_outcome,
+        tossData.toss_winner, tossWinnerId,
+        tossData.elected_to, SYNC_STATUS.PENDING,
+      ],
     },
     {
       sql: `UPDATE matches SET toss_winner_id = ?, toss_choice = ?, batting_first = ?, status = 'toss', sync_status = ? WHERE id = ?`,
@@ -209,7 +234,7 @@ export const saveTossResult = async (tossData) => {
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'toss_results', 'create', id, JSON.stringify({ ...tossData, id }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'toss_results', 'create', id, JSON.stringify(payload), SYNC_STATUS.PENDING],
     },
   ]);
   return id;

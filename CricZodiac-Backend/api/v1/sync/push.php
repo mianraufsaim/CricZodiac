@@ -250,6 +250,16 @@ function resolveMatchRow(PDO $pdo, $value): ?array {
     return $row ?: null;
 }
 
+function resolveMatchRowByScope(PDO $pdo, $clubId, $seriesId): ?array {
+    if (!$clubId || !$seriesId) return null;
+
+    $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE club_id = ? AND series_id = ? ORDER BY id DESC LIMIT 1");
+    $st->execute([(int) $clubId, (int) $seriesId]);
+
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
 function resolvePlayerId(PDO $pdo, $value): ?int {
     if ($value === null || $value === '') return null;
 
@@ -363,6 +373,8 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
+    static $clearedScopes = [];
+
     $teamRow = resolveTeamRow($pdo, $d['team_id'] ?? null);
     $teamId = $teamRow['id'] ?? null;
     $playerId = resolvePlayerId($pdo, $d['player_id'] ?? null);
@@ -375,6 +387,28 @@ function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
         throw new Exception('Team player sync could not resolve team_id or player_id.');
     }
 
+    $scopeKey = implode(':', [
+        (string) ($clubId ?? 'NULL'),
+        (string) ($seriesId ?? 'NULL'),
+        (string) ($matchId ?? 'NULL'),
+        (string) $teamId,
+    ]);
+    $needsScopeClear = empty($clearedScopes[$scopeKey]);
+
+    if ($needsScopeClear) {
+        $pdo->prepare("
+            DELETE FROM team_players
+            WHERE club_id = ?
+              AND series_id = ?
+              AND match_id = ?
+              AND team_id = ?
+        ")->execute([$clubId, $seriesId, $matchId, $teamId]);
+    }
+
+    if (!empty($d['id'])) {
+        $pdo->prepare("DELETE FROM team_players WHERE local_id = ?")->execute([$d['id']]);
+    }
+
     $pdo->prepare("
         INSERT INTO team_players (
             local_id, club_id, series_id, match_id,
@@ -382,16 +416,6 @@ function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
             batting_order, created_at
         )
         VALUES (?,?,?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE
-            local_id = COALESCE(local_id, VALUES(local_id)),
-            club_id = COALESCE(club_id, VALUES(club_id)),
-            series_id = COALESCE(series_id, VALUES(series_id)),
-            match_id = COALESCE(match_id, VALUES(match_id)),
-            team_id = COALESCE(team_id, VALUES(team_id)),
-            team_local_id = VALUES(team_local_id),
-            player_id = COALESCE(player_id, VALUES(player_id)),
-            player_local_id = VALUES(player_local_id),
-            batting_order = VALUES(batting_order)
     ")->execute([
         $d['id'],
         $clubId,
@@ -403,18 +427,86 @@ function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
         $d['player_id'] ?? null,
         $d['batting_order'] ?? 0,
     ]);
+
+    if ($needsScopeClear) {
+        $clearedScopes[$scopeKey] = true;
+    }
+
     return true;
 }
 
 function syncToss(PDO $pdo, string $action, array $d): bool {
+    $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
+    $winnerTeamRow = resolveTeamRow($pdo, $d['toss_winner_id'] ?? ($d['toss_winner'] ?? null));
+
+    $clubId = !empty($d['club_id']) && is_numeric($d['club_id'])
+        ? (int) $d['club_id']
+        : ($matchRow['club_id'] ?? ($winnerTeamRow['club_id'] ?? null));
+    $seriesId = resolveSeriesId($pdo, $d['series_id'] ?? null)
+        ?? ($matchRow['series_id'] ?? ($winnerTeamRow['series_id'] ?? null));
+
+    if (!$matchRow && $clubId && $seriesId) {
+        $matchRow = resolveMatchRowByScope($pdo, $clubId, $seriesId);
+    }
+
+    $matchId = $matchRow['id'] ?? ($winnerTeamRow['match_id'] ?? null);
+    $clubId = $clubId ?? ($matchRow['club_id'] ?? null);
+    $seriesId = $seriesId ?? ($matchRow['series_id'] ?? null);
+    $callingCaptainId = resolvePlayerId($pdo, $d['calling_captain_id'] ?? ($d['calling_captain'] ?? null));
+    $tossWinnerId = $winnerTeamRow['id'] ?? null;
+    $tossLoserId = resolveTeamId($pdo, $d['toss_loser_id'] ?? ($d['toss_loser'] ?? null));
+
+    if (!$matchId || !$callingCaptainId || !$tossWinnerId) {
+        throw new Exception('Toss sync could not resolve match_id, calling_captain_id, or toss_winner_id.');
+    }
+
+    $battingFirstId = ($d['elected_to'] ?? null) === 'bat'
+        ? $tossWinnerId
+        : ($tossLoserId ?: null);
+
     $pdo->prepare("
-        INSERT INTO toss_results (local_id, match_local_id, calling_captain, toss_call, toss_outcome, toss_winner_local, elected_to, created_at)
-        VALUES (?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE elected_to=VALUES(elected_to)
+        INSERT INTO toss_results (
+            local_id, club_id, series_id, match_id,
+            calling_captain_id, toss_call, toss_outcome,
+            toss_winner, toss_winner_id, elected_to, created_at
+        )
+        VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+        ON DUPLICATE KEY UPDATE
+            club_id = VALUES(club_id),
+            series_id = VALUES(series_id),
+            match_id = VALUES(match_id),
+            calling_captain_id = VALUES(calling_captain_id),
+            toss_call = VALUES(toss_call),
+            toss_outcome = VALUES(toss_outcome),
+            toss_winner = VALUES(toss_winner),
+            toss_winner_id = VALUES(toss_winner_id),
+            elected_to = VALUES(elected_to),
+            match_local_id = NULL,
+            calling_captain = NULL,
+            toss_winner_local = NULL
     ")->execute([
-        $d['id'], $d['match_id'], $d['calling_captain'] ?? null,
-        $d['toss_call'], $d['toss_outcome'], $d['toss_winner'], $d['elected_to'],
+        $d['id'],
+        $clubId,
+        $seriesId,
+        $matchId,
+        $callingCaptainId,
+        $d['toss_call'],
+        $d['toss_outcome'],
+        $tossWinnerId,
+        $tossWinnerId,
+        $d['elected_to'],
     ]);
+
+    $pdo->prepare("
+        UPDATE matches
+        SET toss_winner_id = ?,
+            toss_choice = ?,
+            batting_first = COALESCE(?, batting_first),
+            status = 'toss',
+            updated_at = NOW()
+        WHERE id = ?
+    ")->execute([$tossWinnerId, $d['elected_to'], $battingFirstId, $matchId]);
+
     return true;
 }
 

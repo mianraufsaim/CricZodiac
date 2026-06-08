@@ -137,11 +137,15 @@ CREATE TABLE IF NOT EXISTS team_players (
 -- Toss Results
 CREATE TABLE IF NOT EXISTS toss_results (
   id              TEXT PRIMARY KEY,
+  club_id         TEXT REFERENCES clubs(id),
+  series_id       TEXT REFERENCES series(id),
   match_id        TEXT NOT NULL REFERENCES matches(id),
   calling_captain TEXT NOT NULL,
+  calling_captain_id TEXT,
   toss_call       TEXT NOT NULL,            -- heads | tails
   toss_outcome    TEXT NOT NULL,            -- heads | tails
   toss_winner     TEXT NOT NULL,
+  toss_winner_id  TEXT,
   elected_to      TEXT NOT NULL,            -- bat | bowl
   created_at      TEXT DEFAULT (datetime('now')),
   sync_status     TEXT DEFAULT 'pending'

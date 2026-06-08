@@ -47,6 +47,29 @@ export const resetFailedSync = () =>
     WHERE sync_status = 'failed'
   `);
 
+export const clearSyncQueueByStatuses = async (statuses = []) => {
+  const allowedStatuses = new Set([
+    SYNC_STATUS.SYNCED,
+    SYNC_STATUS.PENDING,
+    SYNC_STATUS.FAILED,
+  ]);
+  const cleanStatuses = [];
+
+  for (const status of statuses) {
+    if (allowedStatuses.has(status) && !cleanStatuses.includes(status)) {
+      cleanStatuses.push(status);
+    }
+  }
+
+  if (cleanStatuses.length === 0) return;
+
+  const placeholders = cleanStatuses.map(() => '?').join(',');
+  return executeQuery(
+    `DELETE FROM sync_queue WHERE sync_status IN (${placeholders})`,
+    cleanStatuses
+  );
+};
+
 export const getSyncHistory = () =>
   queryRows(`
     SELECT * FROM sync_queue

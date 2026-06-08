@@ -26,11 +26,16 @@ const ChooseBattingMode = ({ match, teamA, teamB, navigation, COLORS, styles }) 
       // Record as toss with no coin flip — both teams same result
       await saveTossResult({
         match_id:        match.id,
+        club_id:         match.club_id,
+        series_id:       match.series_id,
         calling_captain: battingTeam.captain_id,
+        calling_captain_id: battingTeam.captain_id,
         toss_call:       'heads',
         toss_outcome:    'heads',
         toss_winner:     battingTeam.id,
+        toss_winner_id:  battingTeam.id,
         toss_loser:      bowlingTeam.id,
+        toss_loser_id:   bowlingTeam.id,
         elected_to:      'bat',
       });
       navigation.navigate('LiveScoring', {
@@ -174,11 +179,16 @@ const TossScreen = ({ navigation, route }) => {
     try {
       await saveTossResult({
         match_id:        match.id,
+        club_id:         match.club_id,
+        series_id:       match.series_id,
         calling_captain: callingTeam.captain_id,
+        calling_captain_id: callingTeam.captain_id,
         toss_call:       tossCall,
         toss_outcome:    tossResult,
         toss_winner:     tossWinner.id,
+        toss_winner_id:  tossWinner.id,
         toss_loser:      tossLoser.id,
+        toss_loser_id:   tossLoser.id,
         elected_to:      choice,
       });
       navigation.navigate('LiveScoring', {

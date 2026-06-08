@@ -174,11 +174,15 @@ const initializeTables = async (database) => {
     tx.executeSql(`
       CREATE TABLE IF NOT EXISTS toss_results (
         id              TEXT PRIMARY KEY,
+        club_id         TEXT,
+        series_id       TEXT,
         match_id        TEXT NOT NULL,
         calling_captain TEXT NOT NULL,
+        calling_captain_id TEXT,
         toss_call       TEXT NOT NULL,
         toss_outcome    TEXT NOT NULL,
         toss_winner     TEXT NOT NULL,
+        toss_winner_id  TEXT,
         elected_to      TEXT NOT NULL,
         created_at      TEXT DEFAULT (datetime('now')),
         sync_status     TEXT DEFAULT 'pending'
@@ -416,6 +420,10 @@ const initializeTables = async (database) => {
     `ALTER TABLE team_players ADD COLUMN club_id TEXT;`,
     `ALTER TABLE team_players ADD COLUMN series_id TEXT;`,
     `ALTER TABLE team_players ADD COLUMN match_id TEXT;`,
+    `ALTER TABLE toss_results ADD COLUMN club_id TEXT;`,
+    `ALTER TABLE toss_results ADD COLUMN series_id TEXT;`,
+    `ALTER TABLE toss_results ADD COLUMN calling_captain_id TEXT;`,
+    `ALTER TABLE toss_results ADD COLUMN toss_winner_id TEXT;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }
@@ -428,6 +436,7 @@ const initializeTables = async (database) => {
     `CREATE INDEX IF NOT EXISTS idx_series_club   ON series(club_id);`,
     `CREATE INDEX IF NOT EXISTS idx_teams_series  ON teams(series_id);`,
     `CREATE INDEX IF NOT EXISTS idx_team_players_scope ON team_players(club_id, series_id, match_id, team_id, player_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_toss_results_scope ON toss_results(club_id, series_id, match_id);`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(idxSql); }); } catch (_) { /* exists */ }
   }
@@ -465,6 +474,27 @@ const initializeTables = async (database) => {
             SELECT t.match_id FROM teams t WHERE t.id = team_players.team_id
           )
         WHERE club_id IS NULL OR series_id IS NULL OR match_id IS NULL
+      `);
+    });
+  } catch (_) { /* best-effort cache backfill */ }
+
+  try {
+    await database.transaction(tx => {
+      tx.executeSql(`
+        UPDATE toss_results
+        SET
+          club_id = (
+            SELECT m.club_id FROM matches m WHERE m.id = toss_results.match_id
+          ),
+          series_id = (
+            SELECT m.series_id FROM matches m WHERE m.id = toss_results.match_id
+          ),
+          calling_captain_id = COALESCE(calling_captain_id, calling_captain),
+          toss_winner_id = COALESCE(toss_winner_id, toss_winner)
+        WHERE club_id IS NULL
+           OR series_id IS NULL
+           OR calling_captain_id IS NULL
+           OR toss_winner_id IS NULL
       `);
     });
   } catch (_) { /* best-effort cache backfill */ }
