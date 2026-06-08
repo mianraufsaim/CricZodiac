@@ -160,7 +160,7 @@ const TossScreen = ({ navigation, route }) => {
     if (phase !== 'call') return;
     if (!tossCall) {
       Alert.alert(
-        '📢 Make a call first!',
+        'Please make a call first!',
         'Captains, please call Heads or Tails before flipping the coin.',
         [{ text: 'OK' }],
       );
@@ -203,6 +203,13 @@ const TossScreen = ({ navigation, route }) => {
   };
 
   const won = tossResult === tossCall;
+  const selectedCaptainTeam = selectedCaptain === 'A' ? teamA : teamB;
+  const otherCaptainTeam = selectedCaptain === 'A' ? teamB : teamA;
+  const selectedCaptainName = selectedCaptainTeam?.captain_name || selectedCaptainTeam?.team_name || 'Captain';
+  const tossWinnerTeam = won ? selectedCaptainTeam : otherCaptainTeam;
+  const tossWinnerTeamName = tossWinnerTeam?.team_name || 'Winning Team';
+  const tossWinnerCaptainName = tossWinnerTeam?.captain_name || 'Captain';
+  const tossOutcomeLabel = (tossResult || '').toUpperCase();
 
   const flipStyle = {
     transform: [
@@ -261,12 +268,15 @@ const TossScreen = ({ navigation, route }) => {
       {/* HEADS / TAILS call buttons — shown ABOVE the coin during call phase */}
       {phase === 'call' && (
         <View style={styles.callSection}>
-          <Text style={styles.callSectionTitle}>
-            {selectedCaptain === 'A'
-              ? (teamA?.captain_name || teamA?.team_name)
-              : (teamB?.captain_name || teamB?.team_name)
-            } — make your call:
-          </Text>
+          <View style={styles.callPrompt}>
+            <LinearGradient colors={[COLORS.gold, '#F2D36A', '#B8942A']} style={styles.callCaptainBadge}>
+              <Icon name="account-tie" size={15} color={COLORS.navy} />
+              <Text style={styles.callCaptainBadgeText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+                {selectedCaptainName}
+              </Text>
+            </LinearGradient>
+            <Text style={styles.callSectionTitle}>Please make your call</Text>
+          </View>
           <View style={styles.callRow}>
             {['heads', 'tails'].map(c => (
               <TouchableOpacity
@@ -323,17 +333,6 @@ const TossScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Phase: call — instruction hint below coin */}
-      {phase === 'call' && (
-        <View style={styles.phaseContainer}>
-          <Text style={styles.phaseHint}>
-            {tossCall
-              ? `✅ ${tossCall.toUpperCase()} selected — tap the coin to flip!`
-              : '👆 Select Heads or Tails above, then tap the coin'}
-          </Text>
-        </View>
-      )}
-
       {/* Phase: Flipping */}
       {phase === 'flip' && (
         <View style={styles.phaseContainer}>
@@ -344,13 +343,25 @@ const TossScreen = ({ navigation, route }) => {
       {/* Phase: Result → Choose bat/bowl */}
       {phase === 'result' && (
         <View style={styles.phaseContainer}>
-          <View style={[styles.resultBadge, { backgroundColor: won ? COLORS.success : COLORS.danger }]}>
-            <Text style={styles.resultBadgeText}>
-              {won ? '🎉 ' : ''}
-              {(selectedCaptain === 'A' ? teamA?.team_name : teamB?.team_name)} {won ? 'WON' : 'LOST'} the Toss!
+          <View style={styles.resultBadge}>
+            <View style={styles.resultIconWrap}>
+              <Icon name="trophy" size={20} color={COLORS.success} />
+            </View>
+            <View style={styles.resultTextBlock}>
+              <Text style={styles.resultTeamText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+                {tossWinnerTeamName} won the toss
+              </Text>
+              <Text style={styles.resultCaptainText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+                Captain: {tossWinnerCaptainName}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.outcomePill}>
+            <Icon name={tossResult === 'tails' ? 'bird' : 'crown'} size={15} color={COLORS.gold} />
+            <Text style={styles.outcomeText}>
+              Coin landed on <Text style={styles.outcomeStrong}>{tossOutcomeLabel}</Text>
             </Text>
           </View>
-          <Text style={styles.outcomeText}>Coin landed on {tossResult?.toUpperCase()}</Text>
           <Text style={styles.chooseText}>Choose to:</Text>
           <View style={styles.callRow}>
             {['bat', 'bowl'].map(c => (
@@ -359,7 +370,7 @@ const TossScreen = ({ navigation, route }) => {
                   colors={c === 'bat' ? [COLORS.gold, '#B8942A'] : [COLORS.royalBlue, COLORS.purple]}
                   style={styles.choiceBtnGradient}
                 >
-                  <Icon name={c === 'bat' ? 'cricket' : 'bowl-mix'} size={28} color={COLORS.white} />
+                  <Icon name={c === 'bat' ? 'cricket' : 'tennis-ball'} size={28} color={COLORS.white} />
                   <Text style={styles.choiceBtnText}>{c === 'bat' ? 'BAT FIRST' : 'BOWL FIRST'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -388,7 +399,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   coinLabel:         { color: COLORS.navy, fontWeight: '900', fontSize: 12, letterSpacing: 2, marginTop: 4 },
   coinEdge:          { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 6, borderColor: 'rgba(255,255,255,0.3)' },
   noCoinCircle:      { width: 150, height: 150, borderRadius: 75, backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.gold },
-  phaseContainer:    { flex: 1, alignItems: 'center' },
+  phaseContainer:    { width: '100%', alignItems: 'center' },
   phaseTitle:        { fontSize: 18, fontWeight: '700', color: COLORS.white, marginBottom: 10, textAlign: 'center' },
   chooseSubtitle:    { color: COLORS.gray, fontSize: 12, marginBottom: 10, textAlign: 'center' },
   captainRow:        { flexDirection: 'row', gap: 16, width: '100%' },
@@ -397,19 +408,26 @@ const getStyles = (COLORS) => StyleSheet.create({
   captainBtnText:    { width: '100%', color: COLORS.white, fontWeight: '700', fontSize: 15, textAlign: 'center' },
   captainBtnSub:     { width: '100%', color: COLORS.gray, fontSize: 12, marginTop: 4, textAlign: 'center' },
   callRow:           { flexDirection: 'row', gap: 16, width: '100%', marginTop: 8 },
-  callSection:       { paddingHorizontal: 0, marginBottom: 8 },
-  callSectionTitle:  { color: COLORS.white, fontWeight: '600', fontSize: 14, textAlign: 'center', marginBottom: 10 },
-  callBtn:           { flex: 1, backgroundColor: COLORS.card, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
+  callSection:       { paddingHorizontal: 0, marginBottom: 10, alignItems: 'center' },
+  callPrompt:        { width: '100%', alignItems: 'center', marginBottom: 8 },
+  callCaptainBadge:  { maxWidth: '92%', minHeight: 34, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.gold, shadowColor: COLORS.gold, shadowOpacity: 0.35, shadowRadius: 10, elevation: 8 },
+  callCaptainBadgeText:{ flexShrink: 1, color: COLORS.navy, fontWeight: '900', fontSize: 13, textAlign: 'center', marginLeft: 6 },
+  callSectionTitle:  { color: COLORS.white, fontWeight: '700', fontSize: 14, textAlign: 'center', marginTop: 8, marginBottom: 20 },
+  callBtn:           { flex: 1, minHeight: 96, backgroundColor: COLORS.card, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
   callBtnSelected:   { borderColor: COLORS.gold, backgroundColor: 'rgba(212,175,55,0.12)' },
   callBtnEmoji:      { fontSize: 32, marginBottom: 6 },
   callBtnText:       { color: COLORS.white, fontWeight: '800', fontSize: 15, letterSpacing: 2 },
   tapHint:           { color: COLORS.navy, fontWeight: '800', fontSize: 10, letterSpacing: 1, marginTop: 6, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   tapHintDim:        { color: 'rgba(0,0,0,0.4)', fontWeight: '600', fontSize: 9, letterSpacing: 0.5, marginTop: 6 },
-  phaseHint:         { color: COLORS.gray, fontSize: 13, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
-  resultBadge:       { borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginBottom: 12 },
-  resultBadgeText:   { color: COLORS.white, fontWeight: '800', fontSize: 16, textAlign: 'center' },
-  outcomeText:       { color: COLORS.gray, fontSize: 14, marginBottom: 20 },
-  chooseText:        { color: COLORS.white, fontWeight: '600', fontSize: 16, marginBottom: 12 },
+  resultBadge:       { width: '100%', minHeight: 58, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, backgroundColor: COLORS.success, flexDirection: 'row', alignItems: 'center' },
+  resultIconWrap:    { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  resultTextBlock:   { flex: 1 },
+  resultTeamText:    { color: COLORS.white, fontWeight: '900', fontSize: 15 },
+  resultCaptainText: { color: 'rgba(255,255,255,0.86)', fontWeight: '700', fontSize: 12, marginTop: 2 },
+  outcomePill:       { minHeight: 36, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 18, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  outcomeText:       { color: COLORS.white, fontWeight: '700', fontSize: 13, marginLeft: 8, textAlign: 'center' },
+  outcomeStrong:     { color: COLORS.gold, fontWeight: '900' },
+  chooseText:        { color: COLORS.white, fontWeight: '700', fontSize: 16, marginBottom: 12, alignSelf: 'flex-start' },
   choiceBtn:         { flex: 1, borderRadius: 16, overflow: 'hidden' },
   choiceBtnGradient: { padding: 20, alignItems: 'center', gap: 8 },
   choiceBtnText:     { color: COLORS.white, fontWeight: '800', fontSize: 13, letterSpacing: 1 },
