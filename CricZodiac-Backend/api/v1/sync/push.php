@@ -718,35 +718,35 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
     $bowlerId  = resolvePlayerId($pdo, $d['bowler_id'] ?? null);
     $overNumber = (int) ($d['over_number'] ?? 0);
 
-    // Check by club_id + series_id + match_id + innings_id + over_number
+    // Check by full composite key: club_id + series_id + match_id + innings_id + bowler_id + over_number
     $existing = null;
-    if ($clubId && $seriesId && $matchId && $inningsId) {
+    if ($clubId && $seriesId && $matchId && $inningsId && $bowlerId) {
         $st = $pdo->prepare("
             SELECT id FROM overs
-            WHERE club_id = ? AND series_id = ? AND match_id = ? AND innings_id = ? AND over_number = ?
+            WHERE club_id = ? AND series_id = ? AND match_id = ? AND innings_id = ?
+              AND bowler_id = ? AND over_number = ?
             LIMIT 1
         ");
-        $st->execute([$clubId, $seriesId, $matchId, $inningsId, $overNumber]);
+        $st->execute([$clubId, $seriesId, $matchId, $inningsId, $bowlerId, $overNumber]);
         $existing = $st->fetch(PDO::FETCH_ASSOC);
     }
 
     if ($existing) {
         $pdo->prepare("
             UPDATE overs
-            SET bowler_id     = COALESCE(?, bowler_id),
-                runs_conceded = ?,
+            SET runs_conceded = ?,
                 wickets       = ?,
                 is_maiden     = ?,
                 balls_bowled  = ?,
                 is_completed  = ?,
                 local_id      = COALESCE(local_id, ?)
-            WHERE id = ?
+            WHERE club_id = ? AND series_id = ? AND match_id = ? AND innings_id = ?
+              AND bowler_id = ? AND over_number = ?
         ")->execute([
-            $bowlerId,
             $d['runs_conceded'] ?? 0, $d['wickets'] ?? 0,
             $d['is_maiden'] ?? 0, $d['balls_bowled'] ?? 0, $d['is_completed'] ?? 0,
             $d['id'],
-            $existing['id'],
+            $clubId, $seriesId, $matchId, $inningsId, $bowlerId, $overNumber,
         ]);
     } else {
         $pdo->prepare("

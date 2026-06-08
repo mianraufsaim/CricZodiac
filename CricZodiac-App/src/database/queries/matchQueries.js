@@ -779,3 +779,23 @@ export const getPlayerBattingStats = (inningsId, playerId) =>
 // ── Overs for innings (for maiden calc) ──────────────────
 export const getInningsOvers = (inningsId) =>
   queryRows('SELECT * FROM overs WHERE innings_id = ? ORDER BY over_number ASC', [inningsId]);
+
+// ── Clear innings live-scoring progress (fresh restart) ──────────────────
+// Deletes all balls, overs, and batting/bowling scorecards for the innings
+// and resets the innings totals to 0. Called when the opening pair is
+// re-selected (e.g. app crashed mid-over and user is starting fresh).
+export const clearInningsProgress = async (inningsId) => {
+  await executeTransaction([
+    { sql: 'DELETE FROM balls               WHERE innings_id = ?', params: [inningsId] },
+    { sql: 'DELETE FROM overs               WHERE innings_id = ?', params: [inningsId] },
+    { sql: 'DELETE FROM batting_scorecards  WHERE innings_id = ?', params: [inningsId] },
+    { sql: 'DELETE FROM bowling_scorecards  WHERE innings_id = ?', params: [inningsId] },
+    { sql: 'DELETE FROM wickets             WHERE innings_id = ?', params: [inningsId] },
+    {
+      sql: `UPDATE innings
+            SET total_runs = 0, total_wickets = 0, total_overs = 0, extras = 0
+            WHERE id = ?`,
+      params: [inningsId],
+    },
+  ]);
+};

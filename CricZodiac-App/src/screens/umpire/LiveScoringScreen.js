@@ -24,7 +24,7 @@ import {
   createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
   saveBall, getCurrentOver, getMatchInnings, getTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
-  getLastBall, deleteBall, getInnings,
+  getLastBall, deleteBall, getInnings, clearInningsProgress,
 } from '../../database/queries/matchQueries';
 import { processSyncQueue } from '../../services/SyncService';
 import uuid from 'react-native-uuid';
@@ -212,14 +212,36 @@ const EditBallModal = ({ visible, ball, striker, nonStriker, bowler, onSave, onC
 };
 
 // ── Innings Complete Modal ────────────────────────────────
-const InningsCompleteModal = ({ visible, battingTeam, score, wickets, onStartNext, onEndMatch, isLastInnings, COLORS, ic }) => (
+const InningsCompleteModal = ({
+  visible, battingTeam, bowlingTeam, score, wickets,
+  onStartNext, onEndMatch, isLastInnings, resultText, COLORS, ic,
+}) => (
   <Modal visible={visible} transparent animationType="fade">
     <View style={ic.overlay}>
       <View style={ic.card}>
-        <Icon name="cricket" size={40} color={COLORS.gold} style={{ marginBottom: 12 }} />
-        <Text style={ic.title}>Innings Complete</Text>
-        <Text style={ic.team}>{battingTeam?.team_name}</Text>
-        <Text style={ic.score}>{score}/{wickets}</Text>
+        <Icon
+          name={isLastInnings ? 'trophy' : 'cricket'}
+          size={44}
+          color={isLastInnings ? COLORS.gold : COLORS.cyan}
+          style={{ marginBottom: 12 }}
+        />
+        <Text style={ic.title}>
+          {isLastInnings ? 'Match Over!' : '1st Innings Complete'}
+        </Text>
+
+        {!isLastInnings ? (
+          <>
+            <Text style={ic.team}>{battingTeam?.team_name}</Text>
+            <Text style={ic.score}>{score}/{wickets}</Text>
+            <Text style={[ic.sub, { color: COLORS.gray }]}>Target for 2nd innings: {score + 1}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={[ic.resultTxt, { color: COLORS.gold }]}>{resultText}</Text>
+            <Text style={ic.team}>{battingTeam?.team_name}: {score}/{wickets}</Text>
+          </>
+        )}
+
         {!isLastInnings
           ? <TouchableOpacity style={ic.nextBtn} onPress={onStartNext}>
               <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={ic.nextGrad}>
@@ -228,7 +250,7 @@ const InningsCompleteModal = ({ visible, battingTeam, score, wickets, onStartNex
             </TouchableOpacity>
           : <TouchableOpacity style={ic.nextBtn} onPress={onEndMatch}>
               <LinearGradient colors={[COLORS.gold, '#B8942A']} style={ic.nextGrad}>
-                <Text style={[ic.nextTxt, { color: COLORS.navy }]}>View Match Result</Text>
+                <Text style={[ic.nextTxt, { color: COLORS.navy }]}>View Full Scorecard</Text>
               </LinearGradient>
             </TouchableOpacity>
         }
@@ -338,7 +360,7 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, COLORS, pad, ext
       <TouchableOpacity style={pad.wicketBtn} onPress={onWicket}>
         <Text style={pad.wicketTxt}>WICKET</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={pad.swapBtn} onPress={onSwap}>
+      <TouchableOpacity style={pad.swapBtn} onPress={() => onSwap()}>
         <Icon name="swap-horizontal" size={18} color={COLORS.gray} />
         <Text style={pad.swapTxt}>SWAP</Text>
       </TouchableOpacity>
@@ -485,6 +507,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   // Innings complete modal
   const [showInningsComplete, setShowInningsComplete] = useState(false);
+  const [inningsResultText, setInningsResultText]     = useState('');
 
   // Free hit state
   const [isFreeHit, setIsFreeHit] = useState(false);
@@ -511,19 +534,25 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const processedBatsmanSelectionRef = useRef(null);
   const processedBowlerSelectionRef  = useRef(null);
   const processedWicketDismissedRef  = useRef(null);
+  // Stats refs — needed so _swap and recordBall always read current values
+  // even when called inside async functions after awaits.
+  const strikerStatsRef    = useRef({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+  const nonStrikerStatsRef = useRef({ runs: 0, balls: 0, fours: 0, sixes: 0 });
 
   useEffect(() => { initScoring(); }, []);
 
   // Keep refs in sync
-  useEffect(() => { inningsRef.current    = innings;    }, [innings]);
-  useEffect(() => { overRef.current       = currentOver;}, [currentOver]);
-  useEffect(() => { strikerRef.current    = striker;    }, [striker]);
-  useEffect(() => { nonStrikerRef.current = nonStriker; }, [nonStriker]);
-  useEffect(() => { bowlerRef.current     = bowler;     }, [bowler]);
-  useEffect(() => { legalRef.current      = legalBalls; }, [legalBalls]);
-  useEffect(() => { overNumRef.current    = overNumber; }, [overNumber]);
-  useEffect(() => { totalRunsRef.current  = totalRuns;  }, [totalRuns]);
-  useEffect(() => { totalWktsRef.current  = totalWickets;}, [totalWickets]);
+  useEffect(() => { inningsRef.current       = innings;       }, [innings]);
+  useEffect(() => { overRef.current          = currentOver;   }, [currentOver]);
+  useEffect(() => { strikerRef.current       = striker;       }, [striker]);
+  useEffect(() => { nonStrikerRef.current    = nonStriker;    }, [nonStriker]);
+  useEffect(() => { bowlerRef.current        = bowler;        }, [bowler]);
+  useEffect(() => { legalRef.current         = legalBalls;    }, [legalBalls]);
+  useEffect(() => { overNumRef.current       = overNumber;    }, [overNumber]);
+  useEffect(() => { totalRunsRef.current     = totalRuns;     }, [totalRuns]);
+  useEffect(() => { totalWktsRef.current     = totalWickets;  }, [totalWickets]);
+  useEffect(() => { strikerStatsRef.current    = strikerStats;    }, [strikerStats]);
+  useEffect(() => { nonStrikerStatsRef.current = nonStrikerStats; }, [nonStrikerStats]);
 
   useEffect(() => {
     const selection = route.params?.batsmanSelection;
@@ -534,10 +563,29 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setStriker(selection.striker || null);
       setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
     } else if (selection.striker && selection.nonStriker) {
+      // Opening pair (or re-selection due to technical restart) — clear all
+      // existing balls/overs/scorecards for this innings so scoring starts fresh.
+      const activeInnings = inningsRef.current;
+      if (activeInnings?.id) {
+        clearInningsProgress(activeInnings.id).catch(e =>
+          console.warn('[LiveScoring] clearInningsProgress failed:', e)
+        );
+      }
       setStriker(selection.striker);
       setNonStriker(selection.nonStriker);
       setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
       setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      // Reset all live-scoring state
+      setTotalRuns(0);       totalRunsRef.current = 0;
+      setTotalWickets(0);    totalWktsRef.current = 0;
+      setExtras({ wide: 0, no_ball: 0, bye: 0, leg_bye: 0 });
+      setOverNumber(1);      overNumRef.current = 1;
+      setLegalBalls(0);      legalRef.current = 0;
+      setCurrentOver(null);  overRef.current = null;
+      setOverBalls([]);
+      setAllBalls([]);
+      setPartnership({ runs: 0, balls: 0 });
+      setBowlerStats({ overs: 0, runs: 0, wickets: 0, maidens: 0 });
     }
     navigation.setParams({ batsmanSelection: null });
   }, [navigation, route.params?.batsmanSelection]);
@@ -783,18 +831,19 @@ const LiveScoringScreen = ({ navigation, route }) => {
         setExtras(prev => ({ ...prev, [extraType]: (prev[extraType] || 0) + 1 }));
       }
 
-      // Update striker stats — compute synchronously so _swap can use updated value
-      let newStrikerStats = strikerStats;
+      // Update striker stats — read from ref so value is current even after awaits
+      const curStrikerStats = strikerStatsRef.current;
+      let newStrikerStats = curStrikerStats;
       if (!isWide && !isBye && !isLegBye) {
         newStrikerStats = {
-          runs:  strikerStats.runs  + runsScored,
-          balls: strikerStats.balls + (isValidBall ? 1 : 0),
-          fours: strikerStats.fours + (isFour ? 1 : 0),
-          sixes: strikerStats.sixes + (isSix  ? 1 : 0),
+          runs:  curStrikerStats.runs  + runsScored,
+          balls: curStrikerStats.balls + (isValidBall ? 1 : 0),
+          fours: curStrikerStats.fours + (isFour ? 1 : 0),
+          sixes: curStrikerStats.sixes + (isSix  ? 1 : 0),
         };
       } else if (isValidBall) {
         // Bye/LB: still counts as a ball faced
-        newStrikerStats = { ...strikerStats, balls: strikerStats.balls + 1 };
+        newStrikerStats = { ...curStrikerStats, balls: curStrikerStats.balls + 1 };
       }
       setStrikerStats(newStrikerStats);
 
@@ -859,6 +908,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         await updateInnings(inn.id, { total_overs: ovNum });
         setCurrentOver(null);
+        // Pre-increment so ensureOver creates the correct next over number.
+        // Must happen BEFORE _endInnings check so ovNum still holds the
+        // just-completed over number for the >= match.overs comparison.
+        overNumRef.current = ovNum + 1;
+        setOverNumber(ovNum + 1);
         _swap(); // swap at end of over
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
 
@@ -960,9 +1014,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (newLegal >= 6) {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         setCurrentOver(null);
+        overNumRef.current = ovNum + 1;
+        setOverNumber(ovNum + 1);
         _swap();
+        setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
         if (ovNum >= match.overs) {
           _endInnings(totRuns, newWkts, inn.id);
+          return;
         }
       }
     } catch (err) {
@@ -971,14 +1029,15 @@ const LiveScoringScreen = ({ navigation, route }) => {
   };
 
   // ── Swap Strike ────────────────────────────────────────
-  // updatedStrikerStats: pass the freshly-computed striker stats when calling
-  // right after setStrikerStats() to avoid reading stale state closure.
+  // Always read stats from refs so this is safe to call inside async functions
+  // (state closures would be stale after awaits; refs are always current).
   const _swap = (updatedStrikerStats) => {
-    const sStats = updatedStrikerStats !== undefined ? updatedStrikerStats : strikerStats;
+    const sStats  = updatedStrikerStats !== undefined ? updatedStrikerStats : strikerStatsRef.current;
+    const nsStats = nonStrikerStatsRef.current;
     setStriker(prev => {
       const ns = nonStrikerRef.current;
       setNonStriker(prev);
-      setStrikerStats(nonStrikerStats);
+      setStrikerStats(nsStats);
       setNonStrikerStats(sStats);
       return ns;
     });
@@ -1080,6 +1139,27 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const _endInnings = async (runs, wkts, inningsId) => {
     try {
       await updateInnings(inningsId || innings?.id, { is_completed: 1 });
+
+      // Compute result text for 2nd innings (target comes from route.params)
+      if (inningsNumber === 2 && target) {
+        const finalRuns = runs  ?? totalRuns;
+        const finalWkts = wkts ?? totalWickets;
+        const maxWkts   = (match.players_per_team || 6) - 1;
+        let result;
+        if (finalRuns >= target) {
+          // Batting team chased down — win by remaining wickets
+          const wicketsLeft = maxWkts - finalWkts;
+          result = `${battingTeam.team_name} wins by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
+        } else if (finalRuns === target - 1) {
+          result = 'Match Tied!';
+        } else {
+          // Bowling team defended — win by run difference
+          const runDiff = (target - 1) - finalRuns;
+          result = `${bowlingTeam.team_name} wins by ${runDiff} run${runDiff !== 1 ? 's' : ''}!`;
+        }
+        setInningsResultText(result);
+      }
+
       setShowInningsComplete(true);
     } catch (e) {
       console.error('endInnings:', e);
@@ -1292,7 +1372,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
                 <Text style={sc.partnerTxt}>
                   Partnership: {partnership.runs} runs ({partnership.balls} balls)
                 </Text>
-                <TouchableOpacity onPress={_swap}>
+                <TouchableOpacity onPress={() => _swap()}>
                   <Icon name="swap-horizontal" size={16} color={COLORS.cyan} />
                 </TouchableOpacity>
               </View>
@@ -1397,9 +1477,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
       <InningsCompleteModal
         visible={showInningsComplete}
         battingTeam={battingTeam}
+        bowlingTeam={bowlingTeam}
         score={totalRuns}
         wickets={totalWickets}
         isLastInnings={inningsNumber === 2}
+        resultText={inningsResultText}
         onStartNext={handleStartNextInnings}
         onEndMatch={handleEndMatch}
         COLORS={COLORS}
@@ -1536,8 +1618,10 @@ const getIcStyles = (COLORS) => StyleSheet.create({
   card:      { backgroundColor: COLORS.navy, borderRadius: 24, padding: 32, alignItems: 'center', width: '100%', borderWidth: 1, borderColor: COLORS.gold },
   title:     { color: COLORS.white, fontSize: 20, fontWeight: '800', marginBottom: 8 },
   team:      { color: COLORS.cyan, fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  score:     { color: COLORS.gold, fontSize: 48, fontWeight: '900', marginBottom: 24 },
-  nextBtn:   { borderRadius: 14, overflow: 'hidden', width: '100%' },
+  score:     { color: COLORS.gold, fontSize: 48, fontWeight: '900', marginBottom: 16 },
+  sub:       { fontSize: 13, fontWeight: '600', marginBottom: 24 },
+  resultTxt: { fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 12 },
+  nextBtn:   { borderRadius: 14, overflow: 'hidden', width: '100%', marginTop: 20 },
   nextGrad:  { height: 56, alignItems: 'center', justifyContent: 'center' },
   nextTxt:   { color: COLORS.white, fontWeight: '900', fontSize: 16 },
 });
