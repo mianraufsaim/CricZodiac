@@ -947,9 +947,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setTotalRuns(newTotal);
       if (isValidBall) setLegalBalls(newLegal);
 
-      // Update extras breakdown
+      // Update extras breakdown.
+      // wide/no_ball: track count (penalty applied at display time).
+      // bye/leg_bye: track actual runs (variable per delivery).
       if (isExtra) {
-        setExtras(prev => ({ ...prev, [extraType]: (prev[extraType] || 0) + 1 }));
+        const extDelta = (isBye || isLegBye) ? extraRuns : 1;
+        setExtras(prev => ({ ...prev, [extraType]: (prev[extraType] || 0) + extDelta }));
       }
 
       // Update striker stats — read from ref so value is current even after awaits
@@ -1284,9 +1287,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
             balls: ballsSinceWicket.filter(b => b.is_valid_ball === 1).length,
           });
 
-          // ── Recompute extras breakdown ───────────────────
+          // ── Recompute extras breakdown after undo ────────
+          // wide/no_ball → count; bye/leg_bye → actual extra_runs
           const eb = { wide: 0, no_ball: 0, bye: 0, leg_bye: 0 };
-          refreshed.forEach(b => { if (b.extra_type) eb[b.extra_type] = (eb[b.extra_type] || 0) + 1; });
+          refreshed.forEach(b => {
+            if (!b.extra_type) return;
+            const delta = (b.extra_type === 'bye' || b.extra_type === 'leg_bye')
+              ? (b.extra_runs || 0)
+              : 1;
+            eb[b.extra_type] = (eb[b.extra_type] || 0) + delta;
+          });
           setExtras(eb);
 
         } catch (e) { Alert.alert('Undo Failed', e.message); }
@@ -1507,7 +1517,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
               nb {extras.no_ball}, wd {extras.wide}, b {extras.bye}, lb {extras.leg_bye}
             </Text>
             <Text style={sc.extrasTot}>
-              {extras.no_ball + extras.wide + extras.bye + extras.leg_bye}
+              {extras.no_ball * (match.no_ball_value || 1)
+               + extras.wide   * (match.wide_value    || 1)
+               + extras.bye
+               + extras.leg_bye}
             </Text>
           </View>
 
