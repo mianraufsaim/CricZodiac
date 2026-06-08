@@ -60,15 +60,12 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
     // 2. SQLite empty → fetch from MySQL via API
     if (!teamPlayers?.length) {
       try {
-        const params = new URLSearchParams();
-        // Prefer team UUID; API also accepts integer server_id
-        params.set('team_id',    team.id);
-        // Also send match + label as fallback inside the API
-        if (team.match_id)   params.set('match_id',   String(team.match_id));
-        if (team.team_label) params.set('team_label',  team.team_label);
-        if (team.club_id)    params.set('club_id',     String(team.club_id));
+        const qParts = [`team_id=${encodeURIComponent(team.id)}`];
+        if (team.match_id)   qParts.push(`match_id=${encodeURIComponent(team.match_id)}`);
+        if (team.team_label) qParts.push(`team_label=${encodeURIComponent(team.team_label)}`);
+        if (team.club_id)    qParts.push(`club_id=${encodeURIComponent(team.club_id)}`);
 
-        const res        = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${params.toString()}`);
+        const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
         const serverList = res?.players || res?.data?.players || [];
 
         if (serverList.length) {
