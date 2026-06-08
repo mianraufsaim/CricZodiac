@@ -189,6 +189,18 @@ export const getTeamPlayers = (teamId) =>
 export const getMatchTeams = (matchId) =>
   queryRows('SELECT * FROM teams WHERE match_id = ?', [matchId]);
 
+export const getMatchTeamsWithCaptains = (matchId) =>
+  queryRows(`
+    SELECT
+      t.id, t.team_name, t.team_label, t.captain_id, t.wk_id,
+      COALESCE(u.name, p.full_name) AS captain_name
+    FROM teams t
+    LEFT JOIN players p ON t.captain_id = p.id
+    LEFT JOIN users u   ON p.user_id    = u.id
+    WHERE t.match_id = ?
+    ORDER BY t.team_label ASC
+  `, [matchId]);
+
 // ── Toss ─────────────────────────────────────────────────
 
 export const saveTossResult = async (tossData) => {

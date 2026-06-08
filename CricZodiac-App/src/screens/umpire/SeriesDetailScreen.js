@@ -136,23 +136,46 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     return COLORS.gray;
   };
 
+  const handleMatchPress = async (item, index) => {
+    if (item.status === MATCH_STATUS?.SETUP || item.status === 'setup') {
+      navigation.navigate('MatchSetup', {
+        match: item,
+        seriesId,
+        seriesName,
+        matchNumber: index + 1,
+      });
+    } else if (item.status === 'toss') {
+      try {
+        const res = await ApiService.get(
+          `${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(item.id)}`
+        );
+        const teams = res?.teams || res?.data?.teams || [];
+        const teamA = teams.find(t => t.team_label === 'A') || teams[0];
+        const teamB = teams.find(t => t.team_label === 'B') || teams[1];
+        if (!teamA || !teamB) {
+          Alert.alert('Teams not found', 'Could not load teams for this match. Please complete team selection first.');
+          return;
+        }
+        navigation.navigate('Toss', {
+          match:        item,
+          teamA:        { id: teamA.local_id || String(teamA.id), team_name: teamA.team_name, captain_id: teamA.captain_local || String(teamA.captain_id), captain_name: teamA.captain_name },
+          teamB:        { id: teamB.local_id || String(teamB.id), team_name: teamB.team_name, captain_id: teamB.captain_local || String(teamB.captain_id), captain_name: teamB.captain_name },
+          isFirstMatch: index === 0,
+        });
+      } catch (e) {
+        Alert.alert('Error', 'Failed to load match teams.');
+      }
+    } else if (item.status === 'live') {
+      navigation.navigate('LiveScoring', { matchId: item.id });
+    } else {
+      navigation.navigate('Scorecard', { matchId: item.id });
+    }
+  };
+
   const renderMatch = ({ item, index }) => (
     <TouchableOpacity
       style={styles.matchCard}
-      onPress={() => {
-        if (item.status === MATCH_STATUS?.SETUP || item.status === 'setup') {
-          navigation.navigate('MatchSetup', {
-            match: item,
-            seriesId,
-            seriesName,
-            matchNumber: index + 1,
-          });
-        } else if (item.status === 'live') {
-          navigation.navigate('LiveScoring', { matchId: item.id });
-        } else {
-          navigation.navigate('Scorecard', { matchId: item.id });
-        }
-      }}
+      onPress={() => handleMatchPress(item, index)}
     >
       <View style={styles.matchNum}>
         <Text style={styles.matchNumText}>M{index + 1}</Text>
