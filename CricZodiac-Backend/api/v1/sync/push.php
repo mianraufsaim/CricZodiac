@@ -885,6 +885,29 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
         // authoritative cumulative values from SQLite. Mixing incremental
         // updates here with those absolute overwrites causes ordering bugs.
 
+        // ── Update innings totals ──────────────────────────────────────────
+        // total_overs is derived from the real ball count so it's always exact.
+        // is_completed is intentionally left to syncInnings (app sets it on close).
+        if ($inningsId) {
+            $totalRunsForInnings = $runsScored + $extraRuns;
+            $pdo->prepare("
+                UPDATE innings
+                SET total_runs    = total_runs    + ?,
+                    total_wickets = total_wickets + ?,
+                    total_overs   = (
+                        SELECT FLOOR(COUNT(*) / 6) + (COUNT(*) % 6) * 0.1
+                        FROM balls
+                        WHERE innings_id = ? AND is_valid_ball = 1
+                    )
+                WHERE id = ?
+            ")->execute([
+                $totalRunsForInnings,
+                $isWicket,
+                $inningsId,   // subquery param
+                $inningsId,   // WHERE id
+            ]);
+        }
+
         // ── Update overs table with this ball's contribution ───────────────
         // syncOver only fires at over creation (runs=0), so we maintain
         // runs_conceded, wickets, balls_bowled incrementally here.
