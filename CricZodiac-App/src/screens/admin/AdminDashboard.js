@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert,
+  ScrollView, Alert, Platform, StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -88,24 +88,31 @@ const AdminDashboard = ({ navigation }) => {
       {/* ── Nav Bar ── */}
       <View style={[styles.navBar, isSuperAdminView && { paddingTop: 12 }]}>
 
-        {/* LEFT: Z logo + name + [role | club badge on same line] */}
-        <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={styles.navLogo}>
-          <Text style={styles.navLogoText}>Z</Text>
-        </LinearGradient>
+        {/* LEFT: [Z] + two-line info column */}
         <TouchableOpacity
-          style={styles.navInfo}
           onPress={isSuperAdminView ? undefined : () => navigation.navigate('EditProfile')}
           activeOpacity={isSuperAdminView ? 1 : 0.7}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Text style={styles.navName} numberOfLines={1}>{user?.name}</Text>
-            {!isSuperAdminView && (
-              <Icon name="pencil-outline" size={11} color={COLORS.gray} style={{ marginTop: 1 }} />
-            )}
+          <View style={[styles.navLogo, { backgroundColor: COLORS.gold + '22' }]}>
+            <Text style={[styles.navLogoText, { color: COLORS.gold }]}>
+              {user?.name?.[0]?.toUpperCase() || '?'}
+            </Text>
           </View>
+        </TouchableOpacity>
+
+        <View style={styles.navInfo}>
+          {/* Line 1: Name */}
+          <TouchableOpacity
+            onPress={isSuperAdminView ? undefined : () => navigation.navigate('EditProfile')}
+            activeOpacity={isSuperAdminView ? 1 : 0.7}
+          >
+            <Text style={styles.navName} numberOfLines={1}>{user?.name}</Text>
+          </TouchableOpacity>
+
+          {/* Line 2: Role · Club Badge */}
           <View style={styles.navRoleRow}>
             <Text style={styles.navRole}>
-              {isSuperAdminView ? 'Viewing as Admin' : 'Club Admin'}
+              {isSuperAdminView ? 'Admin' : 'Admin'}
             </Text>
             {effectiveClub && (
               <TouchableOpacity
@@ -114,49 +121,51 @@ const AdminDashboard = ({ navigation }) => {
                 activeOpacity={isSuperAdminView ? 1 : 0.75}
               >
                 <Icon name="shield-star" size={10} color={COLORS.gold} />
-                <Text style={styles.clubBadgeText} numberOfLines={1}>{effectiveClub.name}</Text>
+                <Text style={styles.clubBadgeText}>{effectiveClub.name}</Text>
                 {!isSuperAdminView && (
                   <Icon name="pencil-outline" size={9} color={COLORS.gold} />
                 )}
               </TouchableOpacity>
             )}
           </View>
-        </TouchableOpacity>
+        </View>
 
         <View style={{ flex: 1 }} />
 
-        {/* RIGHT: sync chip + theme toggle + logout/exit */}
-        <TouchableOpacity
-          style={styles.syncChip}
-          onPress={() => navigation.navigate('SyncStatus')}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.syncDot, { backgroundColor: syncColor }]} />
-          {syncStats.pending > 0 && (
-            <Text style={[styles.syncCount, { color: syncColor }]}>{syncStats.pending}</Text>
-          )}
-          {syncStats.failed > 0 && (
-            <Icon name="refresh-circle" size={15} color={COLORS.danger} style={{ marginLeft: 2 }} />
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navIconBtn} onPress={toggleTheme} activeOpacity={0.7}>
-          <Icon
-            name={isDark ? 'weather-sunny' : 'weather-night'}
-            size={20}
-            color={isDark ? COLORS.warning : COLORS.royalBlue}
-          />
-        </TouchableOpacity>
-
-        {isSuperAdminView ? (
-          <TouchableOpacity onPress={exitClubView} style={styles.navIconBtn}>
-            <Icon name="arrow-left-circle" size={22} color={COLORS.gold} />
+        {/* RIGHT: sync · theme · logout — tightly grouped */}
+        <View style={styles.navRight}>
+          <TouchableOpacity
+            style={styles.syncChip}
+            onPress={() => navigation.navigate('SyncStatus')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.syncDot, { backgroundColor: syncColor }]} />
+            {syncStats.pending > 0 && (
+              <Text style={[styles.syncCount, { color: syncColor }]}>{syncStats.pending}</Text>
+            )}
+            {syncStats.failed > 0 && (
+              <Icon name="refresh-circle" size={14} color={COLORS.danger} />
+            )}
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={logout} style={styles.navIconBtn}>
-            <Icon name="logout" size={20} color={COLORS.danger} />
+
+          <TouchableOpacity style={styles.navIconBtn} onPress={toggleTheme} activeOpacity={0.7}>
+            <Icon
+              name={isDark ? 'weather-sunny' : 'weather-night'}
+              size={19}
+              color={isDark ? COLORS.warning : COLORS.royalBlue}
+            />
           </TouchableOpacity>
-        )}
+
+          {isSuperAdminView ? (
+            <TouchableOpacity onPress={exitClubView} style={styles.navIconBtn}>
+              <Icon name="arrow-left-circle" size={20} color={COLORS.gold} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={logout} style={styles.navIconBtn}>
+              <Icon name="logout" size={19} color={COLORS.danger} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -206,19 +215,20 @@ const getStyles = (COLORS) => StyleSheet.create({
   exitChipText:         { color: COLORS.navy, fontWeight: '800', fontSize: 11 },
 
   // Nav bar
-  navBar:        { flexDirection: 'row', alignItems: 'center', paddingTop: 52, paddingHorizontal: 14, paddingBottom: 12, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder, gap: 10 },
-  navLogo:       { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  navLogoText:   { fontSize: 18, fontWeight: '900', color: '#fff', fontStyle: 'italic' },
+  navBar:        { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 52 : (StatusBar.currentHeight || 24), paddingHorizontal: 14, paddingBottom: 12, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder, gap: 5 },
+  navLogo:       { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  navLogoText:   { fontSize: 18, fontWeight: '900' },
   navInfo:       { flexShrink: 1 },
   navName:       { fontSize: 15, fontWeight: '800', color: COLORS.white },
-  navRoleRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' },
-  navRole:       { fontSize: 11, fontWeight: '600', color: COLORS.gold, letterSpacing: 0.5 },
-  clubBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.gold + '1A', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.gold + '44' },
-  clubBadgeText: { color: COLORS.gold, fontSize: 10, fontWeight: '700', maxWidth: 90 },
-  syncChip:      { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.darkGray, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.cardBorder, gap: 4 },
-  syncDot:       { width: 8, height: 8, borderRadius: 4 },
-  syncCount:     { fontSize: 12, fontWeight: '700' },
-  navIconBtn:    { padding: 8 },
+  navRoleRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  navRole:       { fontSize: 11, fontWeight: '600', color: COLORS.gray },
+  clubBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.gold + '1A', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: COLORS.gold + '44' },
+  clubBadgeText: { color: COLORS.gold, fontSize: 10, fontWeight: '700' },
+  navRight:      { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 0 },
+  syncChip:      { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.darkGray, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: COLORS.cardBorder, gap: 3 },
+  syncDot:       { width: 7, height: 7, borderRadius: 4 },
+  syncCount:     { fontSize: 11, fontWeight: '700' },
+  navIconBtn:    { padding: 5 },
 
   // Stats
   statsGrid:     { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, gap: 10 },

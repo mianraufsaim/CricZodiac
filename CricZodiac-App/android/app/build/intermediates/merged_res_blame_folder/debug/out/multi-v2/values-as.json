@@ -1,10 +1,27 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeDebugResources-2:/values-as/values-as.xml",
+            "outputFile": "com.criczodiac.app-mergeDebugResources-35:/values-as/values-as.xml",
             "map": [
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-3/d3a8a24834f295d8078f18b8298041f7/transformed/material-1.9.0/res/values-as/values-as.xml",
+                    "source": "/Users/mian-rauf/.gradle/caches/transforms-3/b4db2f23f2ab214a51186ce21dfe946e/transformed/jetified-react-android-0.73.4-debug/res/values-as/values-as.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8",
+                        "startColumns": "4,4,4,4,4,4,4",
+                        "startOffsets": "55,134,201,281,348,417,491",
+                        "endColumns": "78,66,79,66,68,73,72",
+                        "endOffsets": "129,196,276,343,412,486,559"
+                    },
+                    "to": {
+                        "startLines": "48,52,53,55,69,108,109",
+                        "startColumns": "4,4,4,4,4,4,4",
+                        "startOffsets": "4526,4824,4891,5030,6030,9056,9130",
+                        "endColumns": "78,66,79,66,68,73,72",
+                        "endOffsets": "4600,4886,4966,5092,6094,9125,9198"
+                    }
+                },
+                {
+                    "source": "/Users/mian-rauf/.gradle/caches/transforms-3/d3a8a24834f295d8078f18b8298041f7/transformed/material-1.9.0/res/values-as/values-as.xml",
                     "from": {
                         "startLines": "2,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -23,7 +40,7 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/res/values-as/values-as.xml",
+                    "source": "/Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/res/values-as/values-as.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -40,24 +57,7 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-3/b4db2f23f2ab214a51186ce21dfe946e/transformed/jetified-react-android-0.73.4-debug/res/values-as/values-as.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8",
-                        "startColumns": "4,4,4,4,4,4,4",
-                        "startOffsets": "55,134,201,281,348,417,491",
-                        "endColumns": "78,66,79,66,68,73,72",
-                        "endOffsets": "129,196,276,343,412,486,559"
-                    },
-                    "to": {
-                        "startLines": "48,52,53,55,69,108,109",
-                        "startColumns": "4,4,4,4,4,4,4",
-                        "startOffsets": "4526,4824,4891,5030,6030,9056,9130",
-                        "endColumns": "78,66,79,66,68,73,72",
-                        "endOffsets": "4600,4886,4966,5092,6094,9125,9198"
-                    }
-                },
-                {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-3/b3627ca143232ec2ceb6e319eb18971d/transformed/appcompat-1.6.1/res/values-as/values-as.xml",
+                    "source": "/Users/mian-rauf/.gradle/caches/transforms-3/b3627ca143232ec2ceb6e319eb18971d/transformed/appcompat-1.6.1/res/values-as/values-as.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",

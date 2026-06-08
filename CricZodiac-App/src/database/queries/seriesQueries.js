@@ -2,7 +2,7 @@
 // CricZodiac — Series Database Queries (Local SQLite)
 // ============================================================
 
-import { queryRows, queryFirstRow, executeTransaction } from '../DatabaseHelper';
+import { queryRows, queryFirstRow, executeQuery, executeTransaction } from '../DatabaseHelper';
 import { SYNC_STATUS } from '../../config/constants';
 import uuid from 'react-native-uuid';
 
@@ -46,6 +46,49 @@ export const getAllSeries = () =>
     GROUP BY s.id
     ORDER BY s.created_at DESC
   `);
+
+// ── Pull series from server into local SQLite cache ───────
+// Server rows use MySQL integer ids, while app-created rows use UUID local_id.
+export const upsertSeriesFromServer = async (serverSeries) => {
+  if (!serverSeries?.length) return;
+
+  for (const s of serverSeries) {
+    const seriesId = s.local_id || String(s.id);
+    const existing = await queryFirstRow('SELECT sync_status FROM series WHERE id = ?', [seriesId]);
+
+    // Keep local offline edits authoritative until they have synced.
+    if (existing?.sync_status === SYNC_STATUS.PENDING || existing?.sync_status === SYNC_STATUS.FAILED) {
+      continue;
+    }
+
+    await executeQuery(
+      `INSERT OR REPLACE INTO series
+         (id, server_id, name, description, start_date, end_date, format, status,
+          created_by, club_id, team_a_wins, team_b_wins, team_a_id, team_b_id,
+          created_at, updated_at, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        seriesId,
+        s.id || null,
+        s.name,
+        s.description || null,
+        s.start_date || null,
+        s.end_date || null,
+        s.format || 'bestOf1',
+        s.status || 'active',
+        s.created_by != null ? String(s.created_by) : null,
+        s.club_id != null ? String(s.club_id) : null,
+        s.team_a_wins || 0,
+        s.team_b_wins || 0,
+        s.team_a_local || (s.team_a_id != null ? String(s.team_a_id) : null),
+        s.team_b_local || (s.team_b_id != null ? String(s.team_b_id) : null),
+        s.created_at || null,
+        s.updated_at || null,
+        SYNC_STATUS.SYNCED,
+      ]
+    );
+  }
+};
 
 export const getSeriesById = (id) =>
   queryFirstRow('SELECT * FROM series WHERE id = ?', [id]);

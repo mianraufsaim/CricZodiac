@@ -201,15 +201,19 @@ const SyncItem = ({ item, COLORS, styles, onRetried }) => {
 
           {/* Payload fields */}
           <Text style={styles.sectionMini}>PAYLOAD</Text>
-          {Object.entries(payload)
-            .filter(([k]) => !SKIP_KEYS.has(k))
-            .map(([k, v]) => (
-              <View key={k} style={styles.payloadRow}>
-                <Text style={styles.payloadKey}>{k}</Text>
-                <Text style={[styles.payloadVal, styles.mono]} numberOfLines={3}>{fmtVal(v)}</Text>
-              </View>
-            ))
-          }
+          {(() => {
+            const rows = [];
+            for (const [k, v] of Object.entries(payload)) {
+              if (SKIP_KEYS.has(k)) continue;
+              rows.push(
+                <View key={k} style={styles.payloadRow}>
+                  <Text style={styles.payloadKey}>{k}</Text>
+                  <Text style={[styles.payloadVal, styles.mono]} numberOfLines={3}>{fmtVal(v)}</Text>
+                </View>
+              );
+            }
+            return rows;
+          })()}
 
           {/* Last error */}
           {item.last_error && (

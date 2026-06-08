@@ -11,7 +11,10 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
-import { getAllSeries } from '../../database/queries/seriesQueries';
+import { getAllSeries, upsertSeriesFromServer } from '../../database/queries/seriesQueries';
+import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 const SeriesListScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -23,6 +26,16 @@ const SeriesListScreen = ({ navigation }) => {
   const loadSeries = async () => {
     setLoading(true);
     try {
+      try {
+        const res = await ApiService.get(API_ENDPOINTS.SERIES_LIST);
+        const serverSeries = res?.series || res?.data?.series || [];
+        if (serverSeries.length) await upsertSeriesFromServer(serverSeries);
+        const matchRes = await ApiService.get(API_ENDPOINTS.MATCHES_LIST);
+        const serverMatches = matchRes?.matches || matchRes?.data?.matches || [];
+        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+      } catch (_) {
+        // Offline/server issue: show cached SQLite data.
+      }
       const rows = await getAllSeries();
       setSeries(rows);
     } catch (e) {

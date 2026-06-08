@@ -147,8 +147,9 @@ export const processSyncQueue = async () => {
 
         if (response.success) {
           const syncedIds = response.synced_event_ids || [];
+          const syncedIdSet = new Set(syncedIds);
           for (const item of items) {
-            if (syncedIds.includes(item.event_id) || response.all_synced) {
+            if (response.all_synced || syncedIdSet.has(item.event_id)) {
               await markSyncItemSynced(item.id);
               await _updateMainRecordSyncStatus(item.table_name, item.local_id);
               totalSynced++;

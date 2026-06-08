@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../config/constants';
 import { setUserApproval, deactivateUser, getAllUsers } from '../../database/queries/userQueries';
+import { upsertPlayersFromServer } from '../../database/queries/playerQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -182,7 +183,9 @@ const ManageUsersScreen = ({ navigation }) => {
     try {
       // Try server first — returns users filtered by club_id with player data joined
       const res = await ApiService.get(API_ENDPOINTS.USERS_LIST);
-      setUsers(res.users || []);
+      const serverUsers = res?.users || res?.data?.users || [];
+      await upsertPlayersFromServer(serverUsers);
+      setUsers(serverUsers);
     } catch (serverErr) {
       // Offline fallback — local SQLite filtered to this admin's club
       try {
@@ -190,7 +193,7 @@ const ManageUsersScreen = ({ navigation }) => {
         const filtered = local.filter(u =>
           u.role !== 'admin' &&
           u.role !== 'super_admin' &&
-          u.club_id === currentUser?.club_id
+          String(u.club_id) === String(currentUser?.club_id)
         );
         setUsers(filtered);
       } catch (e) {

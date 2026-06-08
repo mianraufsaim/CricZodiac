@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeDebugResources-2:/values-he/values-he.xml",
+            "outputFile": "com.criczodiac.app-mergeDebugResources-35:/values-he/values-he.xml",
             "map": [
                 {
-                    "source": "/Users/mian-rauf/Mobile Development/Cricket APP/CricZodiac-App/node_modules/react-native-date-picker/android/build/intermediates/packaged_res/debug/values-he/values-he.xml",
+                    "source": "/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-date-picker/android/build/intermediates/packaged_res/debug/values-he/values-he.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4",

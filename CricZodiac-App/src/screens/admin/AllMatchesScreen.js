@@ -9,6 +9,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { MATCH_STATUS } from '../../config/constants';
 import { queryRows } from '../../database/DatabaseHelper';
+import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 const AllMatchesScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -20,6 +23,13 @@ const AllMatchesScreen = ({ navigation }) => {
   const loadMatches = async () => {
     setLoading(true);
     try {
+      try {
+        const res = await ApiService.get(API_ENDPOINTS.MATCHES_LIST);
+        const serverMatches = res?.matches || res?.data?.matches || [];
+        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+      } catch (_) {
+        // Offline/server issue: show cached SQLite data.
+      }
       const rows = await queryRows(
         `SELECT m.*,
           t1.team_name AS team_a_name,

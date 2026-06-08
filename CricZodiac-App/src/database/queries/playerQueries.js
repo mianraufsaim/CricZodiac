@@ -47,7 +47,36 @@ export const updatePlayer = async (id, data) => {
 };
 
 export const getAllPlayers = () =>
-  queryRows('SELECT * FROM players WHERE is_active = 1 ORDER BY full_name ASC');
+  queryRows(`
+    SELECT
+      p.id,
+      p.server_id,
+      p.user_id,
+      u.id AS user_local_id,
+      u.server_id AS user_server_id,
+      COALESCE(u.name, p.full_name) AS full_name,
+      COALESCE(u.email, p.email) AS email,
+      COALESCE(u.phone, p.phone) AS phone,
+      COALESCE(u.club_id, p.club_id) AS club_id,
+      COALESCE(u.status, 'active') AS status,
+      COALESCE(u.is_approved, 1) AS is_approved,
+      p.player_type,
+      p.batting_hand,
+      p.bowling_style,
+      p.jersey_number,
+      p.date_of_birth,
+      p.profile_pic,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      p.sync_status
+    FROM players p
+    LEFT JOIN users u ON p.user_id = u.id
+    WHERE p.is_active = 1
+      AND COALESCE(u.status, 'active') = 'active'
+      AND COALESCE(u.is_approved, 1) = 1
+    ORDER BY full_name ASC
+  `);
 
 // ── Sync players from server API response ─────────────────
 // serverUsers: array returned by GET /users/list.php
@@ -63,10 +92,12 @@ export const upsertPlayersFromServer = async (serverUsers) => {
     // Upsert user row
     await executeQuery(
       `INSERT OR REPLACE INTO users
-         (id, server_id, name, email, phone, role, status, is_approved, sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+         (id, server_id, name, email, phone, role, status, is_approved,
+          profile_pic, club_id, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
       [userId, u.id, u.name, u.email || null, u.phone || null,
-       u.role, u.status, u.is_approved ? 1 : 0]
+       u.role, u.status, u.is_approved ? 1 : 0,
+       u.profile_pic || null, u.club_id != null ? String(u.club_id) : null]
     );
 
     // Upsert player row if a player profile exists on the server
@@ -74,21 +105,41 @@ export const upsertPlayersFromServer = async (serverUsers) => {
       const playerId = u.player_local_id || String(u.player_db_id);
       await executeQuery(
         `INSERT OR REPLACE INTO players
-           (id, server_id, user_id, full_name, email, phone,
-            player_type, profile_pic, is_active, sync_status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+           (id, server_id, user_id, club_id, full_name, email, phone,
+            player_type, batting_hand, bowling_style, jersey_number, date_of_birth,
+            profile_pic, is_active, sync_status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
         [
           playerId, u.player_db_id || null, userId,
+          u.club_id != null ? String(u.club_id) : null,
           u.name,                          // full_name = user's name
           u.email        || null,
           u.phone        || null,
           u.player_type  || 'allrounder',
+          u.batting_hand || 'right',
+          u.bowling_style || null,
+          u.jersey_number || null,
+          u.date_of_birth || null,
           u.player_pic   || null,
           u.is_active != null ? (u.is_active ? 1 : 0) : 1,
         ]
       );
     }
   }
+};
+
+export const deactivatePlayer = async (id) => {
+  await executeTransaction([
+    {
+      sql: `UPDATE players SET is_active = 0, updated_at = datetime('now'), sync_status = ? WHERE id = ?`,
+      params: [SYNC_STATUS.PENDING, id],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [uuid.v4(), 'players', 'delete', id, JSON.stringify({ id }), SYNC_STATUS.PENDING],
+    },
+  ]);
 };
 
 export const getPlayer = (id) =>

@@ -13,6 +13,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { MATCH_STATUS } from '../../config/constants';
 import { getSeriesById, getSeriesMatches, updateSeriesStatus } from '../../database/queries/seriesQueries';
+import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 const FORMAT_LABELS = { bestOf1: 'Best of 1', bestOf3: 'Best of 3', bestOf5: 'Best of 5' };
 
@@ -34,6 +37,13 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const load = async () => {
     setLoading(true);
     try {
+      try {
+        const res = await ApiService.get(`${API_ENDPOINTS.MATCHES_LIST}?series_id=${encodeURIComponent(seriesId)}`);
+        const serverMatches = res?.matches || res?.data?.matches || [];
+        if (serverMatches.length) await upsertMatchesFromServer(serverMatches);
+      } catch (_) {
+        // Offline/server issue: show cached SQLite data.
+      }
       const [s, m] = await Promise.all([
         getSeriesById(seriesId),
         getSeriesMatches(seriesId),

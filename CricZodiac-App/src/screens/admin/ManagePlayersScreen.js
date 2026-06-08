@@ -4,8 +4,10 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
-import { getAllPlayers } from '../../database/queries/playerQueries';
-import { executeQuery } from '../../database/DatabaseHelper';
+import { getAllPlayers, upsertPlayersFromServer, deactivatePlayer } from '../../database/queries/playerQueries';
+import { deactivateUser } from '../../database/queries/userQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 const ManagePlayersScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -17,20 +19,56 @@ const ManagePlayersScreen = ({ navigation }) => {
   useFocusEffect(useCallback(() => { load(); }, []));
 
   const load = async () => {
+    try {
+      const res = await ApiService.get(API_ENDPOINTS.USERS_LIST);
+      const serverUsers = res?.users || res?.data?.users || [];
+      if (serverUsers.length) await upsertPlayersFromServer(serverUsers);
+    } catch (_) {
+      // Offline/server issue: render cached players.
+    }
     const all = await getAllPlayers();
     setPlayers(all);
   };
 
   const filtered = players.filter(p =>
-    p.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     p.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const toEditUser = (player) => ({
+    id: player.user_server_id || player.user_id,
+    local_id: player.user_local_id || player.user_id,
+    name: player.full_name,
+    email: player.email,
+    phone: player.phone,
+    role: 'player',
+    status: player.status || 'active',
+    is_approved: player.is_approved != null ? player.is_approved : 1,
+    club_id: player.club_id,
+    player_local_id: player.id,
+    player_type: player.player_type,
+    batting_hand: player.batting_hand,
+    bowling_style: player.bowling_style,
+    jersey_number: player.jersey_number,
+    date_of_birth: player.date_of_birth,
+  });
+
+  const handleEdit = (player) => {
+    if (player.user_id || player.user_local_id) {
+      navigation.navigate('EditUser', { user: toEditUser(player) });
+      return;
+    }
+    navigation.navigate('AddEditPlayer', { player });
+  };
 
   const handleDelete = (player) => {
     Alert.alert('Delete Player', `Remove ${player.full_name}?`, [
       { text: 'Cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        await executeQuery('UPDATE players SET is_active = 0 WHERE id = ?', [player.id]);
+        if (player.user_id || player.user_local_id) {
+          await deactivateUser(player.user_local_id || player.user_id);
+        }
+        await deactivatePlayer(player.id);
         load();
       }},
     ]);
@@ -43,7 +81,7 @@ const ManagePlayersScreen = ({ navigation }) => {
           <Icon name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.title}>Players ({players.length})</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('AddEditPlayer', {})}>
+        <TouchableOpacity onPress={() => navigation.navigate('CreateUser', { defaultRole: 'player' })}>
           <Icon name="plus" size={26} color={COLORS.gold} />
         </TouchableOpacity>
       </View>
@@ -72,7 +110,7 @@ const ManagePlayersScreen = ({ navigation }) => {
               <Text style={styles.playerName}>{item.full_name}</Text>
               <Text style={styles.playerType}>{item.player_type} · {item.email || item.phone}</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('AddEditPlayer', { player: item })} style={styles.actionBtn}>
+            <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
               <Icon name="pencil" size={18} color={COLORS.cyan} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>

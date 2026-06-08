@@ -63,6 +63,55 @@ export const getAllMatches = () =>
 export const getActiveMatches = () =>
   queryRows("SELECT * FROM matches WHERE status NOT IN ('completed') ORDER BY created_at DESC");
 
+// ── Pull matches from server into local SQLite cache ──────
+export const upsertMatchesFromServer = async (serverMatches) => {
+  if (!serverMatches?.length) return;
+
+  for (const m of serverMatches) {
+    const matchId = m.local_id || String(m.id);
+    const existing = await queryFirstRow('SELECT sync_status FROM matches WHERE id = ?', [matchId]);
+
+    if (existing?.sync_status === SYNC_STATUS.PENDING || existing?.sync_status === SYNC_STATUS.FAILED) {
+      continue;
+    }
+
+    await executeQuery(
+      `INSERT OR REPLACE INTO matches (
+        id, server_id, club_id, title, venue, match_date, overs, players_per_team,
+        team_a_id, team_b_id, series_id, toss_winner_id, toss_choice, batting_first,
+        wide_value, no_ball_value, max_overs_per_bowler, status, result_text,
+        winner_team_id, player_of_match, created_at, updated_at, sync_status
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        matchId,
+        m.id || null,
+        m.club_id != null ? String(m.club_id) : null,
+        m.title,
+        m.venue || null,
+        m.match_date || null,
+        m.overs || 6,
+        m.players_per_team || 6,
+        m.team_a_local || (m.team_a_id != null ? String(m.team_a_id) : null),
+        m.team_b_local || (m.team_b_id != null ? String(m.team_b_id) : null),
+        m.series_local_id || (m.series_id != null ? String(m.series_id) : null),
+        m.toss_winner_id != null ? String(m.toss_winner_id) : null,
+        m.toss_choice || null,
+        m.batting_first != null ? String(m.batting_first) : null,
+        m.wide_value || 1,
+        m.no_ball_value || 1,
+        m.max_overs_per_bowler || 0,
+        m.status || 'setup',
+        m.result_text || null,
+        m.winner_team_id != null ? String(m.winner_team_id) : null,
+        m.player_of_match != null ? String(m.player_of_match) : null,
+        m.created_at || null,
+        m.updated_at || null,
+        SYNC_STATUS.SYNCED,
+      ]
+    );
+  }
+};
+
 // ── Teams ─────────────────────────────────────────────────
 
 export const createTeam = async (teamData) => {

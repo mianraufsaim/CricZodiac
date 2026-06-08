@@ -136,9 +136,8 @@ const TeamSelectionScreen = ({ navigation, route }) => {
       // 1. Fetch fresh player list from server and save to SQLite
       try {
         const res = await ApiService.get(API_ENDPOINTS.USERS_LIST);
-        if (res?.success && res?.data?.users?.length) {
-          await upsertPlayersFromServer(res.data.users);
-        }
+        const serverUsers = res?.users || res?.data?.users || [];
+        if (res?.success && serverUsers.length) await upsertPlayersFromServer(serverUsers);
       } catch (_) {
         // Offline or server error — fall through to cached SQLite data
       }

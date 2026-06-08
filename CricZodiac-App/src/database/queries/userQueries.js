@@ -104,8 +104,8 @@ export const createUserWithPlayer = async (data) => {
     // 1. User record
     {
       sql: `INSERT INTO users
-              (id, name, email, phone, role, status, is_approved, sync_status)
-            VALUES (?,?,?,?,?,?,?,?)`,
+              (id, name, email, phone, role, status, is_approved, club_id, local_password, sync_status)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
       params: [
         userId,
         data.name,
@@ -114,6 +114,8 @@ export const createUserWithPlayer = async (data) => {
         data.role,
         'active',
         1,
+        data.club_id || null,
+        data.password || null,
         SYNC_STATUS.PENDING,
       ],
     },
@@ -146,14 +148,20 @@ export const createUserWithPlayer = async (data) => {
   if (data.role === 'player') {
     statements.push({
       sql: `INSERT INTO players
-              (id, user_id, full_name, email, phone, player_type, sync_status)
-            VALUES (?,?,?,?,?,?,?)`,
+              (id, user_id, club_id, full_name, email, phone, player_type,
+               batting_hand, bowling_style, jersey_number, date_of_birth, sync_status)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       params: [
         playerId, userId,
+        data.club_id || null,
         data.name,                    // full_name comes from users data
         data.email       || null,
         data.phone       || null,
         data.player_type || 'allrounder',
+        data.batting_hand || 'right',
+        data.bowling_style || null,
+        data.jersey_number || null,
+        data.date_of_birth || null,
         SYNC_STATUS.PENDING,
       ],
     });
@@ -195,7 +203,7 @@ export const updateUserWithPlayer = async (localUserId, data) => {
   if (isUuid) {
     statements.push({
       sql: `UPDATE users
-              SET name=?, email=?, phone=?, status=?, is_approved=?,
+              SET name=?, email=?, phone=?, status=?, is_approved=?, club_id=?,
                   updated_at=datetime('now'), sync_status=?
               WHERE id=?`,
       params: [
@@ -204,6 +212,7 @@ export const updateUserWithPlayer = async (localUserId, data) => {
         data.phone       || null,
         data.status      || 'active',
         data.is_approved != null ? (data.is_approved ? 1 : 0) : 1,
+        data.club_id     || null,
         SYNC_STATUS.PENDING,
         localUserId,
       ],
@@ -282,12 +291,15 @@ export const updateUserWithPlayer = async (localUserId, data) => {
       const newPlayerId = uuid.v4();
       statements.push({
         sql: `INSERT INTO players
-                (id, user_id, club_id, player_type, batting_hand, bowling_style,
-                 jersey_number, date_of_birth, sync_status)
-              VALUES (?,?,?,?,?,?,?,?,?)`,
+                (id, user_id, club_id, full_name, email, phone, player_type,
+                 batting_hand, bowling_style, jersey_number, date_of_birth, sync_status)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
         params: [
           newPlayerId, localUserId,
           data.club_id       || null,
+          data.name,
+          data.email         || null,
+          data.phone         || null,
           data.player_type   || 'allrounder',
           data.batting_hand  || 'right',
           data.bowling_style || null,

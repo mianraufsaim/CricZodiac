@@ -112,53 +112,101 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
             $d['team_a_id'] ?? null, $d['team_b_id'] ?? null,
         ]);
     } elseif ($action === 'update') {
-        $pdo->prepare("
-            UPDATE series SET name=?, format=?, status=?, team_a_wins=?, team_b_wins=?, updated_at=NOW()
-            WHERE local_id=?
-        ")->execute([
-            $d['name'] ?? '', $d['format'] ?? 'bestOf1', $d['status'] ?? 'active',
-            $d['team_a_wins'] ?? 0, $d['team_b_wins'] ?? 0, $d['id'],
-        ]);
+        $seriesId = resolveSeriesId($pdo, $d['id'] ?? null);
+        if ($seriesId) {
+            $allowed = ['name', 'description', 'format', 'start_date', 'end_date', 'status', 'team_a_wins', 'team_b_wins'];
+            $sets = []; $params = [];
+            foreach ($allowed as $col) {
+                if (array_key_exists($col, $d)) { $sets[] = "$col = ?"; $params[] = $d[$col]; }
+            }
+            if ($sets) {
+                $params[] = $seriesId;
+                $pdo->prepare(
+                    "UPDATE series SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?"
+                )->execute($params);
+            }
+        }
     }
     return true;
+}
+
+function resolveSeriesId(PDO $pdo, $value): ?int {
+    if ($value === null || $value === '') return null;
+
+    $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
+    if ($isUuid) {
+        $stmt = $pdo->prepare("SELECT id FROM series WHERE local_id = ? LIMIT 1");
+        $stmt->execute([$value]);
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM series WHERE local_id = ? OR id = ? LIMIT 1");
+        $stmt->execute([(string) $value, (int) $value]);
+    }
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ? (int) $row['id'] : null;
 }
 
 function syncMatch(PDO $pdo, string $action, array $d): bool {
     if ($action === 'insert' || $action === 'create') {
         // Resolve series UUID → MySQL integer id
         $seriesLocalId = $d['series_id'] ?? null;
-        $seriesId      = null;
-        if ($seriesLocalId) {
-            $s = $pdo->prepare("SELECT id FROM series WHERE local_id = ? LIMIT 1");
-            $s->execute([$seriesLocalId]);
-            $row = $s->fetch(PDO::FETCH_ASSOC);
-            $seriesId = $row ? (int)$row['id'] : null;
+        $seriesId      = resolveSeriesId($pdo, $seriesLocalId);
+
+        $clubId              = $d['club_id']              ?? null;
+        $title               = $d['title'];
+        $venue               = $d['venue']                ?? null;
+        $matchDate           = $d['match_date']           ?? null;
+        $overs               = $d['overs']                ?? 6;
+        $playersPerTeam      = $d['players_per_team']     ?? 6;
+        $maxOversPerBowler   = $d['max_overs_per_bowler'] ?? 0;
+        $wideValue           = $d['wide_value']           ?? 1;
+        $noBallValue         = $d['no_ball_value']        ?? 1;
+
+        // Check if this match already exists by local_id
+        $existing = $pdo->prepare("SELECT id FROM matches WHERE local_id = ? LIMIT 1");
+        $existing->execute([$d['id']]);
+        $row = $existing->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            // Row exists — UPDATE all fields including club_id and series_id
+            $pdo->prepare("
+                UPDATE matches SET
+                    club_id              = ?,
+                    series_id            = ?,
+                    series_local_id      = ?,
+                    title                = ?,
+                    venue                = ?,
+                    match_date           = ?,
+                    overs                = ?,
+                    players_per_team     = ?,
+                    max_overs_per_bowler = ?,
+                    wide_value           = ?,
+                    no_ball_value        = ?,
+                    updated_at           = NOW()
+                WHERE local_id = ?
+            ")->execute([
+                $clubId, $seriesId, $seriesLocalId,
+                $title, $venue, $matchDate,
+                $overs, $playersPerTeam, $maxOversPerBowler,
+                $wideValue, $noBallValue,
+                $d['id'],
+            ]);
+        } else {
+            // New match — INSERT
+            $pdo->prepare("
+                INSERT INTO matches (
+                    local_id, club_id, series_id, series_local_id, title, venue, match_date,
+                    overs, players_per_team, max_overs_per_bowler, wide_value, no_ball_value,
+                    status, created_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
+            ")->execute([
+                $d['id'], $clubId, $seriesId, $seriesLocalId,
+                $title, $venue, $matchDate,
+                $overs, $playersPerTeam, $maxOversPerBowler,
+                $wideValue, $noBallValue,
+            ]);
         }
 
-        $pdo->prepare("
-            INSERT INTO matches (
-                local_id, club_id, series_id, series_local_id, title, venue, match_date,
-                overs, players_per_team, max_overs_per_bowler, wide_value, no_ball_value,
-                status, created_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
-            ON DUPLICATE KEY UPDATE title=VALUES(title), venue=VALUES(venue),
-                series_id=COALESCE(VALUES(series_id), series_id),
-                club_id=COALESCE(VALUES(club_id), club_id),
-                status=VALUES(status)
-        ")->execute([
-            $d['id'],
-            $d['club_id']  ?? null,
-            $seriesId,
-            $seriesLocalId,
-            $d['title'],
-            $d['venue']    ?? null,
-            $d['match_date'] ?? null,
-            $d['overs']    ?? 6,
-            $d['players_per_team'] ?? 6,
-            $d['max_overs_per_bowler'] ?? 0,
-            $d['wide_value']   ?? 1,
-            $d['no_ball_value'] ?? 1,
-        ]);
     } elseif ($action === 'update') {
         $allowed = ['title','venue','match_date','overs','status','toss_winner_id','batting_first','result_text','winner_team_id'];
         $sets = []; $params = [];

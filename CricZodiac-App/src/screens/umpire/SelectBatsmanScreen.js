@@ -44,13 +44,29 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   const load = async () => {
     const teamPlayers = await getTeamPlayers(team.id);
     const scorecard   = await getBattingScorecard(inningsId);
-    const outIds = scorecard.filter(s => s.is_out).map(s => s.player_id);
-    const available = teamPlayers.filter(p =>
-      p.player_id !== existingStrikerId &&
-      p.player_id !== existingNonStrikerId &&
-      !outIds.includes(p.player_id)
-    );
-    setPlayers(available.map(p => ({ id: p.player_id, full_name: p.full_name, player_type: p.player_type })));
+    const outPlayerIds = new Set();
+    for (const score of scorecard) {
+      if (score.is_out) outPlayerIds.add(score.player_id);
+    }
+
+    const availablePlayers = [];
+    for (const player of teamPlayers) {
+      if (
+        player.player_id === existingStrikerId ||
+        player.player_id === existingNonStrikerId ||
+        outPlayerIds.has(player.player_id)
+      ) {
+        continue;
+      }
+
+      availablePlayers.push({
+        id: player.player_id,
+        full_name: player.full_name,
+        player_type: player.player_type,
+      });
+    }
+
+    setPlayers(availablePlayers);
   };
 
   const handleConfirm = () => {
