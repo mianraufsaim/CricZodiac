@@ -10,7 +10,7 @@ export const getPendingSyncItems = (limit = 50) =>
     SELECT * FROM sync_queue
     WHERE sync_status IN ('pending', 'failed')
     AND retry_count < ?
-    ORDER BY created_at ASC
+    ORDER BY created_at ASC, id ASC
     LIMIT ?
   `, [MAX_RETRY_COUNT, limit]);
 

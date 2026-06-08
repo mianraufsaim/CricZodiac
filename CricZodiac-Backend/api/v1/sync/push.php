@@ -369,6 +369,10 @@ function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
     $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
     $matchId = $matchRow['id'] ?? ($teamRow['match_id'] ?? null);
 
+    if (!$teamId || !$playerId) {
+        throw new Exception('Team player sync could not resolve team_id or player_id.');
+    }
+
     $pdo->prepare("
         INSERT INTO team_players (
             local_id, club_id, series_id, match_id,
@@ -378,7 +382,12 @@ function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
         VALUES (?,?,?,?,?,?,?,?,?,NOW())
         ON DUPLICATE KEY UPDATE
             local_id = COALESCE(local_id, VALUES(local_id)),
+            club_id = COALESCE(club_id, VALUES(club_id)),
+            series_id = COALESCE(series_id, VALUES(series_id)),
+            match_id = COALESCE(match_id, VALUES(match_id)),
+            team_id = COALESCE(team_id, VALUES(team_id)),
             team_local_id = VALUES(team_local_id),
+            player_id = COALESCE(player_id, VALUES(player_id)),
             player_local_id = VALUES(player_local_id),
             batting_order = VALUES(batting_order)
     ")->execute([

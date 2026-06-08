@@ -132,7 +132,7 @@ export const processSyncQueue = async () => {
     // Batch items by table for efficient API calls
     const batches = groupByTable(pendingItems);
 
-    for (const [tableName, items] of Object.entries(batches)) {
+    for (const [tableName, items] of sortBatchesForDependencies(batches)) {
       try {
         const payload = items.map(item => ({
           event_id:   item.event_id,
@@ -298,6 +298,31 @@ export const getSyncStatus = async () => {
 };
 
 // ── Helpers ───────────────────────────────────────────────
+const SYNC_TABLE_ORDER = [
+  'clubs',
+  'series',
+  'matches',
+  'teams',
+  'team_players',
+  'toss_results',
+  'innings',
+  'overs',
+  'balls',
+  'wickets',
+  'batting_scorecards',
+  'bowling_scorecards',
+  'match_results',
+  'players',
+  'users',
+];
+
+const sortBatchesForDependencies = (batches) => {
+  const rank = new Map(SYNC_TABLE_ORDER.map((table, index) => [table, index]));
+  return Object.entries(batches).sort(
+    ([a], [b]) => (rank.get(a) ?? SYNC_TABLE_ORDER.length) - (rank.get(b) ?? SYNC_TABLE_ORDER.length)
+  );
+};
+
 const groupByTable = (items) => {
   return items.reduce((groups, item) => {
     const key = item.table_name;

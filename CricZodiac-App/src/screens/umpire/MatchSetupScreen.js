@@ -2,7 +2,7 @@
 // CricZodiac — Match Setup Screen
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert,
@@ -11,7 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
-import { createMatch, updateMatch } from '../../database/queries/matchQueries';
+import { createMatch, getMatchTeams, updateMatch } from '../../database/queries/matchQueries';
 import { useAuth } from '../../context/AuthContext';
 
 // ── Stepper Component ─────────────────────────────────────
@@ -135,6 +135,31 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const playerMinimum = minPlayersForOvers(form.overs);
+
+  useEffect(() => {
+    if (!isEditingSetup || (form.team_a_name && form.team_b_name)) return;
+
+    let mounted = true;
+    const loadSavedTeamNames = async () => {
+      try {
+        const teams = await getMatchTeams(existingMatch.id);
+        if (!mounted || !teams?.length) return;
+
+        const teamA = teams.find(t => t.team_label === 'A');
+        const teamB = teams.find(t => t.team_label === 'B');
+        setForm(f => ({
+          ...f,
+          team_a_name: f.team_a_name || teamA?.team_name || '',
+          team_b_name: f.team_b_name || teamB?.team_name || '',
+        }));
+      } catch (err) {
+        console.warn('MatchSetup team prefill:', err.message);
+      }
+    };
+
+    loadSavedTeamNames();
+    return () => { mounted = false; };
+  }, [existingMatch?.id, form.team_a_name, form.team_b_name, isEditingSetup]);
 
   const setOvers = (overs) => {
     setForm(f => ({
