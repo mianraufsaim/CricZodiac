@@ -221,14 +221,84 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncTeam(PDO $pdo, string $action, array $d): bool {
-    $pdo->prepare("
-        INSERT INTO teams (local_id, match_local_id, team_name, team_label, captain_local, wk_local, created_at)
-        VALUES (?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE team_name=VALUES(team_name), captain_local=VALUES(captain_local), wk_local=VALUES(wk_local)
-    ")->execute([
-        $d['id'], $d['match_id'] ?? null, $d['team_name'], $d['team_label'] ?? 'A',
-        $d['captain_id'] ?? null, $d['wk_id'] ?? null,
-    ]);
+    // 1. Resolve match UUID → MySQL integer id + club_id
+    $matchRow = null;
+    if (!empty($d['match_id'])) {
+        $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['match_id']]);
+        $matchRow = $st->fetch(PDO::FETCH_ASSOC);
+    }
+    $matchId = $matchRow['id']     ?? null;
+    $clubId  = $matchRow['club_id'] ?? null;
+
+    // 2. Resolve captain UUID → MySQL integer id
+    $captainId = null;
+    if (!empty($d['captain_id'])) {
+        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['captain_id']]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $captainId = $row['id'] ?? null;
+    }
+
+    // 3. Resolve wk UUID → MySQL integer id
+    $wkId = null;
+    if (!empty($d['wk_id'])) {
+        $st = $pdo->prepare("SELECT id FROM players WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['wk_id']]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $wkId = $row['id'] ?? null;
+    }
+
+    $teamLabel    = $d['team_label']  ?? 'A';
+    $teamName     = $d['team_name']   ?? '';
+    $localId      = $d['id']          ?? null;
+    $matchLocalId = $d['match_id']    ?? null;
+    $captainLocal = $d['captain_id']  ?? null;
+    $wkLocal      = $d['wk_id']       ?? null;
+
+    // 4. Check if a team for this match + label already exists
+    $existing = null;
+    if ($clubId && $matchId) {
+        $st = $pdo->prepare("SELECT id FROM teams WHERE club_id = ? AND match_id = ? AND team_label = ? LIMIT 1");
+        $st->execute([$clubId, $matchId, $teamLabel]);
+        $existing = $st->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if ($existing) {
+        // 5a. UPDATE existing row
+        $pdo->prepare("
+            UPDATE teams
+            SET team_name     = ?,
+                captain_id    = ?,
+                captain_local = ?,
+                wk_id         = ?,
+                wk_local      = ?,
+                local_id      = COALESCE(local_id, ?)
+            WHERE id = ?
+        ")->execute([
+            $teamName, $captainId, $captainLocal,
+            $wkId, $wkLocal,
+            $localId,
+            $existing['id'],
+        ]);
+    } else {
+        // 5b. INSERT new row
+        $pdo->prepare("
+            INSERT INTO teams
+                (local_id, club_id, match_id, match_local_id,
+                 team_name, team_label,
+                 captain_id, captain_local,
+                 wk_id, wk_local,
+                 created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+        ")->execute([
+            $localId, $clubId, $matchId, $matchLocalId,
+            $teamName, $teamLabel,
+            $captainId, $captainLocal,
+            $wkId, $wkLocal,
+        ]);
+    }
+
     return true;
 }
 
