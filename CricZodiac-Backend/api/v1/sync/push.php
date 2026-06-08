@@ -162,18 +162,18 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         $wideValue           = $d['wide_value']           ?? 1;
         $noBallValue         = $d['no_ball_value']        ?? 1;
 
-        // Check if this match already exists by local_id
-        $existing = $pdo->prepare("SELECT id FROM matches WHERE local_id = ? LIMIT 1");
-        $existing->execute([$d['id']]);
-        $row = $existing->fetch(PDO::FETCH_ASSOC);
+        // If both club_id and series_id are present, check for an existing match
+        $row = null;
+        if ($clubId && $seriesId) {
+            $existing = $pdo->prepare("SELECT id FROM matches WHERE club_id = ? AND series_id = ? LIMIT 1");
+            $existing->execute([$clubId, $seriesId]);
+            $row = $existing->fetch(PDO::FETCH_ASSOC);
+        }
 
         if ($row) {
-            // Row exists — UPDATE all fields including club_id and series_id
+            // Match already exists for this club + series — UPDATE it
             $pdo->prepare("
                 UPDATE matches SET
-                    club_id              = ?,
-                    series_id            = ?,
-                    series_local_id      = ?,
                     title                = ?,
                     venue                = ?,
                     match_date           = ?,
@@ -183,16 +183,15 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
                     wide_value           = ?,
                     no_ball_value        = ?,
                     updated_at           = NOW()
-                WHERE local_id = ?
+                WHERE id = ?
             ")->execute([
-                $clubId, $seriesId, $seriesLocalId,
                 $title, $venue, $matchDate,
                 $overs, $playersPerTeam, $maxOversPerBowler,
                 $wideValue, $noBallValue,
-                $d['id'],
+                $row['id'],
             ]);
         } else {
-            // New match — INSERT
+            // No matching record — INSERT new row
             $pdo->prepare("
                 INSERT INTO matches (
                     local_id, club_id, series_id, series_local_id, title, venue, match_date,
