@@ -345,6 +345,7 @@ CREATE TABLE IF NOT EXISTS bowling_scorecards (
     innings_local_id VARCHAR(36),
     player_id        INT UNSIGNED,
     player_local_id  VARCHAR(36),
+    balls_bowled     SMALLINT UNSIGNED DEFAULT 0,
     overs_bowled     DECIMAL(4,1) DEFAULT 0.0,
     maidens          TINYINT UNSIGNED DEFAULT 0,
     runs_conceded    SMALLINT UNSIGNED DEFAULT 0,

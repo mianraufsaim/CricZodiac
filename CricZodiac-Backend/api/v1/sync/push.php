@@ -882,15 +882,184 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
     return true;
 }
 
+function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
+    if (!$inningsId) return;
+
+    // Rebuild batting stats from balls. This keeps MySQL aligned with the app:
+    // wides/no-balls do not add to balls_faced because only valid balls count.
+    $pdo->prepare("
+        INSERT INTO batting_scorecards (
+            club_id, series_id, match_id,
+            innings_id, innings_local_id,
+            player_id, player_local_id,
+            runs_scored, balls_faced, fours, sixes, strike_rate,
+            updated_at
+        )
+        SELECT
+            agg.club_id, agg.series_id, agg.match_id,
+            agg.innings_id, agg.innings_local_id,
+            agg.player_id, agg.player_local_id,
+            agg.runs_scored, agg.balls_faced, agg.fours, agg.sixes,
+            CASE
+                WHEN agg.balls_faced > 0
+                THEN ROUND(CAST(agg.runs_scored AS DECIMAL(10,2)) / agg.balls_faced * 100, 2)
+                ELSE 0.00
+            END,
+            NOW()
+        FROM (
+            SELECT
+                MAX(b.club_id) AS club_id,
+                MAX(b.series_id) AS series_id,
+                MAX(b.match_id) AS match_id,
+                b.innings_id,
+                MAX(b.innings_local_id) AS innings_local_id,
+                b.striker_id AS player_id,
+                MAX(b.striker_local_id) AS player_local_id,
+                SUM(COALESCE(b.runs_scored, 0)) AS runs_scored,
+                SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS balls_faced,
+                SUM(CASE WHEN b.is_four = 1 THEN 1 ELSE 0 END) AS fours,
+                SUM(CASE WHEN b.is_six = 1 THEN 1 ELSE 0 END) AS sixes
+            FROM balls b
+            WHERE b.innings_id = ?
+              AND b.striker_id IS NOT NULL
+            GROUP BY b.innings_id, b.striker_id
+        ) agg
+        ON DUPLICATE KEY UPDATE
+            club_id = COALESCE(VALUES(club_id), batting_scorecards.club_id),
+            series_id = COALESCE(VALUES(series_id), batting_scorecards.series_id),
+            match_id = COALESCE(VALUES(match_id), batting_scorecards.match_id),
+            innings_local_id = COALESCE(VALUES(innings_local_id), batting_scorecards.innings_local_id),
+            player_local_id = COALESCE(VALUES(player_local_id), batting_scorecards.player_local_id),
+            runs_scored = VALUES(runs_scored),
+            balls_faced = VALUES(balls_faced),
+            fours = VALUES(fours),
+            sixes = VALUES(sixes),
+            strike_rate = VALUES(strike_rate),
+            updated_at = NOW()
+    ")->execute([$inningsId]);
+
+    $pdo->prepare("
+        UPDATE batting_scorecards bs
+        SET runs_scored = 0,
+            balls_faced = 0,
+            fours = 0,
+            sixes = 0,
+            strike_rate = 0.00,
+            updated_at = NOW()
+        WHERE bs.innings_id = ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM balls b
+              WHERE b.innings_id = bs.innings_id
+                AND b.striker_id = bs.player_id
+          )
+    ")->execute([$inningsId]);
+
+    // Rebuild bowling stats from balls. overs_bowled is cricket notation:
+    // 7 legal balls becomes 1.1, while 6 legal balls stays 1.0.
+    $pdo->prepare("
+        INSERT INTO bowling_scorecards (
+            club_id, series_id, match_id,
+            innings_id, innings_local_id,
+            player_id, player_local_id,
+            balls_bowled, overs_bowled, maidens,
+            runs_conceded, wickets, economy_rate,
+            no_balls, wides, updated_at
+        )
+        SELECT
+            agg.club_id, agg.series_id, agg.match_id,
+            agg.innings_id, agg.innings_local_id,
+            agg.player_id, agg.player_local_id,
+            agg.legal_balls,
+            FLOOR(agg.legal_balls / 6) + MOD(agg.legal_balls, 6) * 0.1,
+            COALESCE((
+                SELECT COUNT(*)
+                FROM overs o
+                WHERE o.innings_id = agg.innings_id
+                  AND o.bowler_id = agg.player_id
+                  AND o.is_completed = 1
+                  AND o.runs_conceded = 0
+            ), 0),
+            agg.runs_conceded,
+            agg.wickets,
+            CASE
+                WHEN agg.legal_balls > 0
+                THEN ROUND(CAST(agg.runs_conceded AS DECIMAL(10,2)) / (agg.legal_balls / 6.0), 2)
+                ELSE 0.00
+            END,
+            agg.no_balls,
+            agg.wides,
+            NOW()
+        FROM (
+            SELECT
+                MAX(b.club_id) AS club_id,
+                MAX(b.series_id) AS series_id,
+                MAX(b.match_id) AS match_id,
+                b.innings_id,
+                MAX(b.innings_local_id) AS innings_local_id,
+                b.bowler_id AS player_id,
+                MAX(b.bowler_local_id) AS player_local_id,
+                SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS legal_balls,
+                SUM(COALESCE(b.runs_scored, 0) + COALESCE(b.extra_runs, 0)) AS runs_conceded,
+                SUM(CASE WHEN b.is_wicket = 1 THEN 1 ELSE 0 END) AS wickets,
+                SUM(CASE WHEN b.extra_type = 'no_ball' THEN 1 ELSE 0 END) AS no_balls,
+                SUM(CASE WHEN b.extra_type = 'wide' THEN 1 ELSE 0 END) AS wides
+            FROM balls b
+            WHERE b.innings_id = ?
+              AND b.bowler_id IS NOT NULL
+            GROUP BY b.innings_id, b.bowler_id
+        ) agg
+        ON DUPLICATE KEY UPDATE
+            club_id = COALESCE(VALUES(club_id), bowling_scorecards.club_id),
+            series_id = COALESCE(VALUES(series_id), bowling_scorecards.series_id),
+            match_id = COALESCE(VALUES(match_id), bowling_scorecards.match_id),
+            innings_local_id = COALESCE(VALUES(innings_local_id), bowling_scorecards.innings_local_id),
+            player_local_id = COALESCE(VALUES(player_local_id), bowling_scorecards.player_local_id),
+            balls_bowled = VALUES(balls_bowled),
+            overs_bowled = VALUES(overs_bowled),
+            maidens = VALUES(maidens),
+            runs_conceded = VALUES(runs_conceded),
+            wickets = VALUES(wickets),
+            economy_rate = VALUES(economy_rate),
+            no_balls = VALUES(no_balls),
+            wides = VALUES(wides),
+            updated_at = NOW()
+    ")->execute([$inningsId]);
+
+    $pdo->prepare("
+        UPDATE bowling_scorecards bs
+        SET balls_bowled = 0,
+            overs_bowled = 0.0,
+            maidens = 0,
+            runs_conceded = 0,
+            wickets = 0,
+            economy_rate = 0.00,
+            no_balls = 0,
+            wides = 0,
+            updated_at = NOW()
+        WHERE bs.innings_id = ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM balls b
+              WHERE b.innings_id = bs.innings_id
+                AND b.bowler_id = bs.player_id
+          )
+    ")->execute([$inningsId]);
+}
+
 function syncBall(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
         // Fetch ball before deleting so we can reverse innings + overs totals.
         $st = $pdo->prepare("SELECT * FROM balls WHERE local_id = ? LIMIT 1");
         $st->execute([$d['id']]);
         $ball = $st->fetch(PDO::FETCH_ASSOC);
+        $inningsId = null;
 
         // Delete first — so the subsequent subqueries that COUNT balls exclude it.
         $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
+        if (!$ball) {
+            return true;
+        }
 
         if ($ball) {
             $isValid    = (int)$ball['is_valid_ball'];
@@ -954,7 +1123,7 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
         $ballStrikerId = (int)($ball['striker_id'] ?? 0) ?: null;
         $ballBowlerId  = (int)($ball['bowler_id']  ?? 0) ?: null;
         $ballIsWide    = ($ball['extra_type'] === 'wide');
-        $ballBallsFacedDelta = $ballIsWide ? 0 : 1;
+        $ballBallsFacedDelta = (int)($ball['is_valid_ball'] ?? 1);
         $ballRuns  = (int)$ball['runs_scored'];
         $ballFours = (int)($ball['is_four'] ?? 0);
         $ballSixes = (int)($ball['is_six']  ?? 0);
@@ -1018,6 +1187,10 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
                 $inningsId,
                 $ballBowlerId,
             ]);
+        }
+
+        if ($inningsId) {
+            recomputeScorecardsForInnings($pdo, (int)$inningsId);
         }
 
         return true;
@@ -1094,7 +1267,8 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
     $isValid    = (int)(bool)($d['is_valid_ball'] ?? 1);
     $runsScored = (int)($d['runs_scored'] ?? 0);
     $extraRuns  = (int)($d['extra_runs']  ?? 0);
-    $extraType  = ($d['extra_type'] !== '' && $d['extra_type'] !== null) ? $d['extra_type'] : null;
+    $extraTypeRaw = $d['extra_type'] ?? null;
+    $extraType  = ($extraTypeRaw !== '' && $extraTypeRaw !== null) ? $extraTypeRaw : null;
 
     // Balls are immutable once written — skip if already exists (idempotent sync).
     if (!$existing) {
@@ -1149,8 +1323,8 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
                 $inningsId, $strikerId,
             ]);
 
-            // Wides don't count as a ball faced by the batsman
-            $ballsFacedDelta = $isWide ? 0 : 1;
+            // Only legal balls count as a ball faced by the batsman.
+            $ballsFacedDelta = $isValid;
             $pdo->prepare("
                 UPDATE batting_scorecards
                 SET runs_scored = runs_scored + ?,
@@ -1284,6 +1458,10 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
                 $overId,
             ]);
         }
+    }
+
+    if ($inningsId) {
+        recomputeScorecardsForInnings($pdo, (int)$inningsId);
     }
 
     // Transition match status to 'live' on first ball delivered
