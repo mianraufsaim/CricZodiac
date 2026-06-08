@@ -304,10 +304,9 @@ function resolveMatchRow(PDO $pdo, $value): ?array {
 
     $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
     if ($isUuid) {
-        $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE local_id = ? LIMIT 1");
         $st->execute([$value]);
     } else {
-        $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, local_id, club_id, series_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
         $st->execute([(string) $value, (int) $value]);
     }
 
@@ -318,7 +317,7 @@ function resolveMatchRow(PDO $pdo, $value): ?array {
 function resolveMatchRowByScope(PDO $pdo, $clubId, $seriesId): ?array {
     if (!$clubId || !$seriesId) return null;
 
-    $st = $pdo->prepare("SELECT id, club_id, series_id FROM matches WHERE club_id = ? AND series_id = ? ORDER BY id DESC LIMIT 1");
+    $st = $pdo->prepare("SELECT id, local_id, club_id, series_id FROM matches WHERE club_id = ? AND series_id = ? ORDER BY id DESC LIMIT 1");
     $st->execute([(int) $clubId, (int) $seriesId]);
 
     $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -341,6 +340,20 @@ function resolvePlayerId(PDO $pdo, $value): ?int {
     return $row ? (int) $row['id'] : null;
 }
 
+function isUuidValue($value): bool {
+    return $value !== null
+        && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
+}
+
+function resolvePlayerLocalId(PDO $pdo, ?int $playerId): ?string {
+    if (!$playerId) return null;
+
+    $st = $pdo->prepare("SELECT local_id FROM players WHERE id = ? LIMIT 1");
+    $st->execute([$playerId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row['local_id'] ?? null;
+}
+
 function resolveTeamId(PDO $pdo, $value): ?int {
     if ($value === null || $value === '') return null;
 
@@ -361,7 +374,7 @@ function resolveTeamRow(PDO $pdo, $value): ?array {
     $teamId = resolveTeamId($pdo, $value);
     if (!$teamId) return null;
 
-    $st = $pdo->prepare("SELECT id, club_id, series_id, match_id FROM teams WHERE id = ? LIMIT 1");
+    $st = $pdo->prepare("SELECT id, local_id, club_id, series_id, match_id FROM teams WHERE id = ? LIMIT 1");
     $st->execute([$teamId]);
     $row = $st->fetch(PDO::FETCH_ASSOC);
     return $row ?: null;
@@ -542,6 +555,25 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
     $callingCaptainId = resolvePlayerId($pdo, $d['calling_captain_id'] ?? ($d['calling_captain'] ?? null));
     $tossWinnerId = $winnerTeamRow['id'] ?? null;
     $tossLoserId = resolveTeamId($pdo, $d['toss_loser_id'] ?? ($d['toss_loser'] ?? null));
+    $matchLocalId = $d['match_local_id'] ?? ($matchRow['local_id'] ?? null);
+    if (!$matchLocalId && isUuidValue($d['match_id'] ?? null)) {
+        $matchLocalId = $d['match_id'];
+    }
+
+    $callingCaptainLocal = $d['calling_captain'] ?? null;
+    if (!$callingCaptainLocal && isUuidValue($d['calling_captain_id'] ?? null)) {
+        $callingCaptainLocal = $d['calling_captain_id'];
+    }
+    $callingCaptainLocal = $callingCaptainLocal ?: resolvePlayerLocalId($pdo, $callingCaptainId);
+
+    $tossWinnerLocal = $d['toss_winner_local'] ?? null;
+    if (!$tossWinnerLocal && isUuidValue($d['toss_winner'] ?? null)) {
+        $tossWinnerLocal = $d['toss_winner'];
+    }
+    if (!$tossWinnerLocal && isUuidValue($d['toss_winner_id'] ?? null)) {
+        $tossWinnerLocal = $d['toss_winner_id'];
+    }
+    $tossWinnerLocal = $tossWinnerLocal ?: ($winnerTeamRow['local_id'] ?? null);
 
     if (!$matchId || !$callingCaptainId || !$tossWinnerId) {
         throw new Exception('Toss sync could not resolve match_id, calling_captain_id, or toss_winner_id.');
@@ -566,20 +598,26 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
     if ($existing) {
         $pdo->prepare("
             UPDATE toss_results
-            SET calling_captain_id  = ?,
+            SET match_local_id      = COALESCE(?, match_local_id),
+                calling_captain     = COALESCE(?, calling_captain),
+                calling_captain_id  = ?,
                 toss_call           = ?,
                 toss_outcome        = ?,
                 toss_winner         = ?,
                 toss_winner_id      = ?,
+                toss_winner_local   = COALESCE(?, toss_winner_local),
                 elected_to          = ?,
                 local_id            = COALESCE(local_id, ?)
             WHERE id = ?
         ")->execute([
+            $matchLocalId,
+            $callingCaptainLocal,
             $callingCaptainId,
             $d['toss_call'],
             $d['toss_outcome'],
             $tossWinnerId,
             $tossWinnerId,
+            $tossWinnerLocal,
             $d['elected_to'],
             $d['id'],
             $existing['id'],
@@ -587,21 +625,26 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
     } else {
         $pdo->prepare("
             INSERT INTO toss_results (
-                local_id, club_id, series_id, match_id,
+                local_id, club_id, series_id, match_id, match_local_id,
+                calling_captain,
                 calling_captain_id, toss_call, toss_outcome,
-                toss_winner, toss_winner_id, elected_to, created_at
+                toss_winner, toss_winner_id, toss_winner_local,
+                elected_to, created_at
             )
-            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
         ")->execute([
             $d['id'],
             $clubId,
             $seriesId,
             $matchId,
+            $matchLocalId,
+            $callingCaptainLocal,
             $callingCaptainId,
             $d['toss_call'],
             $d['toss_outcome'],
             $tossWinnerId,
             $tossWinnerId,
+            $tossWinnerLocal,
             $d['elected_to'],
         ]);
     }
