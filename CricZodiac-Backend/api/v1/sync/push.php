@@ -669,18 +669,16 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
             $inningsRow = $st->fetch(PDO::FETCH_ASSOC) ?: null;
         }
         if ($inningsRow) {
+            // total_runs, total_wickets, extras, total_overs are managed
+            // incrementally by syncBall. Overwriting them here with a SQLite
+            // snapshot would race against syncBall and produce wrong values.
+            // Only update is_completed (set when innings is closed by the app).
             $pdo->prepare("
                 UPDATE innings
-                SET total_runs    = ?,
-                    total_wickets = ?,
-                    total_overs   = ?,
-                    extras        = ?,
-                    is_completed  = ?,
-                    updated_at    = NOW()
+                SET is_completed = ?,
+                    updated_at   = NOW()
                 WHERE id = ?
             ")->execute([
-                $d['total_runs'] ?? 0, $d['total_wickets'] ?? 0,
-                $d['total_overs'] ?? 0, $d['extras'] ?? 0,
                 $d['is_completed'] ?? 0,
                 $inningsRow['id'],
             ]);
@@ -773,10 +771,73 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
 
 function syncBall(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
-        // Just delete the ball row. Batting/bowling scorecard corrections come
-        // via syncBattingScorecard / syncBowlingScorecard which carry the
-        // authoritative decremented values from SQLite after undo.
+        // Fetch ball before deleting so we can reverse innings + overs totals.
+        $st = $pdo->prepare("SELECT * FROM balls WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['id']]);
+        $ball = $st->fetch(PDO::FETCH_ASSOC);
+
+        // Delete first — so the subsequent subqueries that COUNT balls exclude it.
         $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
+
+        if ($ball) {
+            $isValid    = (int)$ball['is_valid_ball'];
+            $isWicket   = (int)$ball['is_wicket'];
+            $runs       = (int)$ball['runs_scored'];
+            $extraRuns  = (int)$ball['extra_runs'];
+            $totalRuns  = $runs + $extraRuns;
+            $inningsId  = $ball['innings_id'] ?? null;
+            $overId     = $ball['over_id']    ?? null;
+
+            // ── Reverse innings totals ─────────────────────────────────────
+            if ($inningsId) {
+                $pdo->prepare("
+                    UPDATE innings
+                    SET total_runs    = GREATEST(0, total_runs    - ?),
+                        total_wickets = GREATEST(0, total_wickets - ?),
+                        extras        = GREATEST(0, extras        - ?),
+                        total_overs   = (
+                            SELECT FLOOR(COUNT(*) / 6) + (COUNT(*) % 6) * 0.1
+                            FROM balls
+                            WHERE innings_id = ? AND is_valid_ball = 1
+                        )
+                    WHERE id = ?
+                ")->execute([
+                    $totalRuns, $isWicket, $extraRuns,
+                    $inningsId,   // subquery param — ball already deleted, count is correct
+                    $inningsId,
+                ]);
+            }
+
+            // ── Reverse overs totals ───────────────────────────────────────
+            if ($overId) {
+                $pdo->prepare("
+                    UPDATE overs
+                    SET runs_conceded = GREATEST(0, runs_conceded - ?),
+                        wickets       = GREATEST(0, wickets       - ?),
+                        balls_bowled  = GREATEST(0, balls_bowled  - ?),
+                        is_completed  = CASE WHEN GREATEST(0, balls_bowled - ?) < 6
+                                        THEN 0 ELSE is_completed END,
+                        is_maiden     = CASE WHEN GREATEST(0, balls_bowled - ?) < 6
+                                        THEN 0
+                                        WHEN GREATEST(0, balls_bowled - ?) >= 6
+                                             AND GREATEST(0, runs_conceded - ?) = 0 THEN 1
+                                        ELSE 0 END
+                    WHERE id = ?
+                ")->execute([
+                    $totalRuns,   // runs_conceded delta
+                    $isWicket,    // wickets delta
+                    $isValid,     // balls_bowled delta
+                    $isValid,     // is_completed: new balls_bowled
+                    $isValid,     // is_maiden incomplete check: new balls_bowled
+                    $isValid,     // is_maiden complete check: new balls_bowled
+                    $totalRuns,   // is_maiden complete check: new runs_conceded
+                    $overId,
+                ]);
+            }
+        }
+
+        // Batting/bowling scorecard corrections arrive via syncBattingScorecard
+        // / syncBowlingScorecard with the authoritative decremented SQLite values.
         return true;
     }
 
@@ -894,6 +955,7 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
                 UPDATE innings
                 SET total_runs    = total_runs    + ?,
                     total_wickets = total_wickets + ?,
+                    extras        = extras        + ?,
                     total_overs   = (
                         SELECT FLOOR(COUNT(*) / 6) + (COUNT(*) % 6) * 0.1
                         FROM balls
@@ -903,6 +965,7 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             ")->execute([
                 $totalRunsForInnings,
                 $isWicket,
+                $extraRuns,   // extras delta (wide/no-ball/bye/leg-bye runs only)
                 $inningsId,   // subquery param
                 $inningsId,   // WHERE id
             ]);
