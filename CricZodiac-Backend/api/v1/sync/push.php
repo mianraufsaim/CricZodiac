@@ -542,7 +542,7 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
         SET toss_winner_id = ?,
             toss_choice    = ?,
             batting_first  = COALESCE(?, batting_first),
-            status         = 'live',
+            status         = 'toss',
             updated_at     = NOW()
         WHERE id = ?
     ")->execute([$tossWinnerId, $d['elected_to'], $battingFirstId, $matchId]);
@@ -853,6 +853,14 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             $d['is_extra'] ?? 0, $d['extra_type'] ?? null, $d['extra_runs'] ?? 0,
             $d['is_four'] ?? 0, $d['is_six'] ?? 0, $d['is_valid_ball'] ?? 1,
         ]);
+    }
+
+    // Transition match status to 'live' on first ball delivered
+    if ($matchId) {
+        $pdo->prepare("
+            UPDATE matches SET status = 'live', updated_at = NOW()
+            WHERE id = ? AND status != 'live'
+        ")->execute([$matchId]);
     }
 
     return true;

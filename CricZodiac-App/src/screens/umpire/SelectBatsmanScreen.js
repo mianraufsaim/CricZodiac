@@ -104,8 +104,8 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
 
       availablePlayers.push({
         id:          player.player_id,
-        full_name:   player.full_name,
-        player_type: player.player_type,
+        full_name:   player.full_name || 'Unknown',
+        player_type: player.player_type || 'allrounder',
       });
     }
 
@@ -247,7 +247,7 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
               onPress={() => handlePlayerTap(item)}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.full_name[0]}</Text>
+                <Text style={styles.avatarText}>{(item.full_name || '?')[0]}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.full_name}</Text>

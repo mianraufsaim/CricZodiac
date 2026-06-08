@@ -178,7 +178,7 @@ export const addPlayerToTeam = async (teamId, playerId, battingOrder = 0) => {
 
 export const getTeamPlayers = (teamId) =>
   queryRows(`
-    SELECT tp.*, u.name AS full_name, p.player_type, p.profile_pic
+    SELECT tp.*, COALESCE(u.name, p.full_name) AS full_name, p.player_type, p.profile_pic
     FROM team_players tp
     JOIN players p ON tp.player_id = p.id
     LEFT JOIN users u ON p.user_id = u.id
@@ -196,6 +196,17 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
     const playerId = sp.player_uuid || String(sp.player_id);
     const tpId     = sp.local_id    || String(sp.id);
 
+    // Cache user into SQLite so the JOIN in getTeamPlayers can resolve the name.
+    // users.local_id is often NULL in MySQL, so we derive a stable SQLite user id
+    // from the server integer user_id (stored as "u_<int>").
+    const sqliteUserId = sp.user_uuid || (sp.user_id ? `u_${sp.user_id}` : null);
+    if (sqliteUserId && sp.full_name) {
+      await executeQuery(
+        `INSERT OR IGNORE INTO users (id, server_id, name, role, status, is_approved) VALUES (?, ?, ?, 'player', 'active', 1)`,
+        [sqliteUserId, sp.user_id || null, sp.full_name]
+      );
+    }
+
     // Ensure player row exists in SQLite
     await executeQuery(
       `INSERT OR IGNORE INTO players
@@ -203,13 +214,13 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
       [
         playerId,
-        sp.player_id   || null,
-        sp.user_uuid   || null,
-        sp.full_name   || '',
-        sp.player_type || 'allrounder',
+        sp.player_id    || null,
+        sqliteUserId    || null,
+        sp.full_name    || 'Unknown',
+        sp.player_type  || 'allrounder',
         sp.batting_hand || 'right',
         sp.bowling_style || null,
-        sp.profile_pic  || null,
+        sp.profile_pic   || null,
         sp.is_active != null ? (sp.is_active ? 1 : 0) : 1,
       ]
     );
