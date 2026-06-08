@@ -464,38 +464,60 @@ function syncToss(PDO $pdo, string $action, array $d): bool {
         ? $tossWinnerId
         : ($tossLoserId ?: null);
 
-    $pdo->prepare("
-        INSERT INTO toss_results (
-            local_id, club_id, series_id, match_id,
-            calling_captain_id, toss_call, toss_outcome,
-            toss_winner, toss_winner_id, elected_to, created_at
-        )
-        VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE
-            club_id = VALUES(club_id),
-            series_id = VALUES(series_id),
-            match_id = VALUES(match_id),
-            calling_captain_id = VALUES(calling_captain_id),
-            toss_call = VALUES(toss_call),
-            toss_outcome = VALUES(toss_outcome),
-            toss_winner = VALUES(toss_winner),
-            toss_winner_id = VALUES(toss_winner_id),
-            elected_to = VALUES(elected_to),
-            match_local_id = NULL,
-            calling_captain = NULL,
-            toss_winner_local = NULL
-    ")->execute([
-        $d['id'],
-        $clubId,
-        $seriesId,
-        $matchId,
-        $callingCaptainId,
-        $d['toss_call'],
-        $d['toss_outcome'],
-        $tossWinnerId,
-        $tossWinnerId,
-        $d['elected_to'],
-    ]);
+    // Check if a toss record already exists for this club + series + match
+    $existing = null;
+    if ($clubId && $seriesId && $matchId) {
+        $st = $pdo->prepare("
+            SELECT id FROM toss_results
+            WHERE club_id = ? AND series_id = ? AND match_id = ?
+            LIMIT 1
+        ");
+        $st->execute([$clubId, $seriesId, $matchId]);
+        $existing = $st->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if ($existing) {
+        $pdo->prepare("
+            UPDATE toss_results
+            SET calling_captain_id  = ?,
+                toss_call           = ?,
+                toss_outcome        = ?,
+                toss_winner         = ?,
+                toss_winner_id      = ?,
+                elected_to          = ?,
+                local_id            = COALESCE(local_id, ?)
+            WHERE id = ?
+        ")->execute([
+            $callingCaptainId,
+            $d['toss_call'],
+            $d['toss_outcome'],
+            $tossWinnerId,
+            $tossWinnerId,
+            $d['elected_to'],
+            $d['id'],
+            $existing['id'],
+        ]);
+    } else {
+        $pdo->prepare("
+            INSERT INTO toss_results (
+                local_id, club_id, series_id, match_id,
+                calling_captain_id, toss_call, toss_outcome,
+                toss_winner, toss_winner_id, elected_to, created_at
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,NOW())
+        ")->execute([
+            $d['id'],
+            $clubId,
+            $seriesId,
+            $matchId,
+            $callingCaptainId,
+            $d['toss_call'],
+            $d['toss_outcome'],
+            $tossWinnerId,
+            $tossWinnerId,
+            $d['elected_to'],
+        ]);
+    }
 
     $pdo->prepare("
         UPDATE matches
