@@ -369,6 +369,24 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
         ]);
     }
 
+    // If both Team A and Team B now exist for this match → set match status = 'toss'
+    if ($matchId) {
+        $st = $pdo->prepare("
+            SELECT COUNT(DISTINCT team_label) AS team_count
+            FROM teams
+            WHERE match_id = ? AND team_label IN ('A', 'B')
+        ");
+        $st->execute([$matchId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if (($row['team_count'] ?? 0) >= 2) {
+            $pdo->prepare("
+                UPDATE matches
+                SET status = 'toss', updated_at = NOW()
+                WHERE id = ? AND status = 'setup'
+            ")->execute([$matchId]);
+        }
+    }
+
     return true;
 }
 

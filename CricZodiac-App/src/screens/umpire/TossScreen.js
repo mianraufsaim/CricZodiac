@@ -399,7 +399,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   callBtnSelected:   { borderColor: COLORS.gold, backgroundColor: 'rgba(212,175,55,0.12)' },
   callBtnEmoji:      { fontSize: 32, marginBottom: 6 },
   callBtnText:       { color: COLORS.white, fontWeight: '800', fontSize: 15, letterSpacing: 2 },
-  tapHint:           { color: COLORS.navy, fontWeight: '800', fontSize: 10, letterSpacing: 1, marginTop: 6, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  tapHint:           { color: COLORS.navy, fontWeight: '800', fontSize: 10, letterSpacing: 1, marginTop: 6, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
   tapHintDim:        { color: 'rgba(0,0,0,0.4)', fontWeight: '600', fontSize: 9, letterSpacing: 0.5, marginTop: 6 },
   phaseHint:         { color: COLORS.gray, fontSize: 13, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
   resultBadge:       { borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginBottom: 12 },
