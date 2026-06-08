@@ -773,70 +773,10 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
 
 function syncBall(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
-        // Fetch the ball before deleting so we can reverse scorecard counters
-        $st = $pdo->prepare("SELECT * FROM balls WHERE local_id = ? LIMIT 1");
-        $st->execute([$d['id']]);
-        $ball = $st->fetch(PDO::FETCH_ASSOC);
-
-        if ($ball) {
-            $isValid   = (int)$ball['is_valid_ball'];
-            $runs      = (int)$ball['runs_scored'];
-            $extraRuns = (int)$ball['extra_runs'];
-            $isFour    = (int)$ball['is_four'];
-            $isSix     = (int)$ball['is_six'];
-            $extraType = $ball['extra_type'] ?? null;
-            $isWide    = ($extraType === 'wide')    ? 1 : 0;
-            $isNoBall  = ($extraType === 'no_ball') ? 1 : 0;
-            $totalRuns = $runs + $extraRuns;
-
-            // ── Reverse batting_scorecards for striker ─────────────────────
-            if ($ball['striker_id'] && $ball['innings_id']) {
-                $pdo->prepare("
-                    UPDATE batting_scorecards
-                    SET runs_scored = GREATEST(0, runs_scored - ?),
-                        balls_faced = GREATEST(0, balls_faced - ?),
-                        fours       = GREATEST(0, fours  - ?),
-                        sixes       = GREATEST(0, sixes  - ?),
-                        strike_rate = CASE WHEN GREATEST(0, balls_faced - ?) > 0
-                                      THEN ROUND(
-                                          CAST(GREATEST(0, runs_scored - ?) AS DECIMAL(10,2))
-                                          / GREATEST(0, balls_faced - ?) * 100, 2)
-                                      ELSE 0.00 END
-                    WHERE innings_id = ? AND player_id = ?
-                ")->execute([
-                    $runs, $isValid, $isFour, $isSix,
-                    $isValid, $runs, $isValid,           // SR calc
-                    $ball['innings_id'], $ball['striker_id'],
-                ]);
-            }
-
-            // ── Reverse bowling_scorecards for bowler ──────────────────────
-            if ($ball['bowler_id'] && $ball['innings_id']) {
-                $pdo->prepare("
-                    UPDATE bowling_scorecards
-                    SET runs_conceded = GREATEST(0, runs_conceded - ?),
-                        balls_bowled  = GREATEST(0, balls_bowled  - ?),
-                        wides         = GREATEST(0, wides    - ?),
-                        no_balls      = GREATEST(0, no_balls - ?),
-                        overs_bowled  = FLOOR(GREATEST(0, balls_bowled - ?) / 6)
-                                      + (GREATEST(0, balls_bowled - ?) % 6) * 0.1,
-                        economy_rate  = CASE WHEN GREATEST(0, balls_bowled - ?) > 0
-                                        THEN ROUND(
-                                            CAST(GREATEST(0, runs_conceded - ?) AS DECIMAL(10,2))
-                                            / (GREATEST(0, balls_bowled - ?) / 6.0), 2)
-                                        ELSE 0.00 END
-                    WHERE innings_id = ? AND player_id = ?
-                ")->execute([
-                    $totalRuns, $isValid, $isWide, $isNoBall,
-                    $isValid, $isValid,               // overs calc
-                    $isValid, $totalRuns, $isValid,   // eco calc
-                    $ball['innings_id'], $ball['bowler_id'],
-                ]);
-            }
-
-            $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
-        }
-
+        // Just delete the ball row. Batting/bowling scorecard corrections come
+        // via syncBattingScorecard / syncBowlingScorecard which carry the
+        // authoritative decremented values from SQLite after undo.
+        $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
         return true;
     }
 
@@ -940,98 +880,39 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             $runsScored, $isWicket, $isExtra, $extraType, $extraRuns,
             $isFour, $isSix, $isValid,
         ]);
+        // Batting/bowling scorecard updates are handled exclusively by
+        // syncBattingScorecard / syncBowlingScorecard which carry the
+        // authoritative cumulative values from SQLite. Mixing incremental
+        // updates here with those absolute overwrites causes ordering bugs.
 
-        // ── Update batting_scorecards for striker ──────────────────────────
-        if ($strikerId && $inningsId) {
-            // Ensure row exists (INSERT only if missing — no UNIQUE constraint needed)
+        // ── Update overs table with this ball's contribution ───────────────
+        // syncOver only fires at over creation (runs=0), so we maintain
+        // runs_conceded, wickets, balls_bowled incrementally here.
+        // is_completed and is_maiden are auto-computed when balls_bowled hits 6.
+        if ($overId) {
+            $totalRunsForOver = $runsScored + $extraRuns;
             $pdo->prepare("
-                INSERT INTO batting_scorecards
-                    (innings_id, player_id, innings_local_id, player_local_id,
-                     club_id, series_id, match_id)
-                SELECT ?, ?, ?, ?, ?, ?, ?
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM batting_scorecards
-                    WHERE innings_id = ? AND player_id = ?
-                )
-            ")->execute([
-                $inningsId, $strikerId,
-                $d['innings_id'] ?? null, $d['striker_id'] ?? null,
-                $clubId, $seriesId, $matchId,
-                $inningsId, $strikerId,
-            ]);
-
-            $pdo->prepare("
-                UPDATE batting_scorecards
-                SET runs_scored = runs_scored + ?,
-                    balls_faced = balls_faced + ?,
-                    fours       = fours  + ?,
-                    sixes       = sixes  + ?,
-                    strike_rate = CASE WHEN (balls_faced + ?) > 0
-                                  THEN ROUND(
-                                      CAST(runs_scored + ? AS DECIMAL(10,2))
-                                      / (balls_faced + ?) * 100, 2)
-                                  ELSE 0.00 END
-                WHERE innings_id = ? AND player_id = ?
-            ")->execute([
-                $runsScored,           // runs delta
-                $isValid,              // balls_faced delta
-                $isFour,
-                $isSix,
-                $isValid,              // SR: new balls_faced
-                $runsScored,           // SR: new runs_scored
-                $isValid,              // SR: new balls_faced (divisor)
-                $inningsId, $strikerId,
-            ]);
-        }
-
-        // ── Update bowling_scorecards for bowler ───────────────────────────
-        if ($bowlerId && $inningsId) {
-            $isWideInt   = ($extraType === 'wide')    ? 1 : 0;
-            $isNoBallInt = ($extraType === 'no_ball') ? 1 : 0;
-            $totalRuns   = $runsScored + $extraRuns;
-
-            // Ensure row exists
-            $pdo->prepare("
-                INSERT INTO bowling_scorecards
-                    (innings_id, player_id, innings_local_id, player_local_id,
-                     club_id, series_id, match_id)
-                SELECT ?, ?, ?, ?, ?, ?, ?
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM bowling_scorecards
-                    WHERE innings_id = ? AND player_id = ?
-                )
-            ")->execute([
-                $inningsId, $bowlerId,
-                $d['innings_id'] ?? null, $d['bowler_id'] ?? null,
-                $clubId, $seriesId, $matchId,
-                $inningsId, $bowlerId,
-            ]);
-
-            $pdo->prepare("
-                UPDATE bowling_scorecards
+                UPDATE overs
                 SET runs_conceded = runs_conceded + ?,
+                    wickets       = wickets       + ?,
                     balls_bowled  = balls_bowled  + ?,
-                    wides         = wides    + ?,
-                    no_balls      = no_balls + ?,
-                    overs_bowled  = FLOOR((balls_bowled + ?) / 6)
-                                  + ((balls_bowled + ?) % 6) * 0.1,
-                    economy_rate  = CASE WHEN (balls_bowled + ?) > 0
-                                    THEN ROUND(
-                                        CAST(runs_conceded + ? AS DECIMAL(10,2))
-                                        / ((balls_bowled + ?) / 6.0), 2)
-                                    ELSE 0.00 END
-                WHERE innings_id = ? AND player_id = ?
+                    is_completed  = CASE WHEN (balls_bowled + ?) >= 6 THEN 1 ELSE is_completed END,
+                    is_maiden     = CASE WHEN (balls_bowled + ?) >= 6
+                                         AND (runs_conceded + ?) = 0 THEN 1
+                                    WHEN (balls_bowled + ?) >= 6
+                                         AND (runs_conceded + ?) > 0 THEN 0
+                                    ELSE is_maiden END
+                WHERE id = ?
             ")->execute([
-                $totalRuns,            // runs_conceded delta
-                $isValid,              // balls_bowled delta
-                $isWideInt,
-                $isNoBallInt,
-                $isValid,              // overs: new balls_bowled (floor)
-                $isValid,              // overs: new balls_bowled (modulo)
-                $isValid,              // eco: new balls_bowled
-                $totalRuns,            // eco: new runs_conceded
-                $isValid,              // eco: new balls_bowled (divisor)
-                $inningsId, $bowlerId,
+                $totalRunsForOver,     // runs_conceded delta
+                $isWicket,             // wickets delta
+                $isValid,              // balls_bowled delta (only legal balls count)
+                $isValid,              // is_completed: new balls_bowled
+                $isValid,              // is_maiden check: new balls_bowled
+                $totalRunsForOver,     // is_maiden check: new runs_conceded
+                $isValid,              // is_maiden reset: new balls_bowled
+                $totalRunsForOver,     // is_maiden reset: new runs_conceded
+                $overId,
             ]);
         }
     }
@@ -1157,6 +1038,7 @@ function syncBowlingScorecard(PDO $pdo, string $action, array $d): bool {
             SET club_id      = COALESCE(club_id, ?),
                 series_id    = COALESCE(series_id, ?),
                 match_id     = COALESCE(match_id, ?),
+                balls_bowled = ?,
                 overs_bowled = ?,
                 maidens      = ?,
                 runs_conceded= ?,
@@ -1168,6 +1050,7 @@ function syncBowlingScorecard(PDO $pdo, string $action, array $d): bool {
             WHERE id = ?
         ")->execute([
             $clubId, $seriesId, $matchId,
+            $d['balls_bowled'] ?? 0,
             $d['overs_bowled'] ?? 0, $d['maidens'] ?? 0,
             $d['runs_conceded'] ?? 0, $d['wickets'] ?? 0,
             $d['economy_rate'] ?? 0,
@@ -1181,13 +1064,14 @@ function syncBowlingScorecard(PDO $pdo, string $action, array $d): bool {
                 local_id, club_id, series_id, match_id,
                 innings_id, innings_local_id,
                 player_id, player_local_id,
-                overs_bowled, maidens, runs_conceded, wickets,
+                balls_bowled, overs_bowled, maidens, runs_conceded, wickets,
                 economy_rate, no_balls, wides, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
         ")->execute([
             $d['id'], $clubId, $seriesId, $matchId,
             $inningsId, $d['innings_id'] ?? null,
             $playerId,  $d['player_id']  ?? null,
+            $d['balls_bowled'] ?? 0,
             $d['overs_bowled'] ?? 0, $d['maidens'] ?? 0,
             $d['runs_conceded'] ?? 0, $d['wickets'] ?? 0,
             $d['economy_rate'] ?? 0,
