@@ -161,6 +161,10 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         $maxOversPerBowler   = $d['max_overs_per_bowler'] ?? 0;
         $wideValue           = $d['wide_value']           ?? 1;
         $noBallValue         = $d['no_ball_value']        ?? 1;
+        $teamALocal          = $d['team_a_id']            ?? ($d['team_a_local'] ?? null);
+        $teamBLocal          = $d['team_b_id']            ?? ($d['team_b_local'] ?? null);
+        $teamAId             = resolveTeamId($pdo, $teamALocal);
+        $teamBId             = resolveTeamId($pdo, $teamBLocal);
 
         // If both club_id and series_id are present, check for an existing match
         $row = null;
@@ -182,28 +186,39 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
                     max_overs_per_bowler = ?,
                     wide_value           = ?,
                     no_ball_value        = ?,
+                    team_a_id            = COALESCE(?, team_a_id),
+                    team_a_local         = COALESCE(?, team_a_local),
+                    team_b_id            = COALESCE(?, team_b_id),
+                    team_b_local         = COALESCE(?, team_b_local),
                     updated_at           = NOW()
                 WHERE id = ?
             ")->execute([
                 $title, $venue, $matchDate,
                 $overs, $playersPerTeam, $maxOversPerBowler,
                 $wideValue, $noBallValue,
+                $teamAId, $teamALocal,
+                $teamBId, $teamBLocal,
                 $row['id'],
             ]);
+            backfillMatchTeams($pdo, (int) $row['id']);
         } else {
             // No matching record — INSERT new row
             $pdo->prepare("
                 INSERT INTO matches (
                     local_id, club_id, series_id, series_local_id, title, venue, match_date,
                     overs, players_per_team, max_overs_per_bowler, wide_value, no_ball_value,
+                    team_a_id, team_a_local, team_b_id, team_b_local,
                     status, created_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
             ")->execute([
                 $d['id'], $clubId, $seriesId, $seriesLocalId,
                 $title, $venue, $matchDate,
                 $overs, $playersPerTeam, $maxOversPerBowler,
                 $wideValue, $noBallValue,
+                $teamAId, $teamALocal,
+                $teamBId, $teamBLocal,
             ]);
+            backfillMatchTeams($pdo, (int) $pdo->lastInsertId());
         }
 
     } elseif ($action === 'update') {
@@ -226,12 +241,62 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
             $sets[] = "series_local_id = ?";
             $params[] = $d['series_id'] ?: null;
         }
+        if (array_key_exists('team_a_id', $d) || array_key_exists('team_a_local', $d)) {
+            $teamALocal = $d['team_a_id'] ?? ($d['team_a_local'] ?? null);
+            $sets[] = "team_a_id = ?";
+            $params[] = resolveTeamId($pdo, $teamALocal);
+            $sets[] = "team_a_local = ?";
+            $params[] = $teamALocal ?: null;
+        }
+        if (array_key_exists('team_b_id', $d) || array_key_exists('team_b_local', $d)) {
+            $teamBLocal = $d['team_b_id'] ?? ($d['team_b_local'] ?? null);
+            $sets[] = "team_b_id = ?";
+            $params[] = resolveTeamId($pdo, $teamBLocal);
+            $sets[] = "team_b_local = ?";
+            $params[] = $teamBLocal ?: null;
+        }
         if ($sets) {
             $params[] = $matchRow['id'];
             $pdo->prepare("UPDATE matches SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?")->execute($params);
         }
+        backfillMatchTeams($pdo, (int) $matchRow['id']);
     }
     return true;
+}
+
+function backfillMatchTeams(PDO $pdo, int $matchId): void {
+    $stmt = $pdo->prepare("
+        SELECT id, local_id, team_label
+        FROM teams
+        WHERE match_id = ?
+          AND team_label IN ('A', 'B')
+        ORDER BY team_label ASC, id ASC
+    ");
+    $stmt->execute([$matchId]);
+    $teams = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $teamA = null;
+    $teamB = null;
+    foreach ($teams as $team) {
+        if ($team['team_label'] === 'A' && !$teamA) $teamA = $team;
+        if ($team['team_label'] === 'B' && !$teamB) $teamB = $team;
+    }
+
+    $pdo->prepare("
+        UPDATE matches
+        SET team_a_id    = COALESCE(?, team_a_id),
+            team_a_local = COALESCE(?, team_a_local),
+            team_b_id    = COALESCE(?, team_b_id),
+            team_b_local = COALESCE(?, team_b_local),
+            updated_at   = NOW()
+        WHERE id = ?
+    ")->execute([
+        $teamA['id'] ?? null,
+        $teamA['local_id'] ?? null,
+        $teamB['id'] ?? null,
+        $teamB['local_id'] ?? null,
+        $matchId,
+    ]);
 }
 
 function resolveMatchRow(PDO $pdo, $value): ?array {
@@ -367,6 +432,10 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
             $captainId, $captainLocal,
             $wkId, $wkLocal,
         ]);
+    }
+
+    if ($matchId) {
+        backfillMatchTeams($pdo, (int) $matchId);
     }
 
     // If both Team A and Team B now exist for this match → set match status = 'toss'
