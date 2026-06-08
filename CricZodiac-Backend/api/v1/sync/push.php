@@ -830,9 +830,19 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
 
     $ballNumber = (int) ($d['ball_number'] ?? 0);
 
-    // Check by club_id + series_id + match_id + innings_id + over_id + ball_number
+    // ── Duplicate detection ────────────────────────────────────────────────
+    // PRIMARY: match by local_id (UUID). This is always unique per delivery.
     $existing = null;
-    if ($clubId && $seriesId && $matchId && $inningsId && $overId) {
+    $st = $pdo->prepare("SELECT id FROM balls WHERE local_id = ? LIMIT 1");
+    $st->execute([$d['id'] ?? '']);
+    $existing = $st->fetch(PDO::FETCH_ASSOC);
+
+    // FALLBACK: composite key — only for legal balls (is_extra = false/0).
+    // Wides and no-balls do NOT increment ball_number, so two balls in the
+    // same over can share ball_number = N (e.g. Wide then next legal ball).
+    // Using composite key for extras would incorrectly UPDATE the wide row
+    // instead of INSERTing a new one.
+    if (!$existing && $overId && !($d['is_extra'] ?? false)) {
         $st = $pdo->prepare("
             SELECT id FROM balls
             WHERE club_id = ? AND series_id = ? AND match_id = ?
