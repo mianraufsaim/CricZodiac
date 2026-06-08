@@ -732,6 +732,9 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
     }
 
     if ($existing) {
+        // Always update local_id — do NOT use COALESCE here.
+        // If a previous test run left a stale UUID, COALESCE would keep it, causing
+        // syncBall to fail its resolveOverRow lookup for the current session's UUID.
         $pdo->prepare("
             UPDATE overs
             SET runs_conceded = ?,
@@ -739,7 +742,7 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
                 is_maiden     = ?,
                 balls_bowled  = ?,
                 is_completed  = ?,
-                local_id      = COALESCE(local_id, ?)
+                local_id      = ?
             WHERE club_id = ? AND series_id = ? AND match_id = ? AND innings_id = ?
               AND bowler_id = ? AND over_number = ?
         ")->execute([
