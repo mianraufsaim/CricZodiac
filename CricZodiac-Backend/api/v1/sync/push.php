@@ -863,29 +863,8 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
     $extraRuns  = (int)($d['extra_runs']  ?? 0);
     $extraType  = ($d['extra_type'] !== '' && $d['extra_type'] !== null) ? $d['extra_type'] : null;
 
-    if ($existing) {
-        $pdo->prepare("
-            UPDATE balls
-            SET striker_id    = COALESCE(?, striker_id),
-                non_striker_id= COALESCE(?, non_striker_id),
-                bowler_id     = COALESCE(?, bowler_id),
-                runs_scored   = ?,
-                is_wicket     = ?,
-                is_extra      = ?,
-                extra_type    = ?,
-                extra_runs    = ?,
-                is_four       = ?,
-                is_six        = ?,
-                is_valid_ball = ?,
-                local_id      = COALESCE(local_id, ?)
-            WHERE id = ?
-        ")->execute([
-            $strikerId, $nonStrikerId, $bowlerId,
-            $runsScored, $isWicket, $isExtra, $extraType, $extraRuns,
-            $isFour, $isSix, $isValid,
-            $d['id'], $existing['id'],
-        ]);
-    } else {
+    // Balls are immutable once written — skip if already exists (idempotent sync).
+    if (!$existing) {
         $pdo->prepare("
             INSERT INTO balls (
                 local_id, club_id, series_id,
