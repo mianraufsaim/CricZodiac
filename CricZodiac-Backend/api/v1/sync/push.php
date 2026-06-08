@@ -773,7 +773,70 @@ function syncOver(PDO $pdo, string $action, array $d): bool {
 
 function syncBall(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
-        $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
+        // Fetch the ball before deleting so we can reverse scorecard counters
+        $st = $pdo->prepare("SELECT * FROM balls WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['id']]);
+        $ball = $st->fetch(PDO::FETCH_ASSOC);
+
+        if ($ball) {
+            $isValid   = (int)$ball['is_valid_ball'];
+            $runs      = (int)$ball['runs_scored'];
+            $extraRuns = (int)$ball['extra_runs'];
+            $isFour    = (int)$ball['is_four'];
+            $isSix     = (int)$ball['is_six'];
+            $extraType = $ball['extra_type'] ?? null;
+            $isWide    = ($extraType === 'wide')    ? 1 : 0;
+            $isNoBall  = ($extraType === 'no_ball') ? 1 : 0;
+            $totalRuns = $runs + $extraRuns;
+
+            // ── Reverse batting_scorecards for striker ─────────────────────
+            if ($ball['striker_id'] && $ball['innings_id']) {
+                $pdo->prepare("
+                    UPDATE batting_scorecards
+                    SET runs_scored = GREATEST(0, runs_scored - ?),
+                        balls_faced = GREATEST(0, balls_faced - ?),
+                        fours       = GREATEST(0, fours  - ?),
+                        sixes       = GREATEST(0, sixes  - ?),
+                        strike_rate = CASE WHEN GREATEST(0, balls_faced - ?) > 0
+                                      THEN ROUND(
+                                          CAST(GREATEST(0, runs_scored - ?) AS DECIMAL(10,2))
+                                          / GREATEST(0, balls_faced - ?) * 100, 2)
+                                      ELSE 0.00 END
+                    WHERE innings_id = ? AND player_id = ?
+                ")->execute([
+                    $runs, $isValid, $isFour, $isSix,
+                    $isValid, $runs, $isValid,           // SR calc
+                    $ball['innings_id'], $ball['striker_id'],
+                ]);
+            }
+
+            // ── Reverse bowling_scorecards for bowler ──────────────────────
+            if ($ball['bowler_id'] && $ball['innings_id']) {
+                $pdo->prepare("
+                    UPDATE bowling_scorecards
+                    SET runs_conceded = GREATEST(0, runs_conceded - ?),
+                        balls_bowled  = GREATEST(0, balls_bowled  - ?),
+                        wides         = GREATEST(0, wides    - ?),
+                        no_balls      = GREATEST(0, no_balls - ?),
+                        overs_bowled  = FLOOR(GREATEST(0, balls_bowled - ?) / 6)
+                                      + (GREATEST(0, balls_bowled - ?) % 6) * 0.1,
+                        economy_rate  = CASE WHEN GREATEST(0, balls_bowled - ?) > 0
+                                        THEN ROUND(
+                                            CAST(GREATEST(0, runs_conceded - ?) AS DECIMAL(10,2))
+                                            / (GREATEST(0, balls_bowled - ?) / 6.0), 2)
+                                        ELSE 0.00 END
+                    WHERE innings_id = ? AND player_id = ?
+                ")->execute([
+                    $totalRuns, $isValid, $isWide, $isNoBall,
+                    $isValid, $isValid,               // overs calc
+                    $isValid, $totalRuns, $isValid,   // eco calc
+                    $ball['innings_id'], $ball['bowler_id'],
+                ]);
+            }
+
+            $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
+        }
+
         return true;
     }
 
