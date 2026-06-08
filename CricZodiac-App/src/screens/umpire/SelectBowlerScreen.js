@@ -70,8 +70,8 @@ const SelectBowlerScreen = ({ navigation, route }) => {
       try {
         const scorecard = await getBowlingScorecard(inningsId);
         for (const row of scorecard) {
-          // overs_bowled uses cricket notation (e.g. 1.3 = 1 complete + 3 balls)
-          bowlerOversMap[row.player_id] = Math.floor(row.overs_bowled || 0);
+          // Use balls_bowled integer (reliable) to derive completed overs
+          bowlerOversMap[row.player_id] = Math.floor((row.balls_bowled || 0) / 6);
         }
       } catch (_) {}
     }

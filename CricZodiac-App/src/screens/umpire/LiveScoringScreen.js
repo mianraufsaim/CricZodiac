@@ -924,6 +924,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       await saveBall({
         id:              ballId,
         over_id:         over.id,
+        over_number:     ovNum,
         innings_id:      inn.id,
         match_id:        match.id,
         ball_number:     legal + 1,
@@ -1101,6 +1102,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       await saveBall({
         id:             ballId,
         over_id:        over.id,
+        over_number:    ovNum,
         innings_id:     inn.id,
         match_id:       match.id,
         ball_number:    newLegal,

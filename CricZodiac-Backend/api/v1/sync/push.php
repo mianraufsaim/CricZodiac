@@ -807,6 +807,27 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
     $nonStrikerId = resolvePlayerId($pdo, $d['non_striker_id'] ?? null);
     $bowlerId     = resolvePlayerId($pdo, $d['bowler_id']      ?? null);
 
+    // Secondary over fallback: if resolveOverRow failed (stale UUID / timing issue),
+    // try to find the over via innings_id + bowler_id + over_number.
+    // This handles the case where a previous test run left a different local_id on the
+    // over row (COALESCE wouldn't overwrite it), but syncOver fix above now always
+    // writes the current UUID. This fallback is retained as belt-and-suspenders.
+    if (!$overId && $inningsId && $bowlerId) {
+        $overNumber = (int)($d['over_number'] ?? 0);
+        if ($overNumber > 0) {
+            $st = $pdo->prepare("
+                SELECT id FROM overs
+                WHERE innings_id = ? AND bowler_id = ? AND over_number = ?
+                LIMIT 1
+            ");
+            $st->execute([$inningsId, $bowlerId, $overNumber]);
+            $fbOver = $st->fetch(PDO::FETCH_ASSOC);
+            if ($fbOver) {
+                $overId = (int)$fbOver['id'];
+            }
+        }
+    }
+
     $ballNumber = (int) ($d['ball_number'] ?? 0);
 
     // Check by club_id + series_id + match_id + innings_id + over_id + ball_number
