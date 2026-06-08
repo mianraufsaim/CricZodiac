@@ -116,36 +116,61 @@ export const upsertMatchesFromServer = async (serverMatches) => {
 
 export const createTeam = async (teamData) => {
   const id = teamData.id || uuid.v4();
-  const match = await queryFirstRow('SELECT series_id FROM matches WHERE id = ?', [teamData.match_id]);
+  const match = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [teamData.match_id]);
+  const clubId = teamData.club_id || match?.club_id || null;
   const seriesId = teamData.series_id || match?.series_id || null;
   await executeTransaction([
     {
-      sql: `INSERT INTO teams (id, match_id, series_id, team_name, team_label, captain_id, sync_status)
-            VALUES (?,?,?,?,?,?,?)`,
-      params: [id, teamData.match_id, seriesId, teamData.team_name, teamData.team_label, teamData.captain_id, SYNC_STATUS.PENDING],
+      sql: `INSERT INTO teams (id, club_id, match_id, series_id, team_name, team_label, captain_id, sync_status)
+            VALUES (?,?,?,?,?,?,?,?)`,
+      params: [id, clubId, teamData.match_id, seriesId, teamData.team_name, teamData.team_label, teamData.captain_id, SYNC_STATUS.PENDING],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'teams', 'create', id, JSON.stringify({ ...teamData, id, series_id: seriesId }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'teams', 'create', id, JSON.stringify({ ...teamData, id, club_id: clubId, series_id: seriesId }), SYNC_STATUS.PENDING],
     },
   ]);
   return id;
 };
 
 export const addPlayerToTeam = async (teamId, playerId, battingOrder = 0) => {
+  const existing = await queryFirstRow(
+    'SELECT id FROM team_players WHERE team_id = ? AND player_id = ?',
+    [teamId, playerId]
+  );
+  if (existing?.id) return existing.id;
+
   const id = uuid.v4();
+  const team = await queryFirstRow(`
+    SELECT
+      t.match_id,
+      COALESCE(t.club_id, m.club_id) AS club_id,
+      COALESCE(t.series_id, m.series_id) AS series_id
+    FROM teams t
+    LEFT JOIN matches m ON m.id = t.match_id
+    WHERE t.id = ?
+  `, [teamId]);
+
   await executeTransaction([
     {
-      sql: `INSERT OR IGNORE INTO team_players (id, team_id, player_id, batting_order, sync_status)
-            VALUES (?,?,?,?,?)`,
-      params: [id, teamId, playerId, battingOrder, SYNC_STATUS.PENDING],
+      sql: `INSERT OR IGNORE INTO team_players (id, club_id, series_id, match_id, team_id, player_id, batting_order, sync_status)
+            VALUES (?,?,?,?,?,?,?,?)`,
+      params: [id, team?.club_id || null, team?.series_id || null, team?.match_id || null, teamId, playerId, battingOrder, SYNC_STATUS.PENDING],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
       params: [uuid.v4(), 'team_players', 'create', id,
-               JSON.stringify({ id, team_id: teamId, player_id: playerId, batting_order: battingOrder }), SYNC_STATUS.PENDING],
+               JSON.stringify({
+                 id,
+                 club_id: team?.club_id || null,
+                 series_id: team?.series_id || null,
+                 match_id: team?.match_id || null,
+                 team_id: teamId,
+                 player_id: playerId,
+                 batting_order: battingOrder,
+               }), SYNC_STATUS.PENDING],
     },
   ]);
   return id;

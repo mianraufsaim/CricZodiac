@@ -158,14 +158,20 @@ CREATE TABLE IF NOT EXISTS teams (
 CREATE TABLE IF NOT EXISTS team_players (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id        VARCHAR(36) UNIQUE,
+    club_id         INT UNSIGNED,
+    series_id       INT UNSIGNED,
+    match_id        INT UNSIGNED,
     team_id         INT UNSIGNED,
     team_local_id   VARCHAR(36),
     player_id       INT UNSIGNED,
     player_local_id VARCHAR(36),
     batting_order   TINYINT UNSIGNED DEFAULT 0,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_team_player (team_id, player_id),
+    UNIQUE KEY uq_team_player_scope (club_id, series_id, match_id, team_id, player_id),
     INDEX idx_team   (team_id),
+    INDEX idx_match  (match_id),
+    INDEX idx_series (series_id),
+    INDEX idx_club   (club_id),
     INDEX idx_player (player_id)
 ) ENGINE=InnoDB;
 

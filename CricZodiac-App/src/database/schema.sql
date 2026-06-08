@@ -124,6 +124,9 @@ CREATE TABLE IF NOT EXISTS teams (
 -- Team Players (squad membership)
 CREATE TABLE IF NOT EXISTS team_players (
   id            TEXT PRIMARY KEY,
+  club_id       TEXT REFERENCES clubs(id),
+  series_id     TEXT REFERENCES series(id),
+  match_id      TEXT REFERENCES matches(id),
   team_id       TEXT NOT NULL REFERENCES teams(id),
   player_id     TEXT NOT NULL REFERENCES players(id),
   batting_order INTEGER DEFAULT 0,

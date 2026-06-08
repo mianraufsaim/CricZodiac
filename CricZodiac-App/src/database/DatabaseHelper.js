@@ -130,6 +130,9 @@ const initializeTables = async (database) => {
     tx.executeSql(`
       CREATE TABLE IF NOT EXISTS team_players (
         id            TEXT PRIMARY KEY,
+        club_id       TEXT,
+        series_id     TEXT,
+        match_id      TEXT,
         team_id       TEXT NOT NULL,
         player_id     TEXT NOT NULL,
         batting_order INTEGER DEFAULT 0,
@@ -410,6 +413,9 @@ const initializeTables = async (database) => {
     `ALTER TABLE series   ADD COLUMN club_id TEXT;`,
     `ALTER TABLE teams    ADD COLUMN club_id TEXT;`,
     `ALTER TABLE teams    ADD COLUMN series_id TEXT;`,
+    `ALTER TABLE team_players ADD COLUMN club_id TEXT;`,
+    `ALTER TABLE team_players ADD COLUMN series_id TEXT;`,
+    `ALTER TABLE team_players ADD COLUMN match_id TEXT;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }
@@ -421,6 +427,7 @@ const initializeTables = async (database) => {
     `CREATE INDEX IF NOT EXISTS idx_matches_club  ON matches(club_id);`,
     `CREATE INDEX IF NOT EXISTS idx_series_club   ON series(club_id);`,
     `CREATE INDEX IF NOT EXISTS idx_teams_series  ON teams(series_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_team_players_scope ON team_players(club_id, series_id, match_id, team_id, player_id);`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(idxSql); }); } catch (_) { /* exists */ }
   }
@@ -433,6 +440,31 @@ const initializeTables = async (database) => {
           SELECT m.series_id FROM matches m WHERE m.id = teams.match_id
         )
         WHERE series_id IS NULL
+      `);
+    });
+  } catch (_) { /* best-effort cache backfill */ }
+
+  try {
+    await database.transaction(tx => {
+      tx.executeSql(`
+        UPDATE team_players
+        SET
+          club_id = (
+            SELECT COALESCE(t.club_id, m.club_id)
+            FROM teams t
+            LEFT JOIN matches m ON m.id = t.match_id
+            WHERE t.id = team_players.team_id
+          ),
+          series_id = (
+            SELECT COALESCE(t.series_id, m.series_id)
+            FROM teams t
+            LEFT JOIN matches m ON m.id = t.match_id
+            WHERE t.id = team_players.team_id
+          ),
+          match_id = (
+            SELECT t.match_id FROM teams t WHERE t.id = team_players.team_id
+          )
+        WHERE club_id IS NULL OR series_id IS NULL OR match_id IS NULL
       `);
     });
   } catch (_) { /* best-effort cache backfill */ }

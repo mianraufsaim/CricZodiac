@@ -282,6 +282,16 @@ function resolveTeamId(PDO $pdo, $value): ?int {
     return $row ? (int) $row['id'] : null;
 }
 
+function resolveTeamRow(PDO $pdo, $value): ?array {
+    $teamId = resolveTeamId($pdo, $value);
+    if (!$teamId) return null;
+
+    $st = $pdo->prepare("SELECT id, club_id, series_id, match_id FROM teams WHERE id = ? LIMIT 1");
+    $st->execute([$teamId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
 function syncTeam(PDO $pdo, string $action, array $d): bool {
     // 1. Resolve match UUID → MySQL integer id + club_id
     $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
@@ -351,14 +361,34 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncTeamPlayer(PDO $pdo, string $action, array $d): bool {
+    $teamRow = resolveTeamRow($pdo, $d['team_id'] ?? null);
+    $teamId = $teamRow['id'] ?? null;
+    $playerId = resolvePlayerId($pdo, $d['player_id'] ?? null);
+    $clubId = $d['club_id'] ?? ($teamRow['club_id'] ?? null);
+    $seriesId = resolveSeriesId($pdo, $d['series_id'] ?? null) ?? ($teamRow['series_id'] ?? null);
+    $matchRow = resolveMatchRow($pdo, $d['match_id'] ?? null);
+    $matchId = $matchRow['id'] ?? ($teamRow['match_id'] ?? null);
+
     $pdo->prepare("
-        INSERT IGNORE INTO team_players (local_id, team_id, team_local_id, player_id, player_local_id, batting_order, created_at)
-        VALUES (?,?,?,?,?,?,NOW())
+        INSERT INTO team_players (
+            local_id, club_id, series_id, match_id,
+            team_id, team_local_id, player_id, player_local_id,
+            batting_order, created_at
+        )
+        VALUES (?,?,?,?,?,?,?,?,?,NOW())
+        ON DUPLICATE KEY UPDATE
+            local_id = COALESCE(local_id, VALUES(local_id)),
+            team_local_id = VALUES(team_local_id),
+            player_local_id = VALUES(player_local_id),
+            batting_order = VALUES(batting_order)
     ")->execute([
         $d['id'],
-        resolveTeamId($pdo, $d['team_id'] ?? null),
+        $clubId,
+        $seriesId,
+        $matchId,
+        $teamId,
         $d['team_id'] ?? null,
-        resolvePlayerId($pdo, $d['player_id'] ?? null),
+        $playerId,
         $d['player_id'] ?? null,
         $d['batting_order'] ?? 0,
     ]);
