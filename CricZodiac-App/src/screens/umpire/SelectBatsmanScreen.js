@@ -9,6 +9,17 @@ import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
 
+const getPlayerDisplayName = (player) => (
+  player?.full_name ||
+  player?.name ||
+  player?.user_name ||
+  player?.player_name ||
+  player?.user?.name ||
+  ''
+).trim();
+
+const isMissingPlayerName = (name) => !name || name.toLowerCase() === 'unknown';
+
 const SelectBatsmanScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -57,6 +68,14 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
 
   const load = async () => {
     let teamPlayers = [];
+    const loadLocalTeamPlayers = async () => {
+      const local = await getTeamPlayers(team.id);
+      return (local || []).map(tp => ({
+        player_id:   tp.player_id,
+        full_name:   getPlayerDisplayName(tp) || 'Unknown',
+        player_type: tp.player_type || 'allrounder',
+      }));
+    };
 
     // 1. Fetch from API server first
     try {
@@ -71,22 +90,34 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
       if (serverList.length) {
         // Build list directly from server response
         teamPlayers = serverList.map(sp => ({
-          player_id:   sp.player_uuid || String(sp.player_id),
-          full_name:   sp.full_name   || 'Unknown',
+          player_id:   sp.player_uuid || sp.player_local_id || String(sp.player_id),
+          full_name:   getPlayerDisplayName(sp) || 'Unknown',
           player_type: sp.player_type || 'allrounder',
         }));
         // Save to SQLite in background
-        upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
+        const cacheWrite = upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
+
+        if (teamPlayers.some(player => isMissingPlayerName(player.full_name))) {
+          await cacheWrite;
+          const localPlayers = await loadLocalTeamPlayers().catch(() => []);
+          const localById = new Map(localPlayers.map(player => [String(player.player_id), player]));
+          teamPlayers = teamPlayers.map(player => {
+            if (!isMissingPlayerName(player.full_name)) return player;
+            const localPlayer = localById.get(String(player.player_id));
+            return {
+              ...player,
+              full_name: getPlayerDisplayName(localPlayer) || player.full_name,
+              player_type: localPlayer?.player_type || player.player_type,
+            };
+          });
+        }
+      } else {
+        teamPlayers = await loadLocalTeamPlayers();
       }
     } catch (apiErr) {
       console.warn('[SelectBatsman] API fetch failed, falling back to SQLite:', apiErr?.message);
       // 2. Fallback to SQLite if API fails
-      const local = await getTeamPlayers(team.id);
-      teamPlayers = (local || []).map(tp => ({
-        player_id:   tp.player_id,
-        full_name:   tp.full_name   || 'Unknown',
-        player_type: tp.player_type || 'allrounder',
-      }));
+      teamPlayers = await loadLocalTeamPlayers();
     }
 
     // 3. Filter out already-batting and dismissed players
@@ -106,7 +137,7 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
 
       availablePlayers.push({
         id:          player.player_id,
-        full_name:   player.full_name || 'Unknown',
+        full_name:   getPlayerDisplayName(player) || 'Unknown',
         player_type: player.player_type || 'allrounder',
       });
     }

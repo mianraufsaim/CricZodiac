@@ -8,6 +8,17 @@ import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
 
+const getPlayerDisplayName = (player) => (
+  player?.full_name ||
+  player?.name ||
+  player?.user_name ||
+  player?.player_name ||
+  player?.user?.name ||
+  ''
+).trim();
+
+const isMissingPlayerName = (name) => !name || name.toLowerCase() === 'unknown';
+
 const SelectBowlerScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -32,6 +43,14 @@ const SelectBowlerScreen = ({ navigation, route }) => {
 
   const load = async () => {
     let teamPlayers = [];
+    const loadLocalTeamPlayers = async () => {
+      const local = await getTeamPlayers(team.id);
+      return (local || []).map(tp => ({
+        player_id:   tp.player_id,
+        full_name:   getPlayerDisplayName(tp) || 'Unknown',
+        player_type: tp.player_type || 'allrounder',
+      }));
+    };
 
     // 1. Fetch from API server first
     try {
@@ -46,22 +65,34 @@ const SelectBowlerScreen = ({ navigation, route }) => {
       if (serverList.length) {
         // Build list directly from server response
         teamPlayers = serverList.map(sp => ({
-          player_id:   sp.player_uuid || String(sp.player_id),
-          full_name:   sp.full_name   || 'Unknown',
+          player_id:   sp.player_uuid || sp.player_local_id || String(sp.player_id),
+          full_name:   getPlayerDisplayName(sp) || 'Unknown',
           player_type: sp.player_type || 'allrounder',
         }));
         // Save to SQLite in background
-        upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
+        const cacheWrite = upsertTeamPlayersFromServer(serverList, team.id).catch(() => {});
+
+        if (teamPlayers.some(player => isMissingPlayerName(player.full_name))) {
+          await cacheWrite;
+          const localPlayers = await loadLocalTeamPlayers().catch(() => []);
+          const localById = new Map(localPlayers.map(player => [String(player.player_id), player]));
+          teamPlayers = teamPlayers.map(player => {
+            if (!isMissingPlayerName(player.full_name)) return player;
+            const localPlayer = localById.get(String(player.player_id));
+            return {
+              ...player,
+              full_name: getPlayerDisplayName(localPlayer) || player.full_name,
+              player_type: localPlayer?.player_type || player.player_type,
+            };
+          });
+        }
+      } else {
+        teamPlayers = await loadLocalTeamPlayers();
       }
     } catch (apiErr) {
       console.warn('[SelectBowler] API fetch failed, falling back to SQLite:', apiErr?.message);
       // 2. Fallback to SQLite if API fails
-      const local = await getTeamPlayers(team.id);
-      teamPlayers = (local || []).map(tp => ({
-        player_id:   tp.player_id,
-        full_name:   tp.full_name   || 'Unknown',
-        player_type: tp.player_type || 'allrounder',
-      }));
+      teamPlayers = await loadLocalTeamPlayers();
     }
 
     // Build bowler overs map from bowling scorecard (to enforce max overs per bowler)
@@ -76,17 +107,19 @@ const SelectBowlerScreen = ({ navigation, route }) => {
       } catch (_) {}
     }
 
-    const availablePlayers = teamPlayers
-      .map(tp => ({
+    const availablePlayers = [];
+    for (const tp of teamPlayers) {
+      const player = {
         id:          tp.player_id,
-        full_name:   tp.full_name   || 'Unknown',
+        full_name:   getPlayerDisplayName(tp) || 'Unknown',
         player_type: tp.player_type || 'allrounder',
-      }))
-      .filter(p => {
-        if (maxOversPerBowler <= 0) return true;
-        const completedOvers = bowlerOversMap[p.id] ?? 0;
-        return completedOvers < maxOversPerBowler;
-      });
+      };
+      if (maxOversPerBowler > 0) {
+        const completedOvers = bowlerOversMap[player.id] ?? 0;
+        if (completedOvers >= maxOversPerBowler) continue;
+      }
+      availablePlayers.push(player);
+    }
 
     setPlayers(availablePlayers);
   };

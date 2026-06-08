@@ -70,17 +70,22 @@ $stmt = $pdo->prepare("
     SELECT
         tp.id,
         tp.local_id,
+        tp.club_id,
+        tp.series_id,
+        tp.match_id,
         tp.team_id,
         tp.player_id,
         tp.player_local_id,
         tp.batting_order,
         p.local_id          AS player_uuid,
+        p.user_id,
         p.player_type,
         p.batting_hand,
         p.bowling_style,
         p.profile_pic,
         p.is_active,
         u.name              AS full_name,
+        u.name              AS user_name,
         u.local_id          AS user_uuid
     FROM team_players tp
     JOIN players p ON p.id = tp.player_id
@@ -92,8 +97,12 @@ $stmt->execute([$teamId]);
 $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($players as &$p) {
+    $p['club_id'] = isset($p['club_id']) ? (int) $p['club_id'] : null;
+    $p['series_id'] = isset($p['series_id']) ? (int) $p['series_id'] : null;
+    $p['match_id'] = isset($p['match_id']) ? (int) $p['match_id'] : null;
     $p['team_id']   = (int) $p['team_id'];
     $p['player_id'] = (int) $p['player_id'];
+    $p['user_id'] = isset($p['user_id']) ? (int) $p['user_id'] : null;
     $p['batting_order'] = (int) $p['batting_order'];
 }
 unset($p);

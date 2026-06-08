@@ -178,10 +178,25 @@ export const addPlayerToTeam = async (teamId, playerId, battingOrder = 0) => {
 
 export const getTeamPlayers = (teamId) =>
   queryRows(`
-    SELECT tp.*, COALESCE(u.name, p.full_name) AS full_name, p.player_type, p.profile_pic
+    SELECT
+      tp.*,
+      COALESCE(
+        (
+          SELECT NULLIF(TRIM(u.name), '')
+          FROM users u
+          WHERE u.id = p.user_id
+             OR CAST(u.server_id AS TEXT) = CAST(p.user_id AS TEXT)
+             OR p.user_id = ('u_' || u.server_id)
+          ORDER BY CASE WHEN u.id = p.user_id THEN 0 ELSE 1 END
+          LIMIT 1
+        ),
+        NULLIF(TRIM(p.full_name), ''),
+        'Unknown'
+      ) AS full_name,
+      p.player_type,
+      p.profile_pic
     FROM team_players tp
     JOIN players p ON tp.player_id = p.id
-    LEFT JOIN users u ON p.user_id = u.id
     WHERE tp.team_id = ?
     ORDER BY tp.batting_order ASC
   `, [teamId]);
@@ -193,17 +208,28 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
   if (!serverPlayers?.length) return;
   for (const sp of serverPlayers) {
     // Prefer local UUIDs; fall back to string of server integer id
-    const playerId = sp.player_uuid || String(sp.player_id);
+    const playerId = sp.player_uuid || sp.player_local_id || String(sp.player_id);
     const tpId     = sp.local_id    || String(sp.id);
+    const playerName = (sp.full_name || sp.name || sp.user_name || sp.player_name || sp.user?.name || '').trim();
 
     // Cache user into SQLite so the JOIN in getTeamPlayers can resolve the name.
-    // users.local_id is often NULL in MySQL, so we derive a stable SQLite user id
-    // from the server integer user_id (stored as "u_<int>").
-    const sqliteUserId = sp.user_uuid || (sp.user_id ? `u_${sp.user_id}` : null);
-    if (sqliteUserId && sp.full_name) {
+    // users/list.php stores MySQL-only users as String(id), so keep the same key here.
+    const sqliteUserId = sp.user_uuid || (sp.user_id != null ? String(sp.user_id) : null);
+    if (sqliteUserId && playerName) {
       await executeQuery(
         `INSERT OR IGNORE INTO users (id, server_id, name, role, status, is_approved) VALUES (?, ?, ?, 'player', 'active', 1)`,
-        [sqliteUserId, sp.user_id || null, sp.full_name]
+        [sqliteUserId, sp.user_id || null, playerName]
+      );
+      await executeQuery(
+        `UPDATE users
+         SET server_id = COALESCE(?, server_id),
+             name = ?,
+             role = COALESCE(role, 'player'),
+             status = 'active',
+             is_approved = 1,
+             sync_status = 'synced'
+         WHERE id = ?`,
+        [sp.user_id || null, playerName, sqliteUserId]
       );
     }
 
@@ -216,7 +242,7 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
         playerId,
         sp.player_id    || null,
         sqliteUserId    || null,
-        sp.full_name    || 'Unknown',
+        playerName      || 'Unknown',
         sp.player_type  || 'allrounder',
         sp.batting_hand || 'right',
         sp.bowling_style || null,
@@ -226,19 +252,50 @@ export const upsertTeamPlayersFromServer = async (serverPlayers, teamLocalId) =>
     );
     // Always refresh name + user_id from server in case the row was previously
     // cached with an empty full_name (INSERT OR IGNORE would have skipped it)
-    if (sp.full_name) {
+    if (playerName) {
       await executeQuery(
         `UPDATE players SET full_name = ?, user_id = COALESCE(?, user_id), sync_status = 'synced' WHERE id = ?`,
-        [sp.full_name, sqliteUserId || null, playerId]
+        [playerName, sqliteUserId || null, playerId]
+      );
+    } else if (sqliteUserId) {
+      await executeQuery(
+        `UPDATE players SET user_id = COALESCE(?, user_id), sync_status = 'synced' WHERE id = ?`,
+        [sqliteUserId, playerId]
       );
     }
 
     // Ensure team_player row exists in SQLite
     await executeQuery(
       `INSERT OR IGNORE INTO team_players
-         (id, team_id, player_id, batting_order, sync_status)
-       VALUES (?, ?, ?, ?, 'synced')`,
-      [tpId, teamLocalId, playerId, sp.batting_order || 0]
+         (id, club_id, series_id, match_id, team_id, player_id, batting_order, sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'synced')`,
+      [
+        tpId,
+        sp.club_id != null ? String(sp.club_id) : null,
+        sp.series_id != null ? String(sp.series_id) : null,
+        sp.match_id != null ? String(sp.match_id) : null,
+        teamLocalId,
+        playerId,
+        sp.batting_order || 0,
+      ]
+    );
+    await executeQuery(
+      `UPDATE team_players
+       SET club_id = COALESCE(?, club_id),
+           series_id = COALESCE(?, series_id),
+           match_id = COALESCE(?, match_id),
+           player_id = ?,
+           batting_order = ?,
+           sync_status = 'synced'
+       WHERE id = ?`,
+      [
+        sp.club_id != null ? String(sp.club_id) : null,
+        sp.series_id != null ? String(sp.series_id) : null,
+        sp.match_id != null ? String(sp.match_id) : null,
+        playerId,
+        sp.batting_order || 0,
+        tpId,
+      ]
     );
   }
 };
