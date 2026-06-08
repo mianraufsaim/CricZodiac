@@ -831,27 +831,14 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
     $ballNumber = (int) ($d['ball_number'] ?? 0);
 
     // ── Duplicate detection ────────────────────────────────────────────────
-    // PRIMARY: match by local_id (UUID). This is always unique per delivery.
+    // Use local_id (UUID) only — it is unique per delivery by definition.
+    // Composite key (over_id + ball_number) cannot be used because wides and
+    // no-balls don't increment ball_number, so multiple balls in the same over
+    // legitimately share the same ball_number value.
     $existing = null;
     $st = $pdo->prepare("SELECT id FROM balls WHERE local_id = ? LIMIT 1");
     $st->execute([$d['id'] ?? '']);
     $existing = $st->fetch(PDO::FETCH_ASSOC);
-
-    // FALLBACK: composite key — only for legal balls (is_extra = false/0).
-    // Wides and no-balls do NOT increment ball_number, so two balls in the
-    // same over can share ball_number = N (e.g. Wide then next legal ball).
-    // Using composite key for extras would incorrectly UPDATE the wide row
-    // instead of INSERTing a new one.
-    if (!$existing && $overId && !($d['is_extra'] ?? false)) {
-        $st = $pdo->prepare("
-            SELECT id FROM balls
-            WHERE club_id = ? AND series_id = ? AND match_id = ?
-              AND innings_id = ? AND over_id = ? AND ball_number = ?
-            LIMIT 1
-        ");
-        $st->execute([$clubId, $seriesId, $matchId, $inningsId, $overId, $ballNumber]);
-        $existing = $st->fetch(PDO::FETCH_ASSOC);
-    }
 
     // Cast all boolean fields to int — PHP false from JSON becomes '' in PDO otherwise
     $isWicket   = (int)(bool)($d['is_wicket']   ?? 0);
@@ -890,6 +877,100 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
             $runsScored, $isWicket, $isExtra, $extraType, $extraRuns,
             $isFour, $isSix, $isValid,
         ]);
+
+        // ── Update batting_scorecards for striker ──────────────────────────
+        if ($strikerId && $inningsId) {
+            // Ensure row exists (INSERT only if missing — no UNIQUE constraint needed)
+            $pdo->prepare("
+                INSERT INTO batting_scorecards
+                    (innings_id, player_id, innings_local_id, player_local_id,
+                     club_id, series_id, match_id)
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM batting_scorecards
+                    WHERE innings_id = ? AND player_id = ?
+                )
+            ")->execute([
+                $inningsId, $strikerId,
+                $d['innings_id'] ?? null, $d['striker_id'] ?? null,
+                $clubId, $seriesId, $matchId,
+                $inningsId, $strikerId,
+            ]);
+
+            $pdo->prepare("
+                UPDATE batting_scorecards
+                SET runs_scored = runs_scored + ?,
+                    balls_faced = balls_faced + ?,
+                    fours       = fours  + ?,
+                    sixes       = sixes  + ?,
+                    strike_rate = CASE WHEN (balls_faced + ?) > 0
+                                  THEN ROUND(
+                                      CAST(runs_scored + ? AS DECIMAL(10,2))
+                                      / (balls_faced + ?) * 100, 2)
+                                  ELSE 0.00 END
+                WHERE innings_id = ? AND player_id = ?
+            ")->execute([
+                $runsScored,           // runs delta
+                $isValid,              // balls_faced delta
+                $isFour,
+                $isSix,
+                $isValid,              // SR: new balls_faced
+                $runsScored,           // SR: new runs_scored
+                $isValid,              // SR: new balls_faced (divisor)
+                $inningsId, $strikerId,
+            ]);
+        }
+
+        // ── Update bowling_scorecards for bowler ───────────────────────────
+        if ($bowlerId && $inningsId) {
+            $isWideInt   = ($extraType === 'wide')    ? 1 : 0;
+            $isNoBallInt = ($extraType === 'no_ball') ? 1 : 0;
+            $totalRuns   = $runsScored + $extraRuns;
+
+            // Ensure row exists
+            $pdo->prepare("
+                INSERT INTO bowling_scorecards
+                    (innings_id, player_id, innings_local_id, player_local_id,
+                     club_id, series_id, match_id)
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM bowling_scorecards
+                    WHERE innings_id = ? AND player_id = ?
+                )
+            ")->execute([
+                $inningsId, $bowlerId,
+                $d['innings_id'] ?? null, $d['bowler_id'] ?? null,
+                $clubId, $seriesId, $matchId,
+                $inningsId, $bowlerId,
+            ]);
+
+            $pdo->prepare("
+                UPDATE bowling_scorecards
+                SET runs_conceded = runs_conceded + ?,
+                    balls_bowled  = balls_bowled  + ?,
+                    wides         = wides    + ?,
+                    no_balls      = no_balls + ?,
+                    overs_bowled  = FLOOR((balls_bowled + ?) / 6)
+                                  + ((balls_bowled + ?) % 6) * 0.1,
+                    economy_rate  = CASE WHEN (balls_bowled + ?) > 0
+                                    THEN ROUND(
+                                        CAST(runs_conceded + ? AS DECIMAL(10,2))
+                                        / ((balls_bowled + ?) / 6.0), 2)
+                                    ELSE 0.00 END
+                WHERE innings_id = ? AND player_id = ?
+            ")->execute([
+                $totalRuns,            // runs_conceded delta
+                $isValid,              // balls_bowled delta
+                $isWideInt,
+                $isNoBallInt,
+                $isValid,              // overs: new balls_bowled (floor)
+                $isValid,              // overs: new balls_bowled (modulo)
+                $isValid,              // eco: new balls_bowled
+                $totalRuns,            // eco: new runs_conceded
+                $isValid,              // eco: new balls_bowled (divisor)
+                $inningsId, $bowlerId,
+            ]);
+        }
     }
 
     // Transition match status to 'live' on first ball delivered
