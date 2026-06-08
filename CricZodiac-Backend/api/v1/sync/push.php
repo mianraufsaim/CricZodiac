@@ -304,6 +304,7 @@ function resolveMatchRow(PDO $pdo, $value): ?array {
 
     $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
     if ($isUuid) {
+        $st = $pdo->prepare("SELECT id, local_id, club_id, series_id FROM matches WHERE local_id = ? LIMIT 1");
         $st->execute([$value]);
     } else {
         $st = $pdo->prepare("SELECT id, local_id, club_id, series_id FROM matches WHERE local_id = ? OR id = ? LIMIT 1");
