@@ -26,6 +26,7 @@ import {
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings,
 } from '../../database/queries/matchQueries';
+import { processSyncQueue } from '../../services/SyncService';
 import uuid from 'react-native-uuid';
 
 // ── Helpers ───────────────────────────────────────────────
@@ -594,11 +595,15 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (!active) {
         const inningsId = await createInnings({
           match_id:        match.id,
+          club_id:         match.club_id  || null,
+          series_id:       match.series_id || null,
           innings_number:  inningsNumber,
           batting_team_id: battingTeam.id,
           bowling_team_id: bowlingTeam.id,
         });
         active = { id: inningsId, total_runs: 0, total_wickets: 0, extras: 0 };
+        // Immediately push innings to MySQL — don't wait for background timer
+        processSyncQueue().catch(() => {});
       }
       setInnings(active);
       setTotalRuns(active.total_runs || 0);
