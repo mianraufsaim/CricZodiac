@@ -100,7 +100,9 @@ export const getSeriesMatches = (seriesId) =>
       t2.team_name AS team_b_name
     FROM matches m
     LEFT JOIN teams t1 ON m.team_a_id = t1.id
+      OR (t1.match_id = m.id AND t1.team_label = 'A')
     LEFT JOIN teams t2 ON m.team_b_id = t2.id
+      OR (t2.match_id = m.id AND t2.team_label = 'B')
     WHERE m.series_id = ?
     ORDER BY m.created_at DESC
   `, [seriesId]);

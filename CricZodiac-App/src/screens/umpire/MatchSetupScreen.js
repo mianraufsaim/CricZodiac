@@ -84,6 +84,23 @@ const toNumber = (value, fallback) => {
   return Number.isFinite(next) ? next : fallback;
 };
 
+const minPlayersForOvers = (overs) => {
+  if (overs >= 20) return 11;
+  if (overs >= 10) return 6;
+  return 2;
+};
+
+const teamNameFromMatch = (match, side) => {
+  const key = side === 'A' ? 'team_a' : 'team_b';
+  return (
+    match?.[`${key}_name`] ||
+    match?.[`${key}_team_name`] ||
+    match?.[key]?.team_name ||
+    match?.[key]?.name ||
+    ''
+  );
+};
+
 // ── Main Screen ───────────────────────────────────────────
 const MatchSetupScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -98,25 +115,50 @@ const MatchSetupScreen = ({ navigation, route }) => {
   } = route.params || {};
   const isEditingSetup = !!existingMatch?.id;
   const seriesId = routeSeriesId || existingMatch?.series_id || null;
-  const [form, setForm] = useState(() => ({
-    title:              existingMatch?.title || (seriesId ? `Match ${matchNumber}` : ''),
-    venue:              existingMatch?.venue || '',
-    match_date:         toDateOnly(existingMatch?.match_date),
-    overs:              toNumber(existingMatch?.overs, 7),
-    players_per_team:   toNumber(existingMatch?.players_per_team, 7),
-    max_overs_per_bowler: toNumber(existingMatch?.max_overs_per_bowler, 0),
-    wide_value:         toNumber(existingMatch?.wide_value, 1),
-    no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
-    team_a_name:        existingMatch?.team_a_name || '',
-    team_b_name:        existingMatch?.team_b_name || '',
-  }));
+  const [form, setForm] = useState(() => {
+    const overs = toNumber(existingMatch?.overs, 7);
+    const minPlayers = minPlayersForOvers(overs);
+    return {
+      title:              existingMatch?.title || (seriesId ? `Match ${matchNumber}` : ''),
+      venue:              existingMatch?.venue || '',
+      match_date:         toDateOnly(existingMatch?.match_date),
+      overs,
+      players_per_team:   Math.max(toNumber(existingMatch?.players_per_team, 7), minPlayers),
+      max_overs_per_bowler: Math.min(toNumber(existingMatch?.max_overs_per_bowler, 0), overs),
+      wide_value:         toNumber(existingMatch?.wide_value, 1),
+      no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
+      team_a_name:        teamNameFromMatch(existingMatch, 'A'),
+      team_b_name:        teamNameFromMatch(existingMatch, 'B'),
+    };
+  });
   const [loading, setLoading]       = useState(false);
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const playerMinimum = minPlayersForOvers(form.overs);
+
+  const setOvers = (overs) => {
+    setForm(f => ({
+      ...f,
+      overs,
+      players_per_team: Math.max(f.players_per_team, minPlayersForOvers(overs)),
+      max_overs_per_bowler: Math.min(f.max_overs_per_bowler, overs),
+    }));
+  };
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.team_a_name.trim() || !form.team_b_name.trim()) {
       Alert.alert('Missing Fields', 'Please fill in match title and both team names.');
+      return;
+    }
+    if (form.players_per_team < playerMinimum) {
+      Alert.alert('Invalid Match Setup', `${form.overs} overs needs at least ${playerMinimum} players per team.`);
+      return;
+    }
+    if (form.max_overs_per_bowler > 0 && (form.max_overs_per_bowler * form.players_per_team) < form.overs) {
+      Alert.alert(
+        'Invalid Bowler Limit',
+        `${form.overs} overs cannot be completed with ${form.players_per_team} players if each bowler is limited to ${form.max_overs_per_bowler} over. Increase the limit or set it to 0.`
+      );
       return;
     }
     setLoading(true);
@@ -200,7 +242,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
               value={form.overs}
               min={1}
               max={50}
-              onChange={v => set('overs', v)}
+              onChange={setOvers}
               unit="ov"
               COLORS={COLORS}
               styles={styles}
@@ -209,7 +251,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
             <Stepper
               label="PLAYERS / TEAM"
               value={form.players_per_team}
-              min={2}
+              min={playerMinimum}
               max={15}
               onChange={v => set('players_per_team', v)}
               unit="pl"

@@ -63,8 +63,12 @@ $stmt = $pdo->prepare("
         m.updated_at
     FROM matches m
     LEFT JOIN series s ON s.id = m.series_id OR s.local_id = m.series_local_id
-    LEFT JOIN teams ta ON ta.id = m.team_a_id OR ta.local_id = m.team_a_local
-    LEFT JOIN teams tb ON tb.id = m.team_b_id OR tb.local_id = m.team_b_local
+    LEFT JOIN teams ta ON ta.id = m.team_a_id
+        OR ta.local_id = m.team_a_local
+        OR ((ta.match_id = m.id OR ta.match_local_id = m.local_id) AND ta.team_label = 'A')
+    LEFT JOIN teams tb ON tb.id = m.team_b_id
+        OR tb.local_id = m.team_b_local
+        OR ((tb.match_id = m.id OR tb.match_local_id = m.local_id) AND tb.team_label = 'B')
     WHERE " . implode(' AND ', $where) . "
     ORDER BY m.created_at DESC, m.id DESC
 ");
