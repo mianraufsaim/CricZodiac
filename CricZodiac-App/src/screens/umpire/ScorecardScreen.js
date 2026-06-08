@@ -13,7 +13,7 @@ const ScorecardScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { inningsId, match } = route.params;
+  const { inningsId, match, liveOverNumber, liveLegalBalls } = route.params;
   const [batting, setBatting]   = useState([]);
   const [bowling, setBowling]   = useState([]);
   const [innings, setInnings]   = useState(null);
@@ -31,6 +31,11 @@ const ScorecardScreen = ({ navigation, route }) => {
     setBowling(bowl);
     setInnings(inn);
   };
+
+  // If live over data was passed (innings still in progress), use it directly
+  const liveOversStr = (liveOverNumber != null && liveLegalBalls != null)
+    ? `${liveOverNumber - 1}.${liveLegalBalls}`
+    : null;
 
   const formatOvers = (overs) => {
     const full  = Math.floor(overs);
@@ -52,7 +57,7 @@ const ScorecardScreen = ({ navigation, route }) => {
       {innings && (
         <View style={styles.summary}>
           <Text style={styles.summaryScore}>{innings.total_runs}/{innings.total_wickets}</Text>
-          <Text style={styles.summaryOvers}>({formatOvers(innings.total_overs)} overs)</Text>
+          <Text style={styles.summaryOvers}>({liveOversStr || formatOvers(innings.total_overs)} overs)</Text>
         </View>
       )}
 
@@ -75,21 +80,26 @@ const ScorecardScreen = ({ navigation, route }) => {
               <Text style={styles.th}>B</Text>
               <Text style={styles.th}>4s</Text>
               <Text style={styles.th}>6s</Text>
-              <Text style={styles.th}>SR</Text>
+              <Text style={[styles.th, { marginLeft: 8 }]}>SR</Text>
             </View>
-            {batting.map((b, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
-                <View style={{ flex: 3 }}>
-                  <Text style={styles.playerName}>{b.full_name}</Text>
-                  <Text style={styles.dismissal}>{b.is_out ? b.dismissal_type : 'not out'}</Text>
+            {batting.map((b, i) => {
+              const bf = b.balls_faced || 0;
+              const rs = b.runs_scored || 0;
+              const srVal = bf > 0 ? ((rs / bf) * 100).toFixed(1) : '0.0';
+              return (
+                <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
+                  <View style={{ flex: 3 }}>
+                    <Text style={styles.playerName}>{b.full_name}</Text>
+                    <Text style={styles.dismissal}>{b.is_out ? b.dismissal_type : 'not out'}</Text>
+                  </View>
+                  <Text style={[styles.td, rs >= 50 && styles.tdHighlight]}>{rs}</Text>
+                  <Text style={styles.td}>{bf}</Text>
+                  <Text style={styles.td}>{b.fours}</Text>
+                  <Text style={styles.td}>{b.sixes}</Text>
+                  <Text style={[styles.td, { marginLeft: 8 }]}>{srVal}</Text>
                 </View>
-                <Text style={[styles.td, b.runs_scored >= 50 && styles.tdHighlight]}>{b.runs_scored}</Text>
-                <Text style={styles.td}>{b.balls_faced}</Text>
-                <Text style={styles.td}>{b.fours}</Text>
-                <Text style={styles.td}>{b.sixes}</Text>
-                <Text style={styles.td}>{b.strike_rate?.toFixed(1)}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : (
           <View style={styles.tableCard}>
@@ -99,18 +109,24 @@ const ScorecardScreen = ({ navigation, route }) => {
               <Text style={styles.th}>M</Text>
               <Text style={styles.th}>R</Text>
               <Text style={styles.th}>W</Text>
-              <Text style={styles.th}>Eco</Text>
+              <Text style={[styles.th, { marginLeft: 8 }]}>Eco</Text>
             </View>
-            {bowling.map((b, i) => (
-              <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
-                <Text style={[styles.playerName, { flex: 3 }]}>{b.full_name}</Text>
-                <Text style={styles.td}>{formatOvers(b.overs_bowled)}</Text>
-                <Text style={styles.td}>{b.maidens}</Text>
-                <Text style={styles.td}>{b.runs_conceded}</Text>
-                <Text style={[styles.td, b.wickets >= 3 && styles.tdHighlight]}>{b.wickets}</Text>
-                <Text style={styles.td}>{b.economy_rate?.toFixed(2)}</Text>
-              </View>
-            ))}
+            {bowling.map((b, i) => {
+              const bb = b.balls_bowled || 0;
+              const rc = b.runs_conceded || 0;
+              const oStr = `${Math.floor(bb / 6)}.${bb % 6}`;
+              const ecoVal = bb > 0 ? ((rc / bb) * 6).toFixed(2) : '0.00';
+              return (
+                <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
+                  <Text style={[styles.playerName, { flex: 3 }]}>{b.full_name}</Text>
+                  <Text style={styles.td}>{oStr}</Text>
+                  <Text style={styles.td}>{b.maidens}</Text>
+                  <Text style={styles.td}>{rc}</Text>
+                  <Text style={[styles.td, b.wickets >= 3 && styles.tdHighlight]}>{b.wickets}</Text>
+                  <Text style={[styles.td, { marginLeft: 8 }]}>{ecoVal}</Text>
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>

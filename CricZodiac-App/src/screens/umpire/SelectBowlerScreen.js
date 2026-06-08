@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getTeamPlayers, upsertTeamPlayersFromServer } from '../../database/queries/matchQueries';
+import { getTeamPlayers, upsertTeamPlayersFromServer, getBowlingScorecard } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
@@ -19,6 +19,7 @@ const SelectBowlerScreen = ({ navigation, route }) => {
     requestId,
     returnScreen = 'LiveScoring',
     resetOver = false,
+    maxOversPerBowler = 0,
   } = route.params;
   const [players, setPlayers]             = useState([]);
   const [selected, setSelected]           = useState(null);
@@ -63,11 +64,31 @@ const SelectBowlerScreen = ({ navigation, route }) => {
       }));
     }
 
-    setPlayers(teamPlayers.map(tp => ({
-      id:          tp.player_id,
-      full_name:   tp.full_name   || 'Unknown',
-      player_type: tp.player_type || 'allrounder',
-    })));
+    // Build bowler overs map from bowling scorecard (to enforce max overs per bowler)
+    let bowlerOversMap = {};
+    if (maxOversPerBowler > 0 && inningsId) {
+      try {
+        const scorecard = await getBowlingScorecard(inningsId);
+        for (const row of scorecard) {
+          // overs_bowled uses cricket notation (e.g. 1.3 = 1 complete + 3 balls)
+          bowlerOversMap[row.player_id] = Math.floor(row.overs_bowled || 0);
+        }
+      } catch (_) {}
+    }
+
+    const availablePlayers = teamPlayers
+      .map(tp => ({
+        id:          tp.player_id,
+        full_name:   tp.full_name   || 'Unknown',
+        player_type: tp.player_type || 'allrounder',
+      }))
+      .filter(p => {
+        if (maxOversPerBowler <= 0) return true;
+        const completedOvers = bowlerOversMap[p.id] ?? 0;
+        return completedOvers < maxOversPerBowler;
+      });
+
+    setPlayers(availablePlayers);
   };
 
   const toggleSearch = () => {

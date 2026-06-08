@@ -494,18 +494,24 @@ export const saveBall = async (ballData) => {
     },
     {
       sql: `UPDATE batting_scorecards
-            SET runs_scored = runs_scored + ?,
-                balls_faced = balls_faced + ?,
-                fours = fours + ?,
-                sixes = sixes + ?,
-                sync_status = ?,
-                updated_at = datetime('now')
+            SET runs_scored  = runs_scored + ?,
+                balls_faced  = balls_faced + ?,
+                fours        = fours + ?,
+                sixes        = sixes + ?,
+                strike_rate  = CASE WHEN (balls_faced + ?) > 0
+                               THEN CAST(runs_scored + ? AS REAL) / (balls_faced + ?) * 100
+                               ELSE 0.0 END,
+                sync_status  = ?,
+                updated_at   = datetime('now')
             WHERE innings_id = ? AND player_id = ?`,
       params: [
-        ballData.runs_scored || 0,
-        ballData.is_valid_ball !== false ? 1 : 0,
+        ballData.runs_scored || 0,                       // runs_scored delta
+        ballData.is_valid_ball !== false ? 1 : 0,        // balls_faced delta
         ballData.is_four ? 1 : 0,
         ballData.is_six ? 1 : 0,
+        ballData.is_valid_ball !== false ? 1 : 0,        // SR: new balls_faced
+        ballData.runs_scored || 0,                       // SR: new runs_scored
+        ballData.is_valid_ball !== false ? 1 : 0,        // SR: new balls_faced (divisor)
         SYNC_STATUS.PENDING,
         ballData.innings_id, ballData.striker_id,
       ],
@@ -549,20 +555,26 @@ export const saveBall = async (ballData) => {
       params: [uuid.v4(), ballData.innings_id, ballData.bowler_id, SYNC_STATUS.PENDING,
                ballData.innings_id, ballData.bowler_id],
     },
-    // Update bowling scorecard runs + balls + overs
+    // Update bowling scorecard runs + balls + overs + economy
     {
       sql: `UPDATE bowling_scorecards
             SET runs_conceded = runs_conceded + ?,
                 balls_bowled  = balls_bowled  + ?,
                 overs_bowled  = ((balls_bowled + ?) / 6) + (((balls_bowled + ?) % 6) * 0.1),
+                economy_rate  = CASE WHEN (balls_bowled + ?) > 0
+                                THEN CAST(runs_conceded + ? AS REAL) / ((balls_bowled + ?) / 6.0)
+                                ELSE 0.0 END,
                 sync_status   = ?,
                 updated_at    = datetime('now')
             WHERE innings_id = ? AND player_id = ?`,
       params: [
-        (ballData.runs_scored || 0) + (ballData.extra_runs || 0),
-        ballData.is_valid_ball !== false ? 1 : 0,
-        ballData.is_valid_ball !== false ? 1 : 0,
-        ballData.is_valid_ball !== false ? 1 : 0,
+        (ballData.runs_scored || 0) + (ballData.extra_runs || 0), // runs_conceded delta
+        ballData.is_valid_ball !== false ? 1 : 0,                  // balls_bowled delta
+        ballData.is_valid_ball !== false ? 1 : 0,                  // overs formula ?1
+        ballData.is_valid_ball !== false ? 1 : 0,                  // overs formula ?2
+        ballData.is_valid_ball !== false ? 1 : 0,                  // eco: new balls_bowled
+        (ballData.runs_scored || 0) + (ballData.extra_runs || 0),  // eco: new runs_conceded
+        ballData.is_valid_ball !== false ? 1 : 0,                  // eco: new balls_bowled (divisor)
         SYNC_STATUS.PENDING,
         ballData.innings_id, ballData.bowler_id,
       ],

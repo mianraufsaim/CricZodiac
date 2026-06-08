@@ -71,7 +71,7 @@ const BatterRow = ({ batter, isStriker, COLORS, sc }) => {
       <Text style={sc.bCell}>{batter.balls ?? 0}</Text>
       <Text style={sc.bCell}>{batter.fours ?? 0}</Text>
       <Text style={sc.bCell}>{batter.sixes ?? 0}</Text>
-      <Text style={[sc.bCell, { color: COLORS.cyan }]}>{sr(batter.runs, batter.balls)}</Text>
+      <Text style={[sc.bCell, { color: COLORS.cyan, marginLeft: 8 }]}>{sr(batter.runs, batter.balls)}</Text>
     </View>
   );
 };
@@ -79,8 +79,10 @@ const BatterRow = ({ batter, isStriker, COLORS, sc }) => {
 const BowlerRow = ({ bowler, legalBalls, COLORS, sc }) => {
   if (!bowler) return null;
   const completedOvers = Math.floor(legalBalls / 6);
-  const rem = legalBalls % 6;
-  const oversStr = `${completedOvers}.${rem}`;
+  const completedOvers = bowler.overs ?? 0;           // completed full overs from bowlerStats
+  const rem            = legalBalls;                  // balls in current over (already 0-5)
+  const oversStr       = `${completedOvers}.${rem}`;
+  const decimalOvers   = completedOvers + rem / 6;    // true decimal for eco calculation
   return (
     <View style={sc.bRow}>
       <Text style={[sc.bName, { color: COLORS.cyan }]} numberOfLines={1}>
@@ -90,7 +92,7 @@ const BowlerRow = ({ bowler, legalBalls, COLORS, sc }) => {
       <Text style={sc.bCell}>{bowler.maidens ?? 0}</Text>
       <Text style={sc.bCell}>{bowler.runs ?? 0}</Text>
       <Text style={sc.bCell}>{bowler.wickets ?? 0}</Text>
-      <Text style={[sc.bCell, { color: COLORS.warning }]}>{eco(bowler.runs, parseFloat(oversStr))}</Text>
+      <Text style={[sc.bCell, { color: COLORS.warning, marginLeft: 8 }]}>{eco(bowler.runs, decimalOvers)}</Text>
     </View>
   );
 };
@@ -362,14 +364,13 @@ const BallByBallTab = ({ allBalls, COLORS, bb }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={bb.ballDesc}>
-                  {over.overNumber}.{ball.ball_number}  {ball.striker_name || '—'}
+                  {over.overNumber}.{ball.extra_type === 'wide' ? 'Wd' : ball.extra_type === 'no_ball' ? 'NB' : ball.extra_type === 'bye' ? 'B' : ball.extra_type === 'leg_bye' ? 'LB' : ball.ball_number}{'  '}{ball.striker_name || '—'}
                   {ball.is_wicket ? '  🔴 OUT' : ''}
-                  {ball.extra_type ? `  (${ball.extra_type.replace('_', ' ')})` : ''}
                 </Text>
                 <Text style={bb.ballSub}>{ball.bowler_name || '—'}</Text>
               </View>
               <Text style={bb.ballRuns}>
-                {(ball.runs_scored || 0) + (ball.extra_runs || 0)}
+                +{(ball.runs_scored || 0) + (ball.extra_runs || 0)}
               </Text>
             </View>
           ))}
@@ -656,12 +657,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
         pendingSelectBowlerRef.current = false;
         setTimeout(() => {
           navigation.navigate('SelectBowler', {
-            inningsId:       inningsRef.current?.id,
-            team:            bowlingTeam,
-            currentBowlerId: bowlerRef.current?.id,
-            requestId:       uuid.v4(),
-            returnScreen:    'LiveScoring',
-            resetOver:       true,
+            inningsId:           inningsRef.current?.id,
+            team:                bowlingTeam,
+            currentBowlerId:     bowlerRef.current?.id,
+            requestId:           uuid.v4(),
+            returnScreen:        'LiveScoring',
+            resetOver:           true,
+            maxOversPerBowler:   match.max_overs_per_bowler || 0,
           });
         }, 300);
       }
@@ -740,10 +742,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     const t = setTimeout(() => {
       navigation.navigate('SelectBowler', {
-        inningsId: inningsRef.current.id,
-        team:      bowlingTeam,
-        requestId: uuid.v4(),
-        returnScreen: 'LiveScoring',
+        inningsId:         inningsRef.current.id,
+        team:              bowlingTeam,
+        requestId:         uuid.v4(),
+        returnScreen:      'LiveScoring',
+        maxOversPerBowler: match.max_overs_per_bowler || 0,
       });
     }, 300);
     return () => clearTimeout(t);
@@ -832,11 +835,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const bwl = bowlerRef.current;
     if (!bwl) {
       navigation.navigate('SelectBowler', {
-        inningsId: inningsRef.current?.id,
-        team: bowlingTeam,
-        requestId: uuid.v4(),
-        returnScreen: 'LiveScoring',
-        resetOver: true,
+        inningsId:         inningsRef.current?.id,
+        team:              bowlingTeam,
+        requestId:         uuid.v4(),
+        returnScreen:      'LiveScoring',
+        resetOver:         true,
+        maxOversPerBowler: match.max_overs_per_bowler || 0,
       });
       return null;
     }
@@ -1039,12 +1043,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
         }
         // Select new bowler for next over
         navigation.navigate('SelectBowler', {
-          inningsId:       inn.id,
-          team:            bowlingTeam,
-          currentBowlerId: bwl.id,
-          requestId:       uuid.v4(),
-          returnScreen:    'LiveScoring',
-          resetOver:       true,
+          inningsId:         inn.id,
+          team:              bowlingTeam,
+          currentBowlerId:   bwl.id,
+          requestId:         uuid.v4(),
+          returnScreen:      'LiveScoring',
+          resetOver:         true,
+          maxOversPerBowler: match.max_overs_per_bowler || 0,
         });
       }
     } catch (err) {
@@ -1163,6 +1168,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
         navigation.navigate('SelectBatsman', {
           inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
           returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
+          mode: 'new_batsman',           // single-player selection UI
+          existingStrikerId: str?.id,    // current striker stays, exclude from list
         });
       } else {
         setStriker(null);
@@ -1170,6 +1177,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
         navigation.navigate('SelectBatsman', {
           inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
           returnScreen: 'LiveScoring', selectionType: 'new_batsman',
+          mode: 'new_batsman',             // single-player selection UI
+          existingNonStrikerId: ns?.id,    // current non-striker stays, exclude from list
         });
       }
     } catch (err) {
@@ -1348,10 +1357,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const handleChangeBowler = () => {
     if (!inningsRef.current) return;
     navigation.navigate('SelectBowler', {
-      inningsId: inningsRef.current.id,
-      team:      bowlingTeam,
-      requestId: uuid.v4(),
-      returnScreen: 'LiveScoring',
+      inningsId:         inningsRef.current.id,
+      team:              bowlingTeam,
+      requestId:         uuid.v4(),
+      returnScreen:      'LiveScoring',
+      maxOversPerBowler: match.max_overs_per_bowler || 0,
     });
   };
 
@@ -1379,13 +1389,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        {/* Left — close */}
-        <TouchableOpacity onPress={() => Alert.alert('Exit Scoring', 'Return to match list? Scoring is saved.', [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Exit', onPress: () => navigation.goBack() },
-        ])} style={styles.headerSide}>
-          <Icon name="close" size={22} color={COLORS.gray} />
-        </TouchableOpacity>
+        {/* Left — empty spacer (exit via CLOSE INNINGS button only) */}
+        <View style={styles.headerSide} />
 
         {/* Centre — score + overs on one row */}
         <View style={styles.headerCenter}>
@@ -1395,7 +1400,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
         {/* Right — scorecard icon */}
         <TouchableOpacity
-          onPress={() => navigation.navigate('Scorecard', { inningsId: innings?.id, match })}
+          onPress={() => navigation.navigate('Scorecard', { inningsId: innings?.id, match, liveOverNumber: overNumber, liveLegalBalls: legalBalls })}
           style={styles.headerSide}
         >
           <Icon name="view-list" size={22} color={COLORS.cyan} />
@@ -1436,24 +1441,18 @@ const LiveScoringScreen = ({ navigation, route }) => {
         ))}
       </View>
 
+      {/* ── Persistent score strip (visible in both tabs) ── */}
+      <View style={sc.scoreBand}>
+        <Text style={sc.scoreBandMain}>{totalRuns}/{totalWickets}</Text>
+        <Text style={sc.scoreBandSep}>  ·  </Text>
+        <Text style={sc.scoreBandMeta}>Ov {formatOvers()}/{match.overs}</Text>
+        <Text style={sc.scoreBandSep}>  ·  </Text>
+        <Text style={sc.scoreBandMeta}>RR {runRate()}</Text>
+      </View>
+
       {/* ── Scorecard Tab ── */}
       {activeTab === 'scorecard' && (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-
-          {/* Summary bar */}
-          <View style={sc.summaryBar}>
-            {[
-              { label: 'OVERS',   val: formatOvers() },
-              { label: 'RUNS',    val: totalRuns      },
-              { label: 'WICKETS', val: totalWickets   },
-              { label: 'RR',      val: runRate()      },
-            ].map(s => (
-              <View key={s.label} style={sc.summaryItem}>
-                <Text style={sc.summaryVal}>{s.val}</Text>
-                <Text style={sc.summaryLabel}>{s.label}</Text>
-              </View>
-            ))}
-          </View>
 
           {/* Batting section */}
           <View style={sc.section}>
@@ -1472,7 +1471,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
                 <Text style={sc.colH}>B</Text>
                 <Text style={sc.colH}>4s</Text>
                 <Text style={sc.colH}>6s</Text>
-                <Text style={sc.colH}>SR</Text>
+                <Text style={[sc.colH, { marginLeft: 8 }]}>SR</Text>
               </View>
             </View>
             <BatterRow
@@ -1528,7 +1527,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
                 <Text style={sc.colH}>M</Text>
                 <Text style={sc.colH}>R</Text>
                 <Text style={sc.colH}>W</Text>
-                <Text style={sc.colH}>Eco</Text>
+                <Text style={[sc.colH, { marginLeft: 8 }]}>Eco</Text>
               </View>
             </View>
             <BowlerRow bowler={bowler ? { ...bowler, ...bowlerStats } : null} legalBalls={legalBalls} COLORS={COLORS} sc={sc} />
@@ -1657,6 +1656,10 @@ const getScStyles = (COLORS) => StyleSheet.create({
   summaryItem:   { flex: 1, alignItems: 'center' },
   summaryVal:    { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   summaryLabel:  { color: COLORS.gray, fontSize: 9, marginTop: 2 },
+  scoreBand:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card + 'CC', marginHorizontal: 12, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
+  scoreBandMain: { color: COLORS.white, fontWeight: '900', fontSize: 18 },
+  scoreBandMeta: { color: COLORS.gray,  fontWeight: '600', fontSize: 13 },
+  scoreBandSep:  { color: COLORS.cardBorder, fontSize: 13 },
   section:       { backgroundColor: COLORS.card, marginHorizontal: 12, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: 1, borderColor: COLORS.cardBorder },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder, paddingBottom: 6 },
   sectionTitle:  { color: COLORS.gold, fontWeight: '700', fontSize: 11, letterSpacing: 2 },

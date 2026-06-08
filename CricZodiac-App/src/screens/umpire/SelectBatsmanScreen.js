@@ -18,11 +18,13 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
     team,
     existingStrikerId,
     existingNonStrikerId,
-    mode,
+    mode: modeParam,
     requestId,
     returnScreen = 'LiveScoring',
     selectionType,
   } = route.params;
+  // mode can be passed explicitly or inferred from selectionType
+  const mode = modeParam || (selectionType === 'new_batsman' || selectionType === 'new_non_striker' ? 'new_batsman' : undefined);
   const [players, setPlayers]   = useState([]);
   const [striker, setStriker]   = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
