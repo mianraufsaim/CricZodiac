@@ -35,7 +35,7 @@ const TABLE_ICONS = {
   bowling_scorecards: 'baseball',
   wickets:            'close-circle',
   overs:              'rotate-left',
-  toss_results:       'coin',
+  toss_results:       'hand-coin-outline',
   match_results:      'medal',
   team_players:       'account-multiple-plus',
 };

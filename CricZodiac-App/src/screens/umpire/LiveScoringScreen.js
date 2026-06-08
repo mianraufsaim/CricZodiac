@@ -24,7 +24,7 @@ import {
   createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
   saveBall, getCurrentOver, getMatchInnings, getTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
-  getLastBall, deleteBall, getInnings, clearInningsProgress,
+  getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket,
 } from '../../database/queries/matchQueries';
 import { processSyncQueue } from '../../services/SyncService';
 import uuid from 'react-native-uuid';
@@ -36,9 +36,9 @@ const eco = (runs, overs) => overs > 0 ? (runs / overs).toFixed(1) : '0.0';
 const ballLabel = (ball) => {
   if (ball.is_wicket) return 'W';
   if (ball.extra_type === 'wide')    return 'Wd';
-  if (ball.extra_type === 'no_ball') return 'Nb';
-  if (ball.extra_type === 'bye')     return 'B';
-  if (ball.extra_type === 'leg_bye') return 'Lb';
+  if (ball.extra_type === 'no_ball') return `${ball.runs_scored || 0}-NB`;
+  if (ball.extra_type === 'bye')     return `${ball.extra_runs || 0}-B`;
+  if (ball.extra_type === 'leg_bye') return `${ball.extra_runs || 0}-LB`;
   return String(ball.runs_scored || 0);
 };
 
@@ -47,8 +47,8 @@ const ballColor = (ball, COLORS) => {
   if (ball.extra_type === 'wide' || ball.extra_type === 'no_ball') return COLORS.warning;
   if (ball.runs_scored === 4)      return COLORS.royalBlue;
   if (ball.runs_scored === 6)      return COLORS.purple;
-  if (ball.runs_scored === 0)      return COLORS.darkGray;
-  return '#1A3F6F';
+  if (ball.runs_scored === 0)      return '#6B7280';   // mid-gray — visible on both themes
+  return COLORS.royalBlue;
 };
 
 const getExtraBtns = (COLORS) => [
@@ -95,114 +95,189 @@ const BowlerRow = ({ bowler, legalBalls, COLORS, sc }) => {
   );
 };
 
-const BallDot = ({ ball, onPress, COLORS, sc }) => (
-  <TouchableOpacity
-    style={[sc.dot, { backgroundColor: ballColor(ball, COLORS) }]}
-    onPress={() => onPress && onPress(ball)}
-  >
-    <Text style={sc.dotTxt}>{ballLabel(ball)}</Text>
-  </TouchableOpacity>
-);
+const BallDot = ({ ball, onPress, COLORS, sc }) => {
+  const label = ballLabel(ball);
+  return (
+    <TouchableOpacity
+      style={[sc.dot, { backgroundColor: ballColor(ball, COLORS) }]}
+      onPress={() => onPress && onPress(ball)}
+    >
+      <Text style={[sc.dotTxt, label.length > 2 && { fontSize: 9 }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
 
 const EmptyDot = ({ COLORS, sc }) => (
   <View style={[sc.dot, { borderWidth: 1, borderColor: COLORS.cardBorder, backgroundColor: 'transparent' }]} />
 );
 
-// ── Edit Ball Modal ───────────────────────────────────────
-const SCORE_TYPES = [
-  { id: 'runs',    label: 'Runs'    },
-  { id: 'wide',    label: 'Wide'    },
-  { id: 'no_ball', label: 'No Ball' },
-  { id: 'bye',     label: 'Bye'     },
-  { id: 'leg_bye', label: 'Leg Bye' },
-  { id: 'wicket',  label: 'Wicket'  },
+// ── Wicket Dismissal Types ─────────────────────────────────
+const WICKET_TYPES_FULL = [
+  { id: 'bowled',     label: 'Bowled',      icon: 'cricket',                   color: '#DC2626' },
+  { id: 'caught',     label: 'Caught',      icon: 'hand-pointing-right',        color: '#7C3AED' },
+  { id: 'run_out',    label: 'Run Out',     icon: 'run-fast',                   color: '#D97706' },
+  { id: 'lbw',        label: 'LBW',         icon: 'human',                      color: '#2563EB' },
+  { id: 'stumped',    label: 'Stumped',     icon: 'close-circle-outline',        color: '#059669' },
+  { id: 'hit_wicket', label: 'Hit Wicket',  icon: 'kabaddi',                    color: '#EA580C' },
+  { id: 'retired',    label: 'Retired',     icon: 'walk',                       color: '#6B7280' },
+  { id: 'other',      label: 'Other',       icon: 'dots-horizontal-circle',     color: '#6B7280' },
 ];
 
-const EditBallModal = ({ visible, ball, striker, nonStriker, bowler, onSave, onCancel, COLORS, em }) => {
-  const [runs, setRuns]           = useState(0);
-  const [scoreType, setScoreType] = useState('runs');
+// Dismissal types where non-striker CAN also be out
+const BOTH_ENDS_TYPES = ['run_out', 'retired', 'other'];
 
-  useEffect(() => {
-    if (ball) {
-      setRuns(ball.runs_scored || 0);
-      if (ball.is_wicket)             setScoreType('wicket');
-      else if (ball.extra_type)       setScoreType(ball.extra_type);
-      else                            setScoreType('runs');
+// ── Wicket Dismissal Modal ─────────────────────────────────
+const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, isFreeHit, COLORS, onConfirm, onCancel }) => {
+  const [selType,    setSelType]   = useState(null);
+  const [selFielder, setSelFielder] = useState(null);
+  // 'striker' | 'nonStriker' — only relevant for run_out / retired / other
+  const [dismissed,  setDismissed] = useState('striker');
+
+  // On free hit only run out is valid
+  const availableTypes = isFreeHit
+    ? WICKET_TYPES_FULL.filter(w => w.id === 'run_out')
+    : WICKET_TYPES_FULL;
+
+  const needsFielder  = ['caught', 'run_out', 'stumped'].includes(selType);
+  const needsWhoIsOut = BOTH_ENDS_TYPES.includes(selType);
+
+  // Reset each time modal opens; auto-select run_out on free hit
+  React.useEffect(() => {
+    if (visible) {
+      setSelFielder(null);
+      setDismissed('striker');
+      setSelType(isFreeHit ? 'run_out' : null);
     }
-  }, [ball]);
+  }, [visible]);
 
-  if (!ball) return null;
+  const dismissedPlayer = dismissed === 'striker' ? striker : nonStriker;
 
-  const handleSave = () => {
-    const isExtra   = scoreType !== 'runs' && scoreType !== 'wicket';
-    const isWicket  = scoreType === 'wicket';
-    const isValid   = scoreType === 'runs' || scoreType === 'bye' || scoreType === 'leg_bye' || isWicket;
-    onSave({
-      runs_scored:   isExtra ? 0 : runs,
-      extra_runs:    isExtra ? 1 : 0,
-      extra_type:    isExtra ? scoreType : null,
-      is_extra:      isExtra ? 1 : 0,
-      is_wicket:     isWicket ? 1 : 0,
-      is_four:       runs === 4 && !isExtra ? 1 : 0,
-      is_six:        runs === 6 && !isExtra ? 1 : 0,
-      is_valid_ball: isValid ? 1 : 0,
-    });
-  };
+  const wdStyles = React.useMemo(() => StyleSheet.create({
+    overlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+    sheet:         { backgroundColor: COLORS.navy, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingBottom: 34, paddingTop: 12 },
+    handle:        { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.cardBorder, alignSelf: 'center', marginBottom: 16 },
+    sectionHdr:    { color: COLORS.gray, fontSize: 10, letterSpacing: 2, marginLeft: 16, marginBottom: 10 },
+    // WHO IS OUT row
+    whoRow:        { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginBottom: 16 },
+    whoBtn:        { flex: 1, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.cardBorder, alignItems: 'center', gap: 3 },
+    whoBtnSel:     { backgroundColor: '#DC262622', borderColor: '#DC2626' },
+    whoRole:       { color: COLORS.gray, fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+    whoRoleSel:    { color: '#DC2626' },
+    whoName:       { color: COLORS.white, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+    whoNameSel:    { color: '#DC2626' },
+    strikerBadge:  { backgroundColor: COLORS.cyan + '33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+    strikerTxt:    { color: COLORS.cyan, fontSize: 9, fontWeight: '800' },
+    // Dismissal grid
+    grid:          { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 8, marginBottom: 16 },
+    typeBtn:       { width: '22%', alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.cardBorder, gap: 4 },
+    typeSel:       { borderWidth: 2 },
+    typeLbl:       { color: COLORS.gray, fontSize: 10, fontWeight: '700', textAlign: 'center' },
+    fielderHdr:    { color: COLORS.gray, fontSize: 10, letterSpacing: 2, marginLeft: 16, marginBottom: 8 },
+    fielderList:   { paddingHorizontal: 16, marginBottom: 16 },
+    fielderBtn:    { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: COLORS.card, borderRadius: 10, marginRight: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
+    fielderSel:    { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue },
+    fielderTxt:    { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
+    fielderTxtSel: { color: '#FFFFFF' },
+    actions:       { flexDirection: 'row', gap: 10, marginHorizontal: 16 },
+    cancelBtn:     { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
+    cancelTxt:     { color: COLORS.gray, fontWeight: '700', fontSize: 15 },
+    confirmBtn:    { flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#DC2626' },
+    confirmTxt:    { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+    confirmDis:    { opacity: 0.4 },
+  }), [COLORS]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <View style={em.overlay}>
-        <View style={em.sheet}>
-          <Text style={em.title}>EDIT BALL</Text>
+      <View style={wdStyles.overlay}>
+        <View style={wdStyles.sheet}>
+          <View style={wdStyles.handle} />
 
-          <View style={em.infoRow}>
-            <View style={em.infoBox}>
-              <Text style={em.infoLabel}>Strike Batter</Text>
-              <Text style={em.infoVal}>{striker?.full_name || '—'}</Text>
-            </View>
-            <View style={em.infoBox}>
-              <Text style={em.infoLabel}>Bowler</Text>
-              <Text style={em.infoVal}>{bowler?.full_name || '—'}</Text>
-            </View>
-          </View>
-
-          {/* Score Type */}
-          <Text style={em.label}>Score Type</Text>
-          <View style={em.typeRow}>
-            {SCORE_TYPES.map(t => (
+          {/* HOW OUT? */}
+          <Text style={wdStyles.sectionHdr}>
+            {isFreeHit ? '⚡ FREE HIT — RUN OUT ONLY' : 'HOW OUT?'}
+          </Text>
+          <View style={wdStyles.grid}>
+            {availableTypes.map(w => (
               <TouchableOpacity
-                key={t.id}
-                style={[em.typeBtn, scoreType === t.id && em.typeBtnActive]}
-                onPress={() => setScoreType(t.id)}
+                key={w.id}
+                style={[wdStyles.typeBtn, selType === w.id && wdStyles.typeSel,
+                  selType === w.id && { borderColor: w.color, backgroundColor: w.color + '22' }]}
+                onPress={() => { setSelType(w.id); setSelFielder(null); if (!BOTH_ENDS_TYPES.includes(w.id)) setDismissed('striker'); }}
               >
-                <Text style={[em.typeTxt, scoreType === t.id && { color: COLORS.white }]}>{t.label}</Text>
+                <Icon name={w.icon} size={22} color={selType === w.id ? w.color : COLORS.gray} />
+                <Text style={[wdStyles.typeLbl, selType === w.id && { color: w.color }]}>{w.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Runs stepper */}
-          {(scoreType === 'runs' || scoreType === 'bye' || scoreType === 'leg_bye') && (
+          {/* WHO IS OUT — only for run out / retired / other */}
+          {needsWhoIsOut && (
             <>
-              <Text style={em.label}>Runs</Text>
-              <View style={em.stepper}>
-                <TouchableOpacity style={em.stepBtn} onPress={() => setRuns(r => Math.max(0, r - 1))}>
-                  <Text style={em.stepTxt}>−</Text>
+              <Text style={wdStyles.sectionHdr}>WHO IS OUT?</Text>
+              <View style={wdStyles.whoRow}>
+                <TouchableOpacity
+                  style={[wdStyles.whoBtn, dismissed === 'striker' && wdStyles.whoBtnSel]}
+                  onPress={() => setDismissed('striker')}
+                >
+                  <View style={wdStyles.strikerBadge}>
+                    <Text style={wdStyles.strikerTxt}>ON STRIKE</Text>
+                  </View>
+                  <Text style={[wdStyles.whoName, dismissed === 'striker' && wdStyles.whoNameSel]}>
+                    {striker?.full_name || '—'}
+                  </Text>
+                  {dismissed === 'striker' && <Icon name="close-circle" size={16} color="#DC2626" />}
                 </TouchableOpacity>
-                <Text style={em.stepVal}>{runs}</Text>
-                <TouchableOpacity style={em.stepBtn} onPress={() => setRuns(r => r + 1)}>
-                  <Text style={em.stepTxt}>+</Text>
+                <TouchableOpacity
+                  style={[wdStyles.whoBtn, dismissed === 'nonStriker' && wdStyles.whoBtnSel]}
+                  onPress={() => setDismissed('nonStriker')}
+                >
+                  <View style={[wdStyles.strikerBadge, { backgroundColor: COLORS.cardBorder }]}>
+                    <Text style={[wdStyles.strikerTxt, { color: COLORS.gray }]}>NON-STRIKE</Text>
+                  </View>
+                  <Text style={[wdStyles.whoName, dismissed === 'nonStriker' && wdStyles.whoNameSel]}>
+                    {nonStriker?.full_name || '—'}
+                  </Text>
+                  {dismissed === 'nonStriker' && <Icon name="close-circle" size={16} color="#DC2626" />}
                 </TouchableOpacity>
               </View>
             </>
           )}
 
-          {/* Actions */}
-          <View style={em.actionRow}>
-            <TouchableOpacity style={em.cancelBtn} onPress={onCancel}>
-              <Text style={em.cancelTxt}>CANCEL</Text>
+          {/* Fielder picker */}
+          {needsFielder && bowlingPlayers.length > 0 && (
+            <>
+              <Text style={wdStyles.fielderHdr}>FIELDER (optional)</Text>
+              <FlatList
+                data={bowlingPlayers}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={p => p.id}
+                contentContainerStyle={wdStyles.fielderList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[wdStyles.fielderBtn, selFielder?.id === item.id && wdStyles.fielderSel]}
+                    onPress={() => setSelFielder(prev => prev?.id === item.id ? null : item)}
+                  >
+                    <Text style={[wdStyles.fielderTxt, selFielder?.id === item.id && wdStyles.fielderTxtSel]}>
+                      {item.full_name}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </>
+          )}
+
+          {/* Buttons */}
+          <View style={wdStyles.actions}>
+            <TouchableOpacity style={wdStyles.cancelBtn} onPress={onCancel}>
+              <Text style={wdStyles.cancelTxt}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={em.saveBtn} onPress={handleSave}>
-              <Text style={em.saveTxt}>DONE</Text>
+            <TouchableOpacity
+              style={[wdStyles.confirmBtn, !selType && wdStyles.confirmDis]}
+              disabled={!selType}
+              onPress={() => onConfirm(selType, selFielder, dismissed)}
+            >
+              <Text style={wdStyles.confirmTxt}>CONFIRM WICKET</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -260,7 +335,7 @@ const InningsCompleteModal = ({
 );
 
 // ── Ball-by-Ball Feed ─────────────────────────────────────
-const BallByBallTab = ({ allBalls, onEditBall, COLORS, bb }) => {
+const BallByBallTab = ({ allBalls, COLORS, bb }) => {
   // Group balls by over_id (maintain order)
   const overs = [];
   let current = null;
@@ -279,9 +354,11 @@ const BallByBallTab = ({ allBalls, onEditBall, COLORS, bb }) => {
         <View key={over.overId || oi} style={bb.overBlock}>
           <Text style={bb.overLabel}>Over {over.overNumber}</Text>
           {[...over.balls].reverse().map((ball, bi) => (
-            <TouchableOpacity key={ball.id || bi} style={bb.ballRow} onPress={() => onEditBall(ball)}>
+            <View key={ball.id || bi} style={bb.ballRow}>
               <View style={[bb.ballDot, { backgroundColor: ballColor(ball, COLORS) }]}>
-                <Text style={bb.ballDotTxt}>{ballLabel(ball)}</Text>
+                {(() => { const lbl = ballLabel(ball); return (
+                  <Text style={[bb.ballDotTxt, lbl.length > 2 && { fontSize: 8 }]}>{lbl}</Text>
+                ); })()}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={bb.ballDesc}>
@@ -294,8 +371,7 @@ const BallByBallTab = ({ allBalls, onEditBall, COLORS, bb }) => {
               <Text style={bb.ballRuns}>
                 {(ball.runs_scored || 0) + (ball.extra_runs || 0)}
               </Text>
-              <Icon name="pencil" size={14} color={COLORS.gray} style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
       ))}
@@ -320,21 +396,21 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, COLORS, pad, ext
         <TouchableOpacity
           key={r}
           style={[pad.runBtn,
-            r === 4 ? { backgroundColor: '#0D2F6F', borderColor: COLORS.royalBlue } :
-            r === 6 ? { backgroundColor: '#2A0F5F', borderColor: COLORS.purple }    : {}
+            r === 4 ? { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue } :
+            r === 6 ? { backgroundColor: COLORS.purple,    borderColor: COLORS.purple }    : {}
           ]}
           onPress={() => onRun(r)}
         >
-          <Text style={pad.runTxt}>{r}</Text>
+          <Text style={[pad.runTxt, (r === 4 || r === 6) && { color: '#FFFFFF' }]}>{r}</Text>
         </TouchableOpacity>
       ))}
       {/* 5+ button */}
-      <TouchableOpacity style={[pad.runBtn, { backgroundColor: '#1A3F6F' }]}
+      <TouchableOpacity style={[pad.runBtn, { backgroundColor: COLORS.orange, borderColor: COLORS.orange }]}
         onPress={() => Alert.prompt(
           'Custom Runs', 'Enter runs scored:',
           (txt) => { const n = parseInt(txt); if (!isNaN(n) && n >= 0) onRun(n); }
         )}>
-        <Text style={pad.runTxt}>5+</Text>
+        <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
       </TouchableOpacity>
       {/* Undo */}
       <TouchableOpacity style={pad.undoBtn} onPress={onUndo}>
@@ -377,7 +453,27 @@ const EXTRA_CONFIG = {
   leg_bye: { icon: 'human-handsup',   label: 'LEG BYE',  sub: 'Leg bye runs',        accentKey: 'purple'  },
 };
 
+const getErmStyles = (COLORS) => StyleSheet.create({
+  overlay:     { flex: 1, backgroundColor: '#000000CC', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  sheet:       { width: '100%', maxWidth: 340, backgroundColor: COLORS.navy, borderRadius: 20, borderWidth: 1.5, overflow: 'hidden' },
+  hdr:         { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 14 },
+  title:       { flex: 1, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  closeBtn:    { padding: 4 },
+  sub:         { color: COLORS.gray, fontSize: 12, fontWeight: '600', letterSpacing: 0.5, paddingHorizontal: 18, marginBottom: 14 },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, gap: 10, marginBottom: 16 },
+  runBtn:      { width: 64, height: 64, borderRadius: 14, borderWidth: 1.5, backgroundColor: COLORS.inputBg, alignItems: 'center', justifyContent: 'center' },
+  runNum:      { fontSize: 22, fontWeight: '800' },
+  runSub:      { fontSize: 10, color: COLORS.gray, marginTop: 1 },
+  customRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, marginBottom: 10 },
+  customInput: { flex: 1, height: 44, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 14, color: COLORS.white, fontSize: 16, backgroundColor: COLORS.inputBg },
+  customOk:    { height: 44, paddingHorizontal: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  customOkTxt: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  cancelBtn:   { alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, borderTopColor: COLORS.cardBorder },
+  cancelTxt:   { color: COLORS.gray, fontWeight: '700', fontSize: 13, letterSpacing: 0.5 },
+});
+
 const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
+  const erm = useMemo(() => getErmStyles(COLORS), [COLORS]);
   const [customVal, setCustomVal] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const cfg = EXTRA_CONFIG[type] || {};
@@ -391,6 +487,13 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
   const handleClose = () => { setShowCustom(false); setCustomVal(''); onCancel(); };
 
   if (!visible || !type) return null;
+
+  // Run number text colour: 4 → royalBlue, 6 → purple, others → always-white on coloured bg
+  const runNumColor = (r) => {
+    if (r === 4) return COLORS.royalBlue;
+    if (r === 6) return COLORS.purple;
+    return COLORS.white;
+  };
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={handleClose}>
@@ -411,12 +514,12 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
           <View style={erm.grid}>
             {EXTRA_RUN_OPTS.map(r => (
               <TouchableOpacity key={r} style={[erm.runBtn, { borderColor: accent + '66' }]} onPress={() => handleSelect(r)}>
-                <Text style={[erm.runNum, r === 4 ? { color: COLORS.royalBlue } : r === 6 ? { color: COLORS.purple } : { color: COLORS.white }]}>{r}</Text>
+                <Text style={[erm.runNum, { color: runNumColor(r) }]}>{r}</Text>
                 {r === 6 && <Text style={erm.runSub}>🎯</Text>}
               </TouchableOpacity>
             ))}
             {/* 5+ custom */}
-            <TouchableOpacity style={[erm.runBtn, { borderColor: accent + '66', backgroundColor: accent + '18' }]} onPress={() => setShowCustom(true)}>
+            <TouchableOpacity style={[erm.runBtn, { borderColor: accent, backgroundColor: accent + '22' }]} onPress={() => setShowCustom(true)}>
               <Text style={[erm.runNum, { color: accent }]}>5+</Text>
               <Text style={erm.runSub}>custom</Text>
             </TouchableOpacity>
@@ -449,25 +552,6 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
   );
 };
 
-const erm = StyleSheet.create({
-  overlay:     { flex: 1, backgroundColor: '#000000CC', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  sheet:       { width: '100%', maxWidth: 340, backgroundColor: '#0F1B2D', borderRadius: 20, borderWidth: 1.5, overflow: 'hidden' },
-  hdr:         { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 14 },
-  title:       { flex: 1, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  closeBtn:    { padding: 4 },
-  sub:         { color: '#8899AA', fontSize: 12, fontWeight: '600', letterSpacing: 0.5, paddingHorizontal: 18, marginBottom: 14 },
-  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, gap: 10, marginBottom: 16 },
-  runBtn:      { width: 64, height: 64, borderRadius: 14, borderWidth: 1.5, backgroundColor: '#162030', alignItems: 'center', justifyContent: 'center' },
-  runNum:      { fontSize: 22, fontWeight: '800' },
-  runSub:      { fontSize: 10, color: '#8899AA', marginTop: 1 },
-  customRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, marginBottom: 10 },
-  customInput: { flex: 1, height: 44, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 14, color: '#FFFFFF', fontSize: 16, backgroundColor: '#162030' },
-  customOk:    { height: 44, paddingHorizontal: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  customOkTxt: { color: '#000', fontWeight: '800', fontSize: 14 },
-  cancelBtn:   { alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, borderTopColor: '#1E2D3E' },
-  cancelTxt:   { color: '#8899AA', fontWeight: '700', fontSize: 13, letterSpacing: 0.5 },
-});
-
 // ── Main Screen ───────────────────────────────────────────
 const LiveScoringScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -475,7 +559,6 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const sc     = useMemo(() => getScStyles(COLORS), [COLORS]);
   const pad    = useMemo(() => getPadStyles(COLORS), [COLORS]);
   const bb     = useMemo(() => getBbStyles(COLORS), [COLORS]);
-  const em     = useMemo(() => getEmStyles(COLORS), [COLORS]);
   const ic     = useMemo(() => getIcStyles(COLORS), [COLORS]);
   const extraBtns = useMemo(() => getExtraBtns(COLORS), [COLORS]);
 
@@ -514,12 +597,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const isFreeHitRef = useRef(false);
   useEffect(() => { isFreeHitRef.current = isFreeHit; }, [isFreeHit]);
 
+  // Wicket dismissal modal
+  const [wicketModal, setWicketModal]       = useState({ visible: false });
+  const [bowlingPlayers, setBowlingPlayers] = useState([]);
+  const pendingSelectBowlerRef              = useRef(false);
+
   // Extra runs modal state
   const [extraModal, setExtraModal] = useState({ visible: false, type: null });
 
-  // Edit ball modal
-  const [editBall, setEditBall]   = useState(null);
-  const [showEdit, setShowEdit]   = useState(false);
 
   // Refs to avoid stale closures in callbacks
   const inningsRef    = useRef(null);
@@ -541,6 +626,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   useEffect(() => { initScoring(); }, []);
 
+  useEffect(() => {
+    if (bowlingTeam?.id) {
+      getTeamPlayers(bowlingTeam.id).then(setBowlingPlayers).catch(() => {});
+    }
+  }, []);
+
   // Keep refs in sync
   useEffect(() => { inningsRef.current       = innings;       }, [innings]);
   useEffect(() => { overRef.current          = currentOver;   }, [currentOver]);
@@ -559,9 +650,33 @@ const LiveScoringScreen = ({ navigation, route }) => {
     if (!selection?.requestId || processedBatsmanSelectionRef.current === selection.requestId) return;
 
     processedBatsmanSelectionRef.current = selection.requestId;
+
+    const triggerBowlerIfNeeded = () => {
+      if (pendingSelectBowlerRef.current) {
+        pendingSelectBowlerRef.current = false;
+        setTimeout(() => {
+          navigation.navigate('SelectBowler', {
+            inningsId:       inningsRef.current?.id,
+            team:            bowlingTeam,
+            currentBowlerId: bowlerRef.current?.id,
+            requestId:       uuid.v4(),
+            returnScreen:    'LiveScoring',
+            resetOver:       true,
+          });
+        }, 300);
+      }
+    };
+
     if (selection.type === 'new_batsman') {
+      // Striker was out — incoming batsman takes strike
       setStriker(selection.striker || null);
       setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      triggerBowlerIfNeeded();
+    } else if (selection.type === 'new_non_striker') {
+      // Non-striker was out (e.g. run out at non-striker's end) — replace non-striker only
+      setNonStriker(selection.striker || null);   // SelectBatsman returns player in .striker field
+      setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      triggerBowlerIfNeeded();
     } else if (selection.striker && selection.nonStriker) {
       // Opening pair (or re-selection due to technical restart) — clear all
       // existing balls/overs/scorecards for this innings so scoring starts fresh.
@@ -780,8 +895,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Clear free hit after this ball (it was for THIS delivery)
-    if (isFreeHitRef.current) setIsFreeHit(false);
+    // Clear free hit only on a legal delivery (wide/no-ball re-bowled, so free hit persists)
+    const thisExtraType = options?.extraType;
+    const isThisWideOrNoBall = thisExtraType === 'wide' || thisExtraType === 'no_ball';
+    if (isFreeHitRef.current && !isThisWideOrNoBall) setIsFreeHit(false);
 
     try {
       const { extraType = null, byeRuns = 0 } = options;
@@ -936,13 +1053,17 @@ const LiveScoringScreen = ({ navigation, route }) => {
   };
 
   // ── Wicket ────────────────────────────────────────────
+  // Only validates + shows the modal. Nothing is saved until the user confirms.
   const handleWicket = async () => {
-    const inn  = inningsRef.current;
-    const str  = strikerRef.current;
-    const bwl  = bowlerRef.current;
-    const ns   = nonStrikerRef.current;
-    const legal = legalRef.current;
-    const ovNum = overNumRef.current;
+    // On a free hit only run out is allowed — open modal with run_out only
+    // (handled in WicketDismissalModal via isFreeHit prop)
+
+    const inn     = inningsRef.current;
+    const str     = strikerRef.current;
+    const bwl     = bowlerRef.current;
+    const ns      = nonStrikerRef.current;
+    const legal   = legalRef.current;
+    const ovNum   = overNumRef.current;
     const totRuns = totalRunsRef.current;
     const totWkts = totalWktsRef.current;
 
@@ -954,63 +1075,73 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const over = await ensureOver();
     if (!over) return;
 
+    // Store context for confirmWicket — nothing saved yet
+    setWicketModal({ visible: true, inn, str, bwl, ns, ovNum, legal, totRuns, totWkts, over, isFreeHit: isFreeHitRef.current });
+  };
+
+  // ── Confirm Wicket (called from modal) ────────────────
+  // dismissed: 'striker' | 'nonStriker'
+  const confirmWicket = async (dismissalType, fielder, dismissed = 'striker') => {
+    const { inn, str, bwl, ns, ovNum, legal, totRuns, totWkts, over } = wicketModal;
+    setWicketModal({ visible: false });
+    // A wicket (even run out on free hit) is a legal delivery — free hit ends
+    if (isFreeHitRef.current) setIsFreeHit(false);
+
+    const outBatsman = dismissed === 'nonStriker' ? ns : str;
+    const newLegal   = legal + 1;
+    const newWkts    = totWkts + 1;
+
     try {
+      // 1. Save the ball
       const ballId = uuid.v4();
       await saveBall({
-        id:           ballId,
-        over_id:      over.id,
-        innings_id:   inn.id,
-        match_id:     match.id,
-        ball_number:  legal + 1,
-        striker_id:   str.id,
+        id:             ballId,
+        over_id:        over.id,
+        innings_id:     inn.id,
+        match_id:       match.id,
+        ball_number:    newLegal,
+        striker_id:     str.id,
         non_striker_id: ns?.id,
-        bowler_id:    bwl.id,
-        runs_scored:  0,
-        is_wicket:    true,
-        is_valid_ball: true,
+        bowler_id:      bwl.id,
+        runs_scored:    0,
+        is_wicket:      true,
+        is_valid_ball:  true,
       });
 
-      const newWkts  = totWkts + 1;
-      const newLegal = legal + 1;
+      // 2. Save the wicket record with dismissal type
+      await saveWicket({
+        ball_id:      ballId,
+        innings_id:   inn.id,
+        batsman_id:   outBatsman.id,
+        bowler_id:    bwl.id,
+        wicket_type:  dismissalType,
+        fielder_id:   fielder?.id || null,
+        runs_at_fall: totRuns,
+        over_at_fall: `${ovNum}.${newLegal}`,
+      });
+
+      // 3. Update counts + UI
       setTotalWickets(newWkts);
       setLegalBalls(newLegal);
-      setBowlerStats(prev => ({ ...prev, wickets: prev.wickets + 1, runs: prev.runs }));
+      setBowlerStats(prev => ({ ...prev, wickets: prev.wickets + 1 }));
       setPartnership({ runs: 0, balls: 0 });
       await updateInnings(inn.id, { total_wickets: newWkts });
 
       const ballDisplay = {
-        id: ballId,
-        over_id: over.id,
-        over_number: ovNum,
-        ball_number: newLegal,
-        runs_scored: 0,
-        extra_runs: 0,
-        is_wicket: 1,
-        striker_name: str.full_name,
-        bowler_name:  bwl.full_name,
+        id: ballId, over_id: over.id, over_number: ovNum,
+        ball_number: newLegal, runs_scored: 0, extra_runs: 0,
+        is_wicket: 1, striker_name: str.full_name, bowler_name: bwl.full_name,
       };
       setAllBalls(prev => [...prev, ballDisplay]);
       setOverBalls(prev => [...prev, ballDisplay]);
 
-      // All out
+      // 4. All out → end innings
       if (newWkts >= match.players_per_team - 1) {
         _endInnings(totRuns, newWkts, inn.id);
         return;
       }
 
-      // Navigate to Wicket screen (enter dismissal type) then select new batsman
-      navigation.navigate('Wicket', {
-        inningsId:   inn.id,
-        ballId,
-        batsman:     str,
-        bowler:      bwl,
-        totalRuns:   totRuns,
-        overAtFall:  `${ovNum}.${newLegal}`,
-        requestId:   uuid.v4(),
-        returnScreen:'LiveScoring',
-      });
-
-      // Over complete after wicket ball
+      // 5. Over complete on this wicket ball
       if (newLegal >= 6) {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         setCurrentOver(null);
@@ -1022,6 +1153,24 @@ const LiveScoringScreen = ({ navigation, route }) => {
           _endInnings(totRuns, newWkts, inn.id);
           return;
         }
+        pendingSelectBowlerRef.current = true;
+      }
+
+      // 6. Navigate to replace the dismissed batsman
+      if (dismissed === 'nonStriker') {
+        setNonStriker(null);
+        setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+        navigation.navigate('SelectBatsman', {
+          inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+          returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
+        });
+      } else {
+        setStriker(null);
+        setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+        navigation.navigate('SelectBatsman', {
+          inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+          returnScreen: 'LiveScoring', selectionType: 'new_batsman',
+        });
       }
     } catch (err) {
       Alert.alert('Wicket Error', err.message);
@@ -1182,35 +1331,6 @@ const LiveScoringScreen = ({ navigation, route }) => {
     navigation.replace('MatchSummary', { match, inningsId: innings?.id });
   };
 
-  // ── Save edited ball ───────────────────────────────────
-  const handleSaveEdit = async (changes) => {
-    if (!editBall || !innings) return;
-    try {
-      // Simple approach: delete old ball record and re-insert with new values
-      await deleteBall(editBall, innings.id);
-      await saveBall({
-        id:              editBall.id,
-        over_id:         editBall.over_id,
-        innings_id:      innings.id,
-        match_id:        match.id,
-        ball_number:     editBall.ball_number,
-        striker_id:      editBall.striker_id,
-        non_striker_id:  editBall.non_striker_id,
-        bowler_id:       editBall.bowler_id,
-        ...changes,
-      });
-      // Refresh from DB
-      const refreshed = await getBallsWithPlayers(innings.id);
-      setAllBalls(refreshed);
-      const currentInnings = await getInnings(innings.id);
-      setTotalRuns(currentInnings.total_runs || 0);
-      setTotalWickets(currentInnings.total_wickets || 0);
-      setShowEdit(false);
-      setEditBall(null);
-    } catch (e) {
-      Alert.alert('Edit Failed', e.message);
-    }
-  };
 
   // ── Change Batsmen (only before first ball of innings) ─
   const handleChangeBatsmen = () => {
@@ -1267,10 +1387,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
           <Icon name="close" size={22} color={COLORS.gray} />
         </TouchableOpacity>
 
-        {/* Centre — score */}
+        {/* Centre — score + overs on one row */}
         <View style={styles.headerCenter}>
           <Text style={styles.headerScore}>{totalRuns}/{totalWickets}</Text>
-          <Text style={styles.headerOvers}>Ov {formatOvers()} / {match.overs}</Text>
+          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{match.overs}</Text>
         </View>
 
         {/* Right — scorecard icon */}
@@ -1282,16 +1402,17 @@ const LiveScoringScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Batting team row */}
+      {/* Team row — teams centred, target pill floats right */}
       <View style={styles.subHeader}>
-        <View style={[styles.teamPill, { borderColor: COLORS.gold }]}>
-          <Text style={styles.teamPillTxt}>{battingTeam.team_name}</Text>
+        <View style={styles.teamsCenter}>
+          <View style={[styles.teamPill, { borderColor: COLORS.gold }]}>
+            <Text style={styles.teamPillTxt}>{battingTeam.team_name}</Text>
+          </View>
+          <Text style={styles.vsLabel}>vs</Text>
+          <View style={styles.teamPill}>
+            <Text style={styles.teamPillTxt}>{bowlingTeam.team_name}</Text>
+          </View>
         </View>
-        <Text style={styles.vsLabel}>vs</Text>
-        <View style={styles.teamPill}>
-          <Text style={styles.teamPillTxt}>{bowlingTeam.team_name}</Text>
-        </View>
-        {/* Target pill — pushed to the far right of the same row */}
         {target ? (
           <View style={styles.targetPill}>
             <Text style={styles.targetLbl}>Target {target}  Need {Math.max(0, target - totalRuns)}</Text>
@@ -1382,8 +1503,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
           {/* Extras */}
           <View style={sc.extrasRow}>
             <Text style={sc.extrasLabel}>Extras</Text>
-            <Text style={sc.extrasTxt}>
+            <Text style={[sc.extrasTxt, { flex: 1 }]}>
               nb {extras.no_ball}, wd {extras.wide}, b {extras.bye}, lb {extras.leg_bye}
+            </Text>
+            <Text style={sc.extrasTot}>
+              {extras.no_ball + extras.wide + extras.bye + extras.leg_bye}
             </Text>
           </View>
 
@@ -1412,7 +1536,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
           {/* Current over dots */}
           <View style={sc.dotsRow}>
-            {overBalls.map((b, i) => <BallDot key={i} ball={b} onPress={(ball) => { setEditBall(ball); setShowEdit(true); }} COLORS={COLORS} sc={sc} />)}
+            {overBalls.map((b, i) => <BallDot key={i} ball={b} COLORS={COLORS} sc={sc} />)}
             {[...Array(Math.max(0, 6 - overBalls.length))].map((_, i) => <EmptyDot key={`e${i}`} COLORS={COLORS} sc={sc} />)}
           </View>
 
@@ -1454,23 +1578,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
       {activeTab === 'ballByBall' && (
         <BallByBallTab
           allBalls={allBalls}
-          onEditBall={(ball) => { setEditBall(ball); setShowEdit(true); }}
           COLORS={COLORS}
           bb={bb}
         />
       )}
 
-      {/* ── Edit Ball Modal ── */}
-      <EditBallModal
-        visible={showEdit}
-        ball={editBall}
-        striker={striker}
-        nonStriker={nonStriker}
-        bowler={bowler}
-        onSave={handleSaveEdit}
-        onCancel={() => { setShowEdit(false); setEditBall(null); }}
+      {/* ── Wicket Dismissal Modal ── */}
+      <WicketDismissalModal
+        visible={wicketModal.visible}
+        striker={wicketModal.str}
+        nonStriker={wicketModal.ns}
+        bowlingPlayers={bowlingPlayers}
+        isFreeHit={wicketModal.isFreeHit}
         COLORS={COLORS}
-        em={em}
+        onConfirm={confirmWicket}
+        onCancel={() => setWicketModal({ visible: false })}
       />
 
       {/* ── Innings Complete Modal ── */}
@@ -1506,9 +1628,9 @@ const getStyles = (COLORS) => StyleSheet.create({
   container:    { flex: 1 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 48, paddingHorizontal: 16, paddingBottom: 8 },
   headerSide:      { width: 44, alignItems: 'center' },
-  headerCenter:    { alignItems: 'center', flex: 1 },
-  headerScore:     { color: COLORS.white, fontSize: 28, fontWeight: '900' },
-  headerOvers:     { color: COLORS.gray, fontSize: 12 },
+  headerCenter:    { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+  headerScore:     { color: COLORS.white, fontSize: 26, fontWeight: '900' },
+  headerOvers:     { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
   // Target block — right side of header in 2nd innings
   targetBox:       { width: 72, alignItems: 'center', backgroundColor: COLORS.warning + '22', borderRadius: 10, paddingVertical: 5, paddingHorizontal: 6, borderWidth: 1, borderColor: COLORS.warning },
   targetBoxLabel:  { color: COLORS.warning, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
@@ -1517,7 +1639,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   // Target pill — far right of subHeader (2nd innings only)
   targetPill:      { marginLeft: 'auto', backgroundColor: COLORS.warning + '22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.warning },
   targetLbl:       { color: COLORS.warning, fontSize: 10, fontWeight: '800' },
-  subHeader:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 8, gap: 8, flexWrap: 'nowrap' },
+  subHeader:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 8 },
+  teamsCenter:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   teamPill:        { backgroundColor: COLORS.card, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.cardBorder },
   teamPillTxt:     { color: COLORS.white, fontSize: 11, fontWeight: '600' },
   vsLabel:         { color: COLORS.gray, fontSize: 11 },
@@ -1525,7 +1648,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   tab:          { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
   tabActive:    { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
   tabTxt:       { color: COLORS.gray, fontWeight: '600', fontSize: 13 },
-  tabTxtActive: { color: COLORS.white },
+  tabTxtActive: { color: '#FFFFFF' },
 });
 
 // Scorecard tab styles
@@ -1549,11 +1672,12 @@ const getScStyles = (COLORS) => StyleSheet.create({
   partnerRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 },
   partnerTxt:    { color: COLORS.gray, fontSize: 11 },
   extrasRow:     { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, backgroundColor: COLORS.darkGray, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 6 },
-  extrasLabel:   { color: COLORS.gray, fontSize: 11, fontWeight: '700', marginRight: 12 },
+  extrasLabel:   { color: COLORS.gray, fontSize: 11, fontWeight: '700', marginRight: 8 },
   extrasTxt:     { color: COLORS.gray, fontSize: 11 },
+  extrasTot:     { color: COLORS.white, fontSize: 14, fontWeight: '800', minWidth: 24, textAlign: 'right' },
   dotsRow:       { flexDirection: 'row', justifyContent: 'center', gap: 8, marginVertical: 10 },
   dot:           { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dotTxt:        { color: COLORS.white, fontWeight: '800', fontSize: 12 },
+  dotTxt:        { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
   endBtn:        { marginHorizontal: 12, marginTop: 8, height: 46, backgroundColor: COLORS.darkGray, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
   endBtnTxt:     { color: COLORS.gray, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
 });
@@ -1570,7 +1694,7 @@ const getPadStyles = (COLORS) => StyleSheet.create({
   extraTxt:  { fontWeight: '800', fontSize: 11 },
   actionRow: { flexDirection: 'row', gap: 6, marginBottom: 6 },
   wicketBtn: { flex: 2, height: 50, backgroundColor: COLORS.danger, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  wicketTxt: { color: COLORS.white, fontWeight: '900', fontSize: 15, letterSpacing: 2 },
+  wicketTxt: { color: '#FFFFFF', fontWeight: '900', fontSize: 15, letterSpacing: 2 },
   swapBtn:   { flex: 1, height: 50, backgroundColor: COLORS.darkGray, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.cardBorder, gap: 2 },
   swapTxt:   { color: COLORS.gray, fontSize: 10, fontWeight: '600' },
 });
@@ -1581,35 +1705,10 @@ const getBbStyles = (COLORS) => StyleSheet.create({
   overLabel:   { color: COLORS.gold, fontWeight: '700', fontSize: 12, letterSpacing: 2, marginBottom: 8 },
   ballRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, padding: 10, marginBottom: 4, gap: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   ballDot:     { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  ballDotTxt:  { color: COLORS.white, fontWeight: '800', fontSize: 11 },
+  ballDotTxt:  { color: '#FFFFFF', fontWeight: '800', fontSize: 11 },
   ballDesc:    { color: COLORS.white, fontSize: 13, fontWeight: '600' },
   ballSub:     { color: COLORS.gray, fontSize: 11, marginTop: 1 },
   ballRuns:    { color: COLORS.white, fontWeight: '800', fontSize: 14 },
-});
-
-// Edit ball modal styles
-const getEmStyles = (COLORS) => StyleSheet.create({
-  overlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet:       { backgroundColor: COLORS.navy, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 },
-  title:       { color: COLORS.white, fontWeight: '800', fontSize: 18, textAlign: 'center', marginBottom: 16 },
-  infoRow:     { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  infoBox:     { flex: 1, backgroundColor: COLORS.card, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
-  infoLabel:   { color: COLORS.gray, fontSize: 10, marginBottom: 4 },
-  infoVal:     { color: COLORS.white, fontWeight: '700', fontSize: 13 },
-  label:       { color: COLORS.gray, fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 8 },
-  typeRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  typeBtn:     { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: COLORS.card, borderRadius: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
-  typeBtnActive: { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
-  typeTxt:     { color: COLORS.gray, fontWeight: '700', fontSize: 12 },
-  stepper:     { flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 20, justifyContent: 'center' },
-  stepBtn:     { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center' },
-  stepTxt:     { color: COLORS.white, fontSize: 22, fontWeight: '900' },
-  stepVal:     { color: COLORS.white, fontWeight: '900', fontSize: 32, minWidth: 50, textAlign: 'center' },
-  actionRow:   { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn:   { flex: 1, height: 50, backgroundColor: COLORS.darkGray, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cancelTxt:   { color: COLORS.gray, fontWeight: '700', fontSize: 14 },
-  saveBtn:     { flex: 1, height: 50, backgroundColor: COLORS.royalBlue, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  saveTxt:     { color: COLORS.white, fontWeight: '800', fontSize: 14 },
 });
 
 // Innings complete modal
