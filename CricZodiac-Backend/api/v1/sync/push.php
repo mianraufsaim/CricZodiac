@@ -668,10 +668,10 @@ function resolveInningsRow(PDO $pdo, $value): ?array {
     if ($value === null || $value === '') return null;
     $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
     if ($isUuid) {
-        $st = $pdo->prepare("SELECT id, club_id, series_id, match_id FROM innings WHERE local_id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, local_id, club_id, series_id, match_id, batting_team_id FROM innings WHERE local_id = ? LIMIT 1");
         $st->execute([$value]);
     } else {
-        $st = $pdo->prepare("SELECT id, club_id, series_id, match_id FROM innings WHERE id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, local_id, club_id, series_id, match_id, batting_team_id FROM innings WHERE id = ? LIMIT 1");
         $st->execute([(int) $value]);
     }
     return $st->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -703,6 +703,83 @@ function resolveOverRow(PDO $pdo, $value): ?array {
         $st->execute([(int) $value]);
     }
     return $st->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function resolveBallRow(PDO $pdo, $value): ?array {
+    if ($value === null || $value === '') return null;
+
+    if (isUuidValue($value)) {
+        $st = $pdo->prepare("
+            SELECT id, local_id, club_id, series_id, match_id,
+                   innings_id, innings_local_id,
+                   striker_id, striker_local_id,
+                   bowler_id, bowler_local_id
+            FROM balls
+            WHERE local_id = ?
+            LIMIT 1
+        ");
+        $st->execute([$value]);
+    } else {
+        $st = $pdo->prepare("
+            SELECT id, local_id, club_id, series_id, match_id,
+                   innings_id, innings_local_id,
+                   striker_id, striker_local_id,
+                   bowler_id, bowler_local_id
+            FROM balls
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $st->execute([(int)$value]);
+    }
+
+    return $st->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function resolveBattingOrder(PDO $pdo, ?int $inningsId, ?int $clubId, ?int $seriesId, ?int $matchId, ?int $playerId): int {
+    if (!$playerId) return 0;
+
+    if ($inningsId) {
+        $st = $pdo->prepare("
+            SELECT tp.batting_order
+            FROM innings i
+            JOIN team_players tp
+              ON tp.team_id = i.batting_team_id
+             AND tp.player_id = ?
+            WHERE i.id = ?
+            ORDER BY tp.batting_order ASC
+            LIMIT 1
+        ");
+        $st->execute([$playerId, $inningsId]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if ($row) return (int)$row['batting_order'];
+    }
+
+    $conditions = ["player_id = ?"];
+    $params = [$playerId];
+    if ($clubId) {
+        $conditions[] = "club_id = ?";
+        $params[] = $clubId;
+    }
+    if ($seriesId) {
+        $conditions[] = "series_id = ?";
+        $params[] = $seriesId;
+    }
+    if ($matchId) {
+        $conditions[] = "match_id = ?";
+        $params[] = $matchId;
+    }
+
+    $st = $pdo->prepare("
+        SELECT batting_order
+        FROM team_players
+        WHERE " . implode(' AND ', $conditions) . "
+        ORDER BY batting_order ASC
+        LIMIT 1
+    ");
+    $st->execute($params);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? (int)$row['batting_order'] : 0;
 }
 
 function syncInnings(PDO $pdo, string $action, array $d): bool {
@@ -1477,13 +1554,183 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
 
 function syncWicket(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
+        $st = $pdo->prepare("SELECT innings_id, batsman_id FROM wickets WHERE local_id = ? LIMIT 1");
+        $st->execute([$d['id']]);
+        $wicket = $st->fetch(PDO::FETCH_ASSOC);
+
         $pdo->prepare("DELETE FROM wickets WHERE local_id=?")->execute([$d['id']]);
+
+        if ($wicket && !empty($wicket['innings_id']) && !empty($wicket['batsman_id'])) {
+            $pdo->prepare("
+                UPDATE batting_scorecards
+                SET is_out = 0,
+                    dismissal_type = NULL,
+                    bowler_id = NULL,
+                    bowler_local_id = NULL,
+                    fielder_id = NULL,
+                    updated_at = NOW()
+                WHERE innings_id = ? AND player_id = ?
+            ")->execute([(int)$wicket['innings_id'], (int)$wicket['batsman_id']]);
+
+            recomputeScorecardsForInnings($pdo, (int)$wicket['innings_id']);
+        }
+
         return true;
     }
+
+    $ballRow = resolveBallRow($pdo, $d['ball_id'] ?? null);
+    if (!$ballRow) {
+        throw new Exception('Wicket sync could not resolve ball_id.');
+    }
+
+    $inningsRow = resolveInningsRow($pdo, $d['innings_id'] ?? null);
+    if (!$inningsRow && !empty($ballRow['innings_id'])) {
+        $inningsRow = resolveInningsRow($pdo, (int)$ballRow['innings_id']);
+    }
+
+    $ballId = (int)$ballRow['id'];
+    $inningsId = $inningsRow['id'] ?? ($ballRow['innings_id'] ?? null);
+    $clubId = $ballRow['club_id'] ?? ($inningsRow['club_id'] ?? null);
+    $seriesId = $ballRow['series_id'] ?? ($inningsRow['series_id'] ?? null);
+    $matchId = $ballRow['match_id'] ?? ($inningsRow['match_id'] ?? null);
+
+    $batsmanId = resolvePlayerId($pdo, $d['batsman_id'] ?? null) ?? ($ballRow['striker_id'] ?? null);
+    $bowlerId = resolvePlayerId($pdo, $d['bowler_id'] ?? null) ?? ($ballRow['bowler_id'] ?? null);
+    $fielderId = resolvePlayerId($pdo, $d['fielder_id'] ?? null);
+
+    if (!$inningsId || !$batsmanId || !$bowlerId) {
+        throw new Exception('Wicket sync could not resolve innings_id, batsman_id, or bowler_id.');
+    }
+
+    $ballLocalId = isUuidValue($d['ball_id'] ?? null) ? $d['ball_id'] : ($ballRow['local_id'] ?? null);
+    $inningsLocalId = isUuidValue($d['innings_id'] ?? null)
+        ? $d['innings_id']
+        : ($inningsRow['local_id'] ?? ($ballRow['innings_local_id'] ?? null));
+    $batsmanLocalId = isUuidValue($d['batsman_id'] ?? null)
+        ? $d['batsman_id']
+        : resolvePlayerLocalId($pdo, (int)$batsmanId);
+    $bowlerLocalId = isUuidValue($d['bowler_id'] ?? null)
+        ? $d['bowler_id']
+        : ($ballRow['bowler_local_id'] ?? resolvePlayerLocalId($pdo, (int)$bowlerId));
+    $fielderLocalId = isUuidValue($d['fielder_id'] ?? null)
+        ? $d['fielder_id']
+        : resolvePlayerLocalId($pdo, $fielderId ? (int)$fielderId : null);
+    $wicketType = $d['wicket_type'] ?? 'other';
+    $battingOrder = resolveBattingOrder($pdo, (int)$inningsId, $clubId ? (int)$clubId : null, $seriesId ? (int)$seriesId : null, $matchId ? (int)$matchId : null, (int)$batsmanId);
+
     $pdo->prepare("
-        INSERT IGNORE INTO wickets (local_id, ball_local_id, innings_local_id, batsman_local_id, bowler_local_id, wicket_type, fielder_local_id, runs_at_fall, over_at_fall, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,NOW())
-    ")->execute([$d['id'], $d['ball_id'], $d['innings_id'], $d['batsman_id'], $d['bowler_id'], $d['wicket_type'], $d['fielder_id'] ?? null, $d['runs_at_fall'] ?? 0, $d['over_at_fall'] ?? null]);
+        INSERT INTO wickets (
+            local_id, club_id, series_id, match_id,
+            ball_id, ball_local_id,
+            innings_id, innings_local_id,
+            batsman_id, batsman_local_id,
+            bowler_id, bowler_local_id,
+            wicket_type,
+            fielder_id, fielder_local_id,
+            runs_at_fall, over_at_fall, created_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+        ON DUPLICATE KEY UPDATE
+            club_id = VALUES(club_id),
+            series_id = VALUES(series_id),
+            match_id = VALUES(match_id),
+            ball_id = VALUES(ball_id),
+            ball_local_id = VALUES(ball_local_id),
+            innings_id = VALUES(innings_id),
+            innings_local_id = VALUES(innings_local_id),
+            batsman_id = VALUES(batsman_id),
+            batsman_local_id = VALUES(batsman_local_id),
+            bowler_id = VALUES(bowler_id),
+            bowler_local_id = VALUES(bowler_local_id),
+            wicket_type = VALUES(wicket_type),
+            fielder_id = VALUES(fielder_id),
+            fielder_local_id = VALUES(fielder_local_id),
+            runs_at_fall = VALUES(runs_at_fall),
+            over_at_fall = VALUES(over_at_fall)
+    ")->execute([
+        $d['id'],
+        $clubId,
+        $seriesId,
+        $matchId,
+        $ballId,
+        $ballLocalId,
+        $inningsId,
+        $inningsLocalId,
+        $batsmanId,
+        $batsmanLocalId,
+        $bowlerId,
+        $bowlerLocalId,
+        $wicketType,
+        $fielderId,
+        $fielderLocalId,
+        $d['runs_at_fall'] ?? 0,
+        $d['over_at_fall'] ?? null,
+    ]);
+
+    recomputeScorecardsForInnings($pdo, (int)$inningsId);
+
+    $pdo->prepare("
+        INSERT INTO batting_scorecards (
+            club_id, series_id, match_id,
+            innings_id, innings_local_id,
+            player_id, player_local_id,
+            runs_scored, balls_faced, fours, sixes, strike_rate,
+            is_out, dismissal_type,
+            bowler_id, bowler_local_id,
+            fielder_id, batting_order, updated_at
+        )
+        SELECT ?,?,?,?,?,?,?,0,0,0,0,0.00,?,?,?,?,?,?,NOW()
+        WHERE NOT EXISTS (
+            SELECT 1 FROM batting_scorecards
+            WHERE innings_id = ? AND player_id = ?
+        )
+    ")->execute([
+        $clubId,
+        $seriesId,
+        $matchId,
+        $inningsId,
+        $inningsLocalId,
+        $batsmanId,
+        $batsmanLocalId,
+        1,
+        $wicketType,
+        $bowlerId,
+        $bowlerLocalId,
+        $fielderId,
+        $battingOrder,
+        $inningsId,
+        $batsmanId,
+    ]);
+
+    $pdo->prepare("
+        UPDATE batting_scorecards
+        SET club_id = COALESCE(club_id, ?),
+            series_id = COALESCE(series_id, ?),
+            match_id = COALESCE(match_id, ?),
+            innings_local_id = COALESCE(innings_local_id, ?),
+            player_local_id = COALESCE(player_local_id, ?),
+            is_out = 1,
+            dismissal_type = ?,
+            bowler_id = ?,
+            bowler_local_id = ?,
+            fielder_id = ?,
+            batting_order = ?,
+            updated_at = NOW()
+        WHERE innings_id = ? AND player_id = ?
+    ")->execute([
+        $clubId,
+        $seriesId,
+        $matchId,
+        $inningsLocalId,
+        $batsmanLocalId,
+        $wicketType,
+        $bowlerId,
+        $bowlerLocalId,
+        $fielderId,
+        $battingOrder,
+        $inningsId,
+        $batsmanId,
+    ]);
+
     return true;
 }
 
@@ -1498,6 +1745,14 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
     // Resolve player, bowler UUIDs → integer ids
     $playerId = resolvePlayerId($pdo, $d['player_id'] ?? null);
     $bowlerId = resolvePlayerId($pdo, $d['bowler_id'] ?? null);
+    $fielderId = resolvePlayerId($pdo, $d['fielder_id'] ?? null);
+    $bowlerLocalId = isUuidValue($d['bowler_id'] ?? null)
+        ? $d['bowler_id']
+        : resolvePlayerLocalId($pdo, $bowlerId);
+    $battingOrder = (int)($d['batting_order'] ?? 0);
+    if ($battingOrder <= 0) {
+        $battingOrder = resolveBattingOrder($pdo, $inningsId ? (int)$inningsId : null, $clubId ? (int)$clubId : null, $seriesId ? (int)$seriesId : null, $matchId ? (int)$matchId : null, $playerId ? (int)$playerId : null);
+    }
 
     // Upsert by innings_id + player_id (existing unique key)
     $existing = null;
@@ -1516,16 +1771,22 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
             SET club_id        = COALESCE(club_id, ?),
                 series_id      = COALESCE(series_id, ?),
                 match_id       = COALESCE(match_id, ?),
-                is_out         = ?,
-                dismissal_type = ?,
+                is_out         = CASE WHEN ? = 1 THEN 1 ELSE is_out END,
+                dismissal_type = COALESCE(?, dismissal_type),
                 bowler_id      = COALESCE(?, bowler_id),
-                batting_order  = ?,
+                bowler_local_id = COALESCE(?, bowler_local_id),
+                fielder_id     = COALESCE(?, fielder_id),
+                batting_order  = CASE WHEN ? > 0 THEN ? ELSE batting_order END,
                 local_id       = COALESCE(local_id, ?)
             WHERE id = ?
         ")->execute([
             $clubId, $seriesId, $matchId,
             $d['is_out'] ?? 0, $d['dismissal_type'] ?? null,
-            $bowlerId, $d['batting_order'] ?? 0,
+            $bowlerId,
+            $bowlerLocalId,
+            $fielderId,
+            $battingOrder,
+            $battingOrder,
             $d['id'],
             $existing['id'],
         ]);
@@ -1540,15 +1801,16 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
                 runs_scored, balls_faced, fours, sixes, strike_rate,
                 is_out, dismissal_type,
                 bowler_id, bowler_local_id,
-                batting_order, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,0,0,0,0,0.00,?,?,?,?,?,NOW())
+                fielder_id, batting_order, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,0,0,0,0,0.00,?,?,?,?,?,?,NOW())
         ")->execute([
             $d['id'], $clubId, $seriesId, $matchId,
             $inningsId, $d['innings_id'] ?? null,
             $playerId,  $d['player_id']  ?? null,
             $d['is_out'] ?? 0, $d['dismissal_type'] ?? null,
-            $bowlerId, $d['bowler_id'] ?? null,
-            $d['batting_order'] ?? 0,
+            $bowlerId, $bowlerLocalId,
+            $fielderId,
+            $battingOrder,
         ]);
     }
 

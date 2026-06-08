@@ -286,6 +286,9 @@ CREATE TABLE IF NOT EXISTS balls (
 CREATE TABLE IF NOT EXISTS wickets (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id         VARCHAR(36) UNIQUE,
+    club_id          INT UNSIGNED,
+    series_id        INT UNSIGNED,
+    match_id         INT UNSIGNED,
     ball_id          INT UNSIGNED,
     ball_local_id    VARCHAR(36),
     innings_id       INT UNSIGNED,
@@ -301,6 +304,8 @@ CREATE TABLE IF NOT EXISTS wickets (
     over_at_fall     VARCHAR(10),
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_innings (innings_id),
+    INDEX idx_match   (match_id),
+    INDEX idx_wickets_club_series (club_id, series_id),
     INDEX idx_local   (local_id)
 ) ENGINE=InnoDB;
 
