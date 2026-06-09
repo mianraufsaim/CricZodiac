@@ -22,11 +22,13 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import {
   createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
-  saveBall, getCurrentOver, getMatchInnings, getTeamPlayers, getAllTeamPlayers,
+  saveBall, getCurrentOver, getMatchInnings, getMatch, getMatchTeams,
+  getTeamPlayers, getAllTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket,
-  upsertTeamPlayersFromServer,
+  upsertTeamPlayersFromServer, upsertMatchesFromServer,
 } from '../../database/queries/matchQueries';
+import { queryFirstRow, executeQuery } from '../../database/DatabaseHelper';
 import { processSyncQueue } from '../../services/SyncService';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
@@ -572,7 +574,25 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const ic     = useMemo(() => getIcStyles(COLORS), [COLORS]);
   const extraBtns = useMemo(() => getExtraBtns(COLORS), [COLORS]);
 
-  const { match, battingTeam, bowlingTeam, inningsNumber, target } = route.params;
+  const {
+    match: matchParam, battingTeam: battingTeamParam, bowlingTeam: bowlingTeamParam,
+    inningsNumber: inningsNumberParam, target,
+    matchId: routeMatchId,   // passed from SeriesDetailScreen for resume
+  } = route.params || {};
+
+  // These will be overwritten if recovered from DB in initScoring
+  const [resolvedParams, setResolvedParams] = React.useState({
+    match:         matchParam        || null,
+    battingTeam:   battingTeamParam  || null,
+    bowlingTeam:   bowlingTeamParam  || null,
+    inningsNumber: inningsNumberParam || 1,
+    target:        target             || null,
+  });
+  const match         = resolvedParams.match;
+  const battingTeam   = resolvedParams.battingTeam;
+  const bowlingTeam   = resolvedParams.bowlingTeam;
+  const inningsNumber = resolvedParams.inningsNumber;
+  const resolvedTarget = resolvedParams.target;
 
   // Core state
   const [innings, setInnings]           = useState(null);
@@ -804,73 +824,268 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   // ── Init ───────────────────────────────────────────────
   const initScoring = async () => {
+    // ── Step 1: Resolve match / teams — from route params OR recover from DB ──
+    const matchId = routeMatchId || matchParam?.id;
+    if (!matchId) {
+      setLoading(false);
+      return; // render guard will show "Session data lost"
+    }
+
+    let rMatch         = matchParam       || null;
+    let rBattingTeam   = battingTeamParam || null;
+    let rBowlingTeam   = bowlingTeamParam || null;
+    let rInningsNumber = inningsNumberParam || 1;
+
+    // If any key param is missing, recover everything from SQLite (+ server fallback)
+    if (!rMatch || !rBattingTeam || !rBowlingTeam) {
+      try {
+        // ── Step 1a: Find match in SQLite by id, then by server_id as fallback ──
+        rMatch = await getMatch(matchId);
+        if (!rMatch) {
+          // matchId might be a server integer string like "5" — try server_id column
+          rMatch = await queryFirstRow(
+            'SELECT * FROM matches WHERE server_id = ?', [matchId]
+          );
+        }
+
+        // ── Step 1b: Still not found — fetch from server and upsert ────────
+        if (!rMatch) {
+          try {
+            const res = await ApiService.get(
+              `${API_ENDPOINTS.MATCHES_LIST}?id=${encodeURIComponent(matchId)}`
+            );
+            const serverMatches = res?.matches || res?.data?.matches || [];
+            if (serverMatches.length) {
+              await upsertMatchesFromServer(serverMatches);
+              const m = serverMatches[0];
+              const savedId = m.local_id || String(m.id);
+              rMatch = await getMatch(savedId);
+            }
+          } catch (_) {}
+        }
+
+        if (!rMatch) { setLoading(false); return; }
+
+        // ── Step 2a: Find teams in SQLite using the match's LOCAL id ──────────
+        // (teams are always stored with the local UUID as match_id)
+        let teams = await getMatchTeams(rMatch.id);
+
+        // ── Step 2b: Not found — fetch teams from server and save locally ──
+        if (teams.length < 2) {
+          try {
+            const res = await ApiService.get(
+              `${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(matchId)}`
+            );
+            const serverTeams = res?.teams || res?.data?.teams || [];
+            if (serverTeams.length >= 2) {
+              // Save each team to SQLite so future lookups work
+              for (const t of serverTeams) {
+                const localId = t.local_id || uuid.v4();
+                await executeQuery(
+                  `INSERT OR REPLACE INTO teams
+                     (id, server_id, match_id, series_id, club_id, team_name, team_label, captain_id, sync_status)
+                   VALUES (?,?,?,?,?,?,?,?,?)`,
+                  [
+                    localId,
+                    t.id || null,
+                    rMatch.id,
+                    rMatch.series_id || null,
+                    rMatch.club_id   || null,
+                    t.team_name,
+                    t.team_label || 'A',
+                    t.captain_id != null ? String(t.captain_id) : null,
+                    'synced',
+                  ]
+                );
+              }
+              teams = await getMatchTeams(rMatch.id);
+            }
+          } catch (_) {}
+        }
+
+        if (teams.length < 2) { setLoading(false); return; }
+
+        // ── Step 3: Get innings and determine which team bats ─────────────
+        const allInnings = await getMatchInnings(rMatch.id);
+
+        // Find the latest non-completed innings (= the one we should resume)
+        const activeInnings = allInnings
+          .filter(i => !i.is_completed)
+          .sort((a, b) => b.innings_number - a.innings_number)[0];
+
+        if (activeInnings) {
+          rInningsNumber = activeInnings.innings_number;
+          rBattingTeam   = teams.find(t => t.id === activeInnings.batting_team_id) || teams[0];
+          rBowlingTeam   = teams.find(t => t.id === activeInnings.bowling_team_id) || teams[1];
+        } else {
+          // No innings started yet — fresh match, default to innings 1
+          rInningsNumber = 1;
+          rBattingTeam   = teams[0];
+          rBowlingTeam   = teams[1];
+        }
+
+        // ── Step 4: Recover target for 2nd innings ─────────────────────────
+        let rTarget = target || null;
+        if (rInningsNumber === 2 && !rTarget) {
+          const inn1 = allInnings.find(i => i.innings_number === 1 && i.is_completed);
+          if (inn1) rTarget = (inn1.total_runs || 0) + 1;
+        }
+
+        // Update component state so JSX (header, fielder effect, etc.) is correct
+        setResolvedParams({
+          match:         rMatch,
+          battingTeam:   rBattingTeam,
+          bowlingTeam:   rBowlingTeam,
+          inningsNumber: rInningsNumber,
+          target:        rTarget,
+        });
+      } catch (err) {
+        Alert.alert('Error', 'Could not resume match: ' + err.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // ── Step 2: Normal init using resolved variables ───────────────────────
     try {
-      const existingInnings = await getMatchInnings(match.id);
-      let active = existingInnings.find(i => i.innings_number === inningsNumber && !i.is_completed);
+      const existingInnings = await getMatchInnings(rMatch.id);
+      let active = existingInnings.find(i => i.innings_number === rInningsNumber && !i.is_completed);
 
       if (!active) {
         const inningsId = await createInnings({
-          match_id:        match.id,
-          club_id:         match.club_id  || null,
-          series_id:       match.series_id || null,
-          innings_number:  inningsNumber,
-          batting_team_id: battingTeam.id,
-          bowling_team_id: bowlingTeam.id,
-        });
-        active = { id: inningsId, total_runs: 0, total_wickets: 0, extras: 0 };
-      } else {
-        // Innings already in SQLite — overwrite teams from toss result then re-queue.
-        // The SQLite row may have been created before the toss so batting/bowling
-        // teams might be wrong; always overwrite with what LiveScoring received.
-        await updateInnings(active.id, {
-          batting_team_id: battingTeam.id,
-          bowling_team_id: bowlingTeam.id,
+          match_id:        rMatch.id,
+          club_id:         rMatch.club_id   || null,
+          series_id:       rMatch.series_id || null,
+          innings_number:  rInningsNumber,
+          batting_team_id: rBattingTeam.id,
+          bowling_team_id: rBowlingTeam.id,
         });
         active = {
-          ...active,
-          batting_team_id: battingTeam.id,
-          bowling_team_id: bowlingTeam.id,
+          id:              inningsId,
+          innings_number:  rInningsNumber,
+          batting_team_id: rBattingTeam.id,
+          bowling_team_id: rBowlingTeam.id,
+          total_runs: 0, total_wickets: 0, extras: 0,
         };
-        await enqueueInningsSync(active, match);
+        await enqueueInningsSync(active, rMatch);
+      } else {
+        // Innings already in SQLite — re-queue to make sure server is in sync.
+        await updateInnings(active.id, {
+          batting_team_id: rBattingTeam.id,
+          bowling_team_id: rBowlingTeam.id,
+        });
+        active = { ...active, batting_team_id: rBattingTeam.id, bowling_team_id: rBowlingTeam.id };
+        await enqueueInningsSync(active, rMatch);
       }
-      // Always trigger immediate sync to MySQL after toss/innings init
-      processSyncQueue().catch(() => {});
-      setInnings(active);
-      setTotalRuns(active.total_runs || 0);
-      setTotalWickets(active.total_wickets || 0);
 
-      const existingOver = await getCurrentOver(active.id);
-      if (existingOver) {
-        setCurrentOver(existingOver);
-        setOverNumber(existingOver.over_number);
-        setLegalBalls(existingOver.balls_bowled || 0);
-        // Re-queue with full match context so MySQL resolves innings_id correctly
-        await enqueueOverSync(existingOver, active, match);
-        processSyncQueue().catch(() => {});
-      }
+      processSyncQueue().catch(() => {});
+
+      // Set state + refs immediately so async code below reads correct values
+      inningsRef.current = active;
+      setInnings(active);
+
+      const runs  = active.total_runs     || 0;
+      const wkts  = active.total_wickets  || 0;
+      setTotalRuns(runs);     totalRunsRef.current  = runs;
+      setTotalWickets(wkts);  totalWktsRef.current  = wkts;
 
       // Load ball history
       const balls = await getBallsWithPlayers(active.id);
       setAllBalls(balls);
 
-      // Load current-over balls for display
+      // Load current over
+      const existingOver = await getCurrentOver(active.id);
       if (existingOver) {
+        overRef.current      = existingOver;
+        overNumRef.current   = existingOver.over_number;
+        legalRef.current     = existingOver.balls_bowled || 0;
+        setCurrentOver(existingOver);
+        setOverNumber(existingOver.over_number);
+        setLegalBalls(existingOver.balls_bowled || 0);
         const ob = balls.filter(b => b.over_id === existingOver.id);
         setOverBalls(ob);
+        await enqueueOverSync(existingOver, active, rMatch);
+        processSyncQueue().catch(() => {});
       }
 
       setLoading(false);
 
-      // Navigate to select batsmen
-      setTimeout(() => {
-        navigation.navigate('SelectBatsman', {
-          inningsId: active.id,
-          team: battingTeam,
-          requestId: uuid.v4(),
-          returnScreen: 'LiveScoring',
-          selectionType: 'opening_pair',
+      // ── Decide whether to navigate or restore from existing balls ──────────
+      const hasProgress = balls.length > 0;
+
+      if (hasProgress) {
+        // ── Restore from DB (crash-recovery / series-resume path) ───────────
+        const lastBall = balls[balls.length - 1];
+
+        const restoredStriker = lastBall.striker_id
+          ? { id: lastBall.striker_id, full_name: lastBall.striker_name || 'Unknown' }
+          : null;
+        const restoredNS = lastBall.non_striker_id
+          ? { id: lastBall.non_striker_id, full_name: lastBall.non_striker_name || 'Unknown' }
+          : null;
+        const restoredBowler = lastBall.bowler_id
+          ? { id: lastBall.bowler_id, full_name: lastBall.bowler_name || 'Unknown' }
+          : null;
+
+        if (restoredStriker) { strikerRef.current = restoredStriker;    setStriker(restoredStriker); }
+        if (restoredNS)      { nonStrikerRef.current = restoredNS;       setNonStriker(restoredNS); }
+        if (restoredBowler)  { bowlerRef.current = restoredBowler;       setBowler(restoredBowler); }
+
+        // Restore batting stats from DB
+        if (restoredStriker) {
+          const ss = await getPlayerBattingStats(active.id, restoredStriker.id);
+          if (ss) {
+            const stats = { runs: ss.runs_scored || 0, balls: ss.balls_faced || 0, fours: ss.fours || 0, sixes: ss.sixes || 0 };
+            strikerStatsRef.current = stats;
+            setStrikerStats(stats);
+          }
+        }
+        if (restoredNS) {
+          const nss = await getPlayerBattingStats(active.id, restoredNS.id);
+          if (nss) {
+            const stats = { runs: nss.runs_scored || 0, balls: nss.balls_faced || 0, fours: nss.fours || 0, sixes: nss.sixes || 0 };
+            nonStrikerStatsRef.current = stats;
+            setNonStrikerStats(stats);
+          }
+        }
+
+        // Restore bowler stats from over balls
+        if (restoredBowler && existingOver) {
+          const overBallsList = balls.filter(b => b.over_id === existingOver.id);
+          const bwlRuns = overBallsList.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+          const bwlWkts = overBallsList.filter(b => b.is_wicket === 1).length;
+          setBowlerStats({ overs: existingOver.over_number - 1, runs: bwlRuns, wickets: bwlWkts, maidens: 0 });
+        }
+
+        // Restore extras from ball history
+        const eb = { wide: 0, no_ball: 0, bye: 0, leg_bye: 0 };
+        balls.forEach(b => {
+          if (!b.extra_type) return;
+          const delta = (b.extra_type === 'bye' || b.extra_type === 'leg_bye') ? (b.extra_runs || 0) : 1;
+          eb[b.extra_type] = (eb[b.extra_type] || 0) + delta;
         });
-      }, 300);
+        setExtras(eb);
+
+        // Restore partnership since last wicket
+        const lastWicketIdx = balls.map(b => b.is_wicket).lastIndexOf(1);
+        const sinceLast = lastWicketIdx === -1 ? balls : balls.slice(lastWicketIdx + 1);
+        setPartnership({
+          runs:  sinceLast.reduce((s, b) => s + (b.runs_scored || 0), 0),
+          balls: sinceLast.filter(b => b.is_valid_ball === 1).length,
+        });
+
+      } else {
+        // ── Fresh innings — navigate to select opening pair ──────────────────
+        setTimeout(() => {
+          navigation.navigate('SelectBatsman', {
+            inningsId: active.id,
+            team:      rBattingTeam,
+            requestId: uuid.v4(),
+            returnScreen:  'LiveScoring',
+            selectionType: 'opening_pair',
+          });
+        }, 300);
+      }
     } catch (err) {
       Alert.alert('Error', 'Failed to init: ' + err.message);
       setLoading(false);
@@ -1073,7 +1288,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (isValidBall && runsScored % 2 !== 0) _swap(newStrikerStats);
 
       // Target chased? End innings immediately (2nd innings only)
-      if (target && newTotal > target) {
+      if (resolvedTarget && newTotal >= resolvedTarget) {
         _endInnings(newTotal, totWkts, inn.id);
         return;
       }
@@ -1360,21 +1575,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
     try {
       await updateInnings(inningsId || innings?.id, { is_completed: 1 });
 
-      // Compute result text for 2nd innings (target comes from route.params)
-      if (inningsNumber === 2 && target) {
+      // Compute result text for 2nd innings
+      if (inningsNumber === 2 && resolvedTarget) {
         const finalRuns = runs  ?? totalRuns;
         const finalWkts = wkts ?? totalWickets;
         const maxWkts   = (match.players_per_team || 6) - 1;
         let result;
-        if (finalRuns >= target) {
+        if (finalRuns >= resolvedTarget) {
           // Batting team chased down — win by remaining wickets
           const wicketsLeft = maxWkts - finalWkts;
           result = `${battingTeam.team_name} wins by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
-        } else if (finalRuns === target - 1) {
+        } else if (finalRuns === resolvedTarget - 1) {
           result = 'Match Tied!';
         } else {
           // Bowling team defended — win by run difference
-          const runDiff = (target - 1) - finalRuns;
+          const runDiff = (resolvedTarget - 1) - finalRuns;
           result = `${bowlingTeam.team_name} wins by ${runDiff} run${runDiff !== 1 ? 's' : ''}!`;
         }
         setInningsResultText(result);
@@ -1387,14 +1602,19 @@ const LiveScoringScreen = ({ navigation, route }) => {
   };
 
   const handleStartNextInnings = () => {
+    // Dismiss modal first; delay replace so the modal can fully unmount
+    // before React Navigation replaces the screen — avoids timing crashes.
     setShowInningsComplete(false);
-    navigation.replace('LiveScoring', {
-      match,
-      battingTeam:   bowlingTeam,
-      bowlingTeam:   battingTeam,
-      inningsNumber: 2,
-      target:        totalRuns + 1,
-    });
+    const snapRuns = totalRunsRef.current;
+    setTimeout(() => {
+      navigation.replace('LiveScoring', {
+        match,
+        battingTeam:   bowlingTeam,
+        bowlingTeam:   battingTeam,
+        inningsNumber: 2,
+        target:        snapRuns + 1,
+      });
+    }, 400);
   };
 
   const handleEndMatch = () => {
@@ -1445,19 +1665,51 @@ const LiveScoringScreen = ({ navigation, route }) => {
     </LinearGradient>
   );
 
+  // ── Guard: match data could not be resolved from params or SQLite ────────
+  // (Only shown after loading=false; if we got here it means even DB recovery failed)
+  if (!match || !battingTeam || !bowlingTeam) {
+    return (
+      <LinearGradient colors={[COLORS.background, COLORS.navy]} style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 32 }]}>
+        <Icon name="alert-circle-outline" size={56} color={COLORS.danger} />
+        <Text style={{ color: COLORS.white, fontSize: 18, fontWeight: '700', marginTop: 20, textAlign: 'center' }}>
+          Match data not found
+        </Text>
+        <Text style={{ color: COLORS.gray, fontSize: 14, marginTop: 8, textAlign: 'center' }}>
+          This match could not be loaded from local storage. Please go back to the series and try again.
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            // Pop back to the SeriesList screen (correct screen name in UmpireNavigator)
+            navigation.navigate('SeriesList');
+          }}
+          style={{ marginTop: 28, backgroundColor: COLORS.royalBlue, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12 }}
+        >
+          <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 15 }}>Go to Series</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        {/* Left — empty spacer (exit via CLOSE INNINGS button only) */}
-        <View style={styles.headerSide} />
+        {/* Left — TARGET badge in 2nd innings, empty spacer otherwise */}
+        {resolvedTarget ? (
+          <LinearGradient colors={['#2A2200', '#1A1500']} style={styles.targetBadge}>
+            <Text style={styles.targetBadgeLabel}>🏴 TARGET</Text>
+            <Text style={styles.targetBadgeNum}>{resolvedTarget}</Text>
+          </LinearGradient>
+        ) : (
+          <View style={styles.headerSide} />
+        )}
 
         {/* Centre — score + overs on one row */}
         <View style={styles.headerCenter}>
           <Text style={styles.headerScore}>{totalRuns}/{totalWickets}</Text>
-          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{match.overs}</Text>
+          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{match?.overs ?? '—'}</Text>
         </View>
 
         {/* Right — scorecard icon */}
@@ -1465,11 +1717,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
           onPress={() => navigation.navigate('Scorecard', { inningsId: innings?.id, match, liveOverNumber: overNumber, liveLegalBalls: legalBalls })}
           style={styles.headerSide}
         >
-          <Icon name="view-list" size={22} color={COLORS.cyan} />
+          <Icon name="view-list" size={22} color={COLORS.gold} />
         </TouchableOpacity>
       </View>
 
-      {/* Team row — teams centred, target pill floats right */}
+      {/* Team row — teams centred */}
       <View style={styles.subHeader}>
         <View style={styles.teamsCenter}>
           <View style={[styles.teamPill, { borderColor: COLORS.gold }]}>
@@ -1480,11 +1732,6 @@ const LiveScoringScreen = ({ navigation, route }) => {
             <Text style={styles.teamPillTxt}>{bowlingTeam.team_name}</Text>
           </View>
         </View>
-        {target ? (
-          <View style={styles.targetPill}>
-            <Text style={styles.targetLbl}>Target {target}  Need {Math.max(0, target - totalRuns)}</Text>
-          </View>
-        ) : null}
       </View>
 
       {/* Tabs */}
@@ -1504,12 +1751,50 @@ const LiveScoringScreen = ({ navigation, route }) => {
       </View>
 
       {/* ── Persistent score strip (visible in both tabs) ── */}
-      <View style={sc.scoreBand}>
-        <Text style={sc.scoreBandMain}>{totalRuns}/{totalWickets}</Text>
-        <Text style={sc.scoreBandSep}>  ·  </Text>
-        <Text style={sc.scoreBandMeta}>Ov {formatOvers()}/{match.overs}</Text>
-        <Text style={sc.scoreBandSep}>  ·  </Text>
-        <Text style={sc.scoreBandMeta}>RR {runRate()}</Text>
+      <View style={sc.scoreBandWrap}>
+        {/* Score row */}
+        <View style={sc.scoreBandRow}>
+          <Text style={sc.scoreBandMain}>{totalRuns}/{totalWickets}</Text>
+          <Text style={sc.scoreBandSep}>  ·  </Text>
+          <Text style={sc.scoreBandMeta}>Ov {formatOvers()}/{match?.overs ?? '—'}</Text>
+          <Text style={sc.scoreBandSep}>  ·  </Text>
+          <Text style={sc.scoreBandMeta}>RR {runRate()}</Text>
+        </View>
+        {/* Chase indicator — only in 2nd innings */}
+        {resolvedTarget ? (() => {
+          const runsNeeded  = Math.max(0, resolvedTarget - totalRuns);
+          const ballsBowled = (overNumber - 1) * 6 + legalBalls;
+          const ballsLeft   = Math.max(0, (match?.overs || 0) * 6 - ballsBowled);
+          const reqRate     = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : '—';
+          const won         = totalRuns >= resolvedTarget;
+          const tied        = !won && runsNeeded === 0;
+          return (
+            <LinearGradient
+              colors={won ? ['#1A2E00', '#0E1A00'] : ['#2A1E00', '#1A1300']}
+              style={sc.chasePill}
+            >
+              {won ? (
+                <>
+                  <Icon name="trophy" size={13} color={COLORS.gold} />
+                  <Text style={[sc.chaseText, { color: COLORS.gold, marginLeft: 6 }]}>Target Achieved!</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="lightning-bolt" size={12} color={COLORS.gold} style={{ marginRight: 5 }} />
+                  <Text style={sc.chaseText}>
+                    Need{' '}
+                    <Text style={sc.chaseHighlight}>{runsNeeded}</Text>
+                    {' '}Runs off{' '}
+                    <Text style={sc.chaseHighlight}>{ballsLeft}</Text>
+                    {' '}Balls
+                  </Text>
+                  <View style={sc.chaseDivider} />
+                  <Text style={sc.chaseRRR}>RRR <Text style={sc.chaseHighlight}>{reqRate}</Text></Text>
+                </>
+              )}
+            </LinearGradient>
+          );
+        })() : null}
       </View>
 
       {/* ── Scorecard Tab ── */}
@@ -1695,15 +1980,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   headerCenter:    { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
   headerScore:     { color: COLORS.white, fontSize: 26, fontWeight: '900' },
   headerOvers:     { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
-  // Target block — right side of header in 2nd innings
-  targetBox:       { width: 72, alignItems: 'center', backgroundColor: COLORS.warning + '22', borderRadius: 10, paddingVertical: 5, paddingHorizontal: 6, borderWidth: 1, borderColor: COLORS.warning },
-  targetBoxLabel:  { color: COLORS.warning, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  targetBoxNum:    { color: COLORS.white, fontSize: 20, fontWeight: '900', lineHeight: 24 },
-  targetBoxNeed:   { color: COLORS.warning, fontSize: 9, fontWeight: '700' },
-  // Target pill — far right of subHeader (2nd innings only)
-  targetPill:      { marginLeft: 'auto', backgroundColor: COLORS.warning + '22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.warning },
-  targetLbl:       { color: COLORS.warning, fontSize: 10, fontWeight: '800' },
-  subHeader:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 8 },
+  // TARGET badge — top-left of header in 2nd innings (height matches centre score row)
+  targetBadge:      { width: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 4, paddingHorizontal: 4, borderWidth: 1.5, borderColor: COLORS.gold, overflow: 'hidden' },
+  targetBadgeLabel: { color: COLORS.gold + 'BB', fontSize: 7, fontWeight: '900', letterSpacing: 1.5, marginBottom: 0 },
+  targetBadgeNum:   { color: COLORS.gold, fontSize: 26, fontWeight: '900', lineHeight: 30 },
+  subHeader:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 8 },
   teamsCenter:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   teamPill:        { backgroundColor: COLORS.card, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.cardBorder },
   teamPillTxt:     { color: COLORS.white, fontSize: 11, fontWeight: '600' },
@@ -1721,10 +2002,17 @@ const getScStyles = (COLORS) => StyleSheet.create({
   summaryItem:   { flex: 1, alignItems: 'center' },
   summaryVal:    { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   summaryLabel:  { color: COLORS.gray, fontSize: 9, marginTop: 2 },
-  scoreBand:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card + 'CC', marginHorizontal: 12, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
-  scoreBandMain: { color: COLORS.white, fontWeight: '900', fontSize: 18 },
-  scoreBandMeta: { color: COLORS.gray,  fontWeight: '600', fontSize: 13 },
-  scoreBandSep:  { color: COLORS.cardBorder, fontSize: 13 },
+  scoreBandWrap:  { backgroundColor: COLORS.card + 'CC', marginHorizontal: 12, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
+  scoreBandRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  scoreBandMain:  { color: COLORS.white, fontWeight: '900', fontSize: 18 },
+  scoreBandMeta:  { color: COLORS.gray,  fontWeight: '600', fontSize: 13 },
+  scoreBandSep:   { color: COLORS.cardBorder, fontSize: 13 },
+  // Chase pill — shown below score row in 2nd innings
+  chasePill:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.gold + '60', overflow: 'hidden' },
+  chaseText:      { color: '#C8B06A', fontSize: 12, fontWeight: '600' },
+  chaseHighlight: { color: COLORS.gold, fontWeight: '900', fontSize: 13 },
+  chaseDivider:   { width: 1, height: 12, backgroundColor: COLORS.gold + '40', marginHorizontal: 10 },
+  chaseRRR:       { color: '#C8B06A', fontSize: 11, fontWeight: '600' },
   section:       { backgroundColor: COLORS.card, marginHorizontal: 12, borderRadius: 12, padding: 10, marginBottom: 6, borderWidth: 1, borderColor: COLORS.cardBorder },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder, paddingBottom: 6 },
   sectionTitle:  { color: COLORS.gold, fontWeight: '700', fontSize: 11, letterSpacing: 2 },
