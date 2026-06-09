@@ -777,10 +777,15 @@ export const saveMatchResult = async (resultData) => {
       : null,
   ]);
 
-  const serverMatchId   = matchRow?.server_id   || null;
-  const serverWinnerId  = winnerRow?.server_id  || null;
-  const serverLoserId   = loserRow?.server_id   || null;
-  const serverPlayerId  = playerRow?.server_id  || null;
+  const numericOrNull = value => {
+    const n = Number(value);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  };
+
+  const serverMatchId   = resultData.match_server_id || matchRow?.server_id || numericOrNull(resultData.match_id);
+  const serverWinnerId  = resultData.winner_team_server_id || winnerRow?.server_id || numericOrNull(resultData.winner_team_id);
+  const serverLoserId   = resultData.loser_team_server_id || loserRow?.server_id || numericOrNull(resultData.loser_team_id);
+  const serverPlayerId  = resultData.player_of_match_server_id || playerRow?.server_id || numericOrNull(resultData.player_of_match);
 
   await executeTransaction([
     {

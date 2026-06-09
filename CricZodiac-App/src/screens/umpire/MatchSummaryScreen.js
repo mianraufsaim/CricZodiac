@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { saveMatchResult } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { processSyncQueue } from '../../services/SyncService';
 
 // ── Pure winner helper ────────────────────────────────────
 const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
@@ -48,6 +49,9 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const [teams,    setTeams]    = useState([]);
   const [result,   setResult]   = useState(null);
   const [potmName, setPotmName] = useState(null);
+  const [potmPlayers, setPotmPlayers] = useState([]);
+  const [selectedPotm, setSelectedPotm] = useState(null);
+  const [savingPotm, setSavingPotm] = useState(false);
   const [matchObj, setMatchObj] = useState(matchParam || null);
   const [loadErr,  setLoadErr]  = useState(null);
   const [loading,  setLoading]  = useState(true);
@@ -95,7 +99,10 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         ...t,
         id:       t.local_id || String(t.id),
         local_id: t.local_id || String(t.id),
+        server_id: t.id,
       }));
+
+      const players = await loadPlayersForTeams(normalizedTeams);
 
       // ── Parse result ─────────────────────────────────────────────────
       const sr = resultRes?.result || resultRes?.data?.result || null;
@@ -143,6 +150,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       // ── Commit to state ──────────────────────────────────────────────
       setInnings(validInnings);
       setTeams(normalizedTeams);
+      setPotmPlayers(players);
       setResult(apiResult || null);
       setPotmName(
         (apiResult?.player_of_match_name || '').trim() || null
@@ -151,6 +159,82 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       setLoadErr(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPlayersForTeams = async (teamsForMatch) => {
+    const merged = new Map();
+    for (const team of teamsForMatch || []) {
+      const teamId = team.local_id || team.id;
+      if (!teamId) continue;
+
+      const res = await ApiService
+        .get(`${API_ENDPOINTS.TEAMS_PLAYERS}?team_id=${encodeURIComponent(teamId)}`)
+        .catch(() => null);
+      const rows = res?.players || res?.data?.players || [];
+      for (const row of rows) {
+        const localId = row.player_uuid || row.player_local_id || row.local_id || null;
+        const serverId = row.player_id || row.id || null;
+        const key = localId || String(serverId);
+        if (!key || merged.has(key)) continue;
+
+        const fullName = (row.full_name || row.user_name || row.name || '').trim();
+        merged.set(key, {
+          id: localId || String(serverId),
+          local_id: localId,
+          server_id: serverId,
+          full_name: fullName || 'Unknown',
+          player_type: row.player_type || 'player',
+          team_name: team.team_name,
+        });
+      }
+    }
+    return [...merged.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
+  };
+
+  const handleSavePotm = async () => {
+    if (!selectedPotm || !winner || winner.type === 'tie') return;
+
+    setSavingPotm(true);
+    try {
+      const sorted = [...innings].sort((a, b) => a.innings_number - b.innings_number);
+      const [inn1, inn2] = sorted;
+      const winnerTeam = teams.find(t =>
+        t.id === winner.winner?.id || t.local_id === winner.winner?.local_id
+      ) || winner.winner;
+      const loserTeam = teams.find(t =>
+        t.id === winner.loser?.id || t.local_id === winner.loser?.local_id
+      ) || winner.loser;
+
+      await saveMatchResult({
+        match_id: matchParam?.id,
+        match_server_id: matchParam?.server_id || (Number.isInteger(Number(matchParam?.id)) ? Number(matchParam.id) : null),
+        winner_team_id: winnerTeam?.local_id || winnerTeam?.id || null,
+        winner_team_server_id: winnerTeam?.server_id || (Number.isInteger(Number(winnerTeam?.id)) ? Number(winnerTeam.id) : null),
+        loser_team_id: loserTeam?.local_id || loserTeam?.id || null,
+        loser_team_server_id: loserTeam?.server_id || (Number.isInteger(Number(loserTeam?.id)) ? Number(loserTeam.id) : null),
+        result_type: winner.type === 'tie' ? 'tie' : 'win',
+        margin: 0,
+        margin_type: winner.type === 'runs' ? 'runs' : 'wickets',
+        team_a_score: `${inn1?.total_runs ?? 0}/${inn1?.total_wickets ?? 0}`,
+        team_b_score: inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
+        player_of_match: selectedPotm.local_id || selectedPotm.id,
+        player_of_match_server_id: selectedPotm.server_id || (Number.isInteger(Number(selectedPotm.id)) ? Number(selectedPotm.id) : null),
+        result_text: winner.type === 'tie'
+          ? 'Match Tied!'
+          : (result?.result_text || `${winner.winner.team_name} won by ${winner.margin}`),
+      });
+
+      setPotmName(selectedPotm.full_name);
+      setResult(prev => ({
+        ...(prev || {}),
+        player_of_match_name: selectedPotm.full_name,
+        player_of_match_local: selectedPotm.local_id || selectedPotm.id,
+        player_of_match: selectedPotm.server_id || prev?.player_of_match || null,
+      }));
+      processSyncQueue().catch(() => {});
+    } finally {
+      setSavingPotm(false);
     }
   };
 
@@ -329,6 +413,58 @@ const MatchSummaryScreen = ({ navigation, route }) => {
             </View>
           </>
         )}
+        {!potmName && winner && winner.type !== 'tie' && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>MAN OF THE MATCH</Text>
+            <View style={styles.potmPickerCard}>
+              <View style={styles.potmPickerHeader}>
+                <Icon name="star-circle-outline" size={22} color={COLORS.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.potmPickerTitle}>Select player of the match</Text>
+                  <Text style={styles.potmPickerSub}>{potmPlayers.length} players available</Text>
+                </View>
+              </View>
+
+              <View style={styles.potmGrid}>
+                {potmPlayers.map(player => {
+                  const active = selectedPotm?.id === player.id;
+                  return (
+                    <TouchableOpacity
+                      key={player.id}
+                      style={[styles.potmOption, active && styles.potmOptionSelected]}
+                      onPress={() => setSelectedPotm(player)}
+                    >
+                      <View style={[styles.potmOptionAvatar, active && { backgroundColor: COLORS.gold }]}>
+                        <Text style={[styles.potmOptionInitial, active && { color: COLORS.navy }]}>
+                          {player.full_name[0]?.toUpperCase() || 'P'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.potmOptionName, active && { color: COLORS.gold }]} numberOfLines={1}>
+                          {player.full_name}
+                        </Text>
+                        <Text style={styles.potmOptionTeam} numberOfLines={1}>{player.team_name}</Text>
+                      </View>
+                      {active && <Icon name="check-circle" size={18} color={COLORS.gold} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.savePotmBtn, (!selectedPotm || savingPotm) && styles.savePotmBtnDisabled]}
+                onPress={handleSavePotm}
+                disabled={!selectedPotm || savingPotm}
+              >
+                {savingPotm
+                  ? <ActivityIndicator size="small" color={COLORS.navy} />
+                  : <Icon name="content-save-check" size={17} color={COLORS.navy} />
+                }
+                <Text style={styles.savePotmText}>{savingPotm ? 'SAVING...' : 'SAVE MAN OF THE MATCH'}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('SeriesList')}>
           <Icon name="arrow-left-circle-outline" size={17} color={COLORS.gray} style={{ marginRight: 7 }} />
@@ -389,6 +525,20 @@ const getStyles = (COLORS) => StyleSheet.create({
   potmAvatarText:    { color: '#FFFFFF', fontWeight: '900', fontSize: 22 },
   potmName:          { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   potmSub:           { color: COLORS.gold, fontSize: 11, marginTop: 2 },
+  potmPickerCard:    { backgroundColor: COLORS.card, borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: '#D4AF3760' },
+  potmPickerHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  potmPickerTitle:   { color: COLORS.white, fontSize: 15, fontWeight: '800' },
+  potmPickerSub:     { color: COLORS.gray, fontSize: 11, marginTop: 2 },
+  potmGrid:          { gap: 8, marginBottom: 12 },
+  potmOption:        { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: COLORS.cardBorder, backgroundColor: COLORS.navy + '55', flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  potmOptionSelected:{ borderColor: COLORS.gold, backgroundColor: COLORS.gold + '14' },
+  potmOptionAvatar:  { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center' },
+  potmOptionInitial: { color: COLORS.white, fontSize: 15, fontWeight: '900' },
+  potmOptionName:    { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+  potmOptionTeam:    { color: COLORS.gray, fontSize: 11, marginTop: 2 },
+  savePotmBtn:       { height: 42, borderRadius: 11, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  savePotmBtnDisabled:{ opacity: 0.45 },
+  savePotmText:      { color: COLORS.navy, fontWeight: '900', fontSize: 12, letterSpacing: 0.5 },
 
   homeBtn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, paddingVertical: 14 },
   homeBtnText:       { color: COLORS.gray, fontSize: 14 },
