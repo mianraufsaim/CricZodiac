@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -124,9 +124,10 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
   const { seriesId, seriesName, series: routeSeries = null } = route.params;
-  const [series, setSeries]   = useState(routeSeries);
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [series, setSeries]         = useState(routeSeries);
+  const [matches, setMatches]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const orderedMatches = useMemo(() => orderMatchesAsc(matches), [matches]);
   const matchOrdinals = useMemo(() => {
@@ -240,6 +241,12 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
 
   const handleClose = () => {
     Alert.alert('Close Series', 'Mark this series as completed?', [
@@ -375,6 +382,8 @@ const SeriesDetailScreen = ({ navigation, route }) => {
             keyExtractor={i => i.id}
             renderItem={renderMatch}
             contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListHeaderComponent={
               series ? (
                 <View style={styles.seriesInfo}>

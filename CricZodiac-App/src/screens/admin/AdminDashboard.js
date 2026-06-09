@@ -1,12 +1,13 @@
 // ============================================================
 // CricZodiac — Admin Dashboard
-// Nav: [Z + name + Club Admin | 🛡 Club]  ··· [sync · ☀ · logout]
+// Stats: 2 rows × 3 blocks, all fetched live from API (no local DB)
+// Quick Actions: 2 rows × 3 blocks
 // ============================================================
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Platform, StatusBar,
+  ScrollView, Alert, Platform, StatusBar, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,19 +15,22 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSync } from '../../context/SyncContext';
-import { getAllMatches } from '../../database/queries/matchQueries';
-import { getAllPlayers } from '../../database/queries/playerQueries';
-import { getAllUsers } from '../../database/queries/userQueries';
 import { manualRetrySync } from '../../services/SyncService';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
+// ── Stat Card ─────────────────────────────────────────────────
 const StatCard = ({ icon, value, label, color, COLORS, styles }) => (
   <View style={styles.statCard}>
-    <Icon name={icon} size={24} color={color || COLORS.gold} />
-    <Text style={styles.statValue}>{value ?? 0}</Text>
+    <View style={[styles.statIconWrap, { backgroundColor: color + '1A' }]}>
+      <Icon name={icon} size={22} color={color} />
+    </View>
+    <Text style={styles.statValue}>{value ?? '—'}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
+// ── Quick Action ──────────────────────────────────────────────
 const QuickAction = ({ icon, label, color, onPress, styles }) => (
   <TouchableOpacity style={styles.qa} onPress={onPress} activeOpacity={0.75}>
     <View style={[styles.qaIcon, { backgroundColor: color + '22' }]}>
@@ -36,28 +40,42 @@ const QuickAction = ({ icon, label, color, onPress, styles }) => (
   </TouchableOpacity>
 );
 
+// ─────────────────────────────────────────────────────────────
 const AdminDashboard = ({ navigation }) => {
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
   const { user, activeClub, viewingAsClub, exitClubView, logout } = useAuth();
   const effectiveClub    = viewingAsClub ?? activeClub;
   const isSuperAdminView = !!viewingAsClub;
   const { syncStatus, syncStats } = useSync();
-  const [counts, setCounts] = useState({ matches: 0, players: 0, users: 0, live: 0 });
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const loadCounts = async () => {
-    const [matches, players, users] = await Promise.all([
-      getAllMatches(), getAllPlayers(), getAllUsers(),
-    ]);
-    setCounts({
-      matches: matches.length,
-      players: players.length,
-      users:   users.filter(u => u.status !== 'inactive').length,
-      live:    matches.filter(m => m.status === 'live').length,
-    });
-  };
+  const [stats, setStats]           = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(useCallback(() => { loadCounts(); }, []));
+  // ── Fetch stats from API (club-scoped, no local SQLite) ────
+  const loadStats = useCallback(async () => {
+    try {
+      const params = {};
+      if (isSuperAdminView && effectiveClub?.id) {
+        params.club_id = effectiveClub.id;
+      }
+      const res = await ApiService.get(API_ENDPOINTS.ADMIN_STATS, { params });
+      if (res?.success && res?.data) setStats(res.data);
+    } catch (_) {
+      // Values stay null → UI shows '—'
+    } finally {
+      setLoading(false);
+    }
+  }, [isSuperAdminView, effectiveClub?.id]);
+
+  useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadStats();
+    setRefreshing(false);
+  }, [loadStats]);
 
   const syncColor =
     syncStatus === 'synced'  ? COLORS.success :
@@ -87,8 +105,6 @@ const AdminDashboard = ({ navigation }) => {
 
       {/* ── Nav Bar ── */}
       <View style={[styles.navBar, isSuperAdminView && { paddingTop: 12 }]}>
-
-        {/* LEFT: [Z] + two-line info column */}
         <TouchableOpacity
           onPress={isSuperAdminView ? undefined : () => navigation.navigate('EditProfile')}
           activeOpacity={isSuperAdminView ? 1 : 0.7}
@@ -101,19 +117,14 @@ const AdminDashboard = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.navInfo}>
-          {/* Line 1: Name */}
           <TouchableOpacity
             onPress={isSuperAdminView ? undefined : () => navigation.navigate('EditProfile')}
             activeOpacity={isSuperAdminView ? 1 : 0.7}
           >
             <Text style={styles.navName} numberOfLines={1}>{user?.name}</Text>
           </TouchableOpacity>
-
-          {/* Line 2: Role · Club Badge */}
           <View style={styles.navRoleRow}>
-            <Text style={styles.navRole}>
-              {isSuperAdminView ? 'Admin' : 'Admin'}
-            </Text>
+            <Text style={styles.navRole}>Admin</Text>
             {effectiveClub && (
               <TouchableOpacity
                 style={styles.clubBadge}
@@ -122,9 +133,7 @@ const AdminDashboard = ({ navigation }) => {
               >
                 <Icon name="shield-star" size={10} color={COLORS.gold} />
                 <Text style={styles.clubBadgeText}>{effectiveClub.name}</Text>
-                {!isSuperAdminView && (
-                  <Icon name="pencil-outline" size={9} color={COLORS.gold} />
-                )}
+                {!isSuperAdminView && <Icon name="pencil-outline" size={9} color={COLORS.gold} />}
               </TouchableOpacity>
             )}
           </View>
@@ -132,7 +141,6 @@ const AdminDashboard = ({ navigation }) => {
 
         <View style={{ flex: 1 }} />
 
-        {/* RIGHT: sync · theme · logout — tightly grouped */}
         <View style={styles.navRight}>
           <TouchableOpacity
             style={styles.syncChip}
@@ -168,28 +176,66 @@ const AdminDashboard = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.statsGrid}>
-          <StatCard icon="cricket"       value={counts.matches}  label="Matches"  color={COLORS.cyan}    COLORS={COLORS} styles={styles} />
-          <StatCard icon="account"       value={counts.players}  label="Players"  color={COLORS.gold}    COLORS={COLORS} styles={styles} />
-          <StatCard icon="account-group" value={counts.users}    label="Users"    color={COLORS.purple}  COLORS={COLORS} styles={styles} />
-          <StatCard icon="play-circle"   value={counts.live}     label="Live Now" color={COLORS.success} COLORS={COLORS} styles={styles} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />
+        }
+      >
+        {/* ── Stats ── */}
+        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>OVERVIEW</Text>
+
+        {/* Row 1: Series · Matches · Teams */}
+        <View style={styles.statsRow}>
+          <StatCard icon="trophy-outline"    value={loading ? null : stats?.total_series}       label="Series"   color={COLORS.cyan}       COLORS={COLORS} styles={styles} />
+          <StatCard icon="cricket"           value={loading ? null : stats?.total_matches}      label="Matches"  color={COLORS.gold}       COLORS={COLORS} styles={styles} />
+          <StatCard icon="shield-half-full"  value={loading ? null : stats?.total_teams}        label="Teams"    color={COLORS.purple}     COLORS={COLORS} styles={styles} />
         </View>
 
-        <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
-        <View style={styles.qaGrid}>
-          <QuickAction icon="trophy-outline" label="New Series"   color={COLORS.cyan}
-            onPress={() => navigation.navigate('Series')} styles={styles} />
-          <QuickAction icon="account-group"  label="Manage Users" color={COLORS.purple}
-            onPress={() => navigation.navigate('Users')} styles={styles} />
-          <QuickAction icon="history"        label="All Matches"  color={COLORS.success}
-            onPress={() => navigation.navigate('AllMatches')} styles={styles} />
-          <QuickAction icon="podium"         label="Leaderboard"  color={COLORS.royalBlue}
-            onPress={() => navigation.navigate('Stats')} styles={styles} />
-          <QuickAction icon="cricket"        label="Quick Match"  color={COLORS.orange}
-            onPress={() => navigation.navigate('MatchSetup', {})} styles={styles} />
+        {/* Row 2: Players · In Teams · Live */}
+        <View style={[styles.statsRow, { marginTop: 10 }]}>
+          <StatCard icon="account-outline"       value={loading ? null : stats?.total_players}      label="Players"  color={COLORS.royalBlue}  COLORS={COLORS} styles={styles} />
+          <StatCard icon="account-group-outline" value={loading ? null : stats?.total_team_players} label="In Teams" color={COLORS.orange}     COLORS={COLORS} styles={styles} />
+          <StatCard icon="play-circle-outline"   value={loading ? null : stats?.live_matches}       label="Live Now" color={COLORS.success}    COLORS={COLORS} styles={styles} />
         </View>
 
+        {/* ── Quick Actions ── */}
+        <Text style={[styles.sectionTitle, { marginTop: 22 }]}>QUICK ACTIONS</Text>
+
+        {/* Row 1: Manage Users · All Matches · Leaderboard */}
+        <View style={styles.qaRow}>
+          <QuickAction icon="account-group"  label="Manage Users" color={COLORS.purple}    onPress={() => navigation.navigate('Users')}      styles={styles} />
+          <QuickAction icon="history"        label="All Matches"  color={COLORS.success}   onPress={() => navigation.navigate('AllMatches')} styles={styles} />
+          <QuickAction icon="podium"         label="Leaderboard"  color={COLORS.royalBlue} onPress={() => navigation.navigate('Stats')}      styles={styles} />
+        </View>
+
+        {/* Row 2: Pending Approvals · Sync Status · Theme */}
+        <View style={[styles.qaRow, { marginTop: 10, marginBottom: 16 }]}>
+          <QuickAction
+            icon="account-clock-outline"
+            label="Approvals"
+            color={COLORS.warning}
+            onPress={() => navigation.navigate('PendingApprovals')}
+            styles={styles}
+          />
+          <QuickAction
+            icon="cloud-sync-outline"
+            label="Sync Status"
+            color={COLORS.cyan}
+            onPress={() => navigation.navigate('SyncStatus')}
+            styles={styles}
+          />
+          <QuickAction
+            icon={isDark ? 'weather-sunny' : 'weather-night'}
+            label={isDark ? 'Light Mode' : 'Dark Mode'}
+            color={isDark ? COLORS.warning : COLORS.royalBlue}
+            onPress={toggleTheme}
+            styles={styles}
+          />
+        </View>
+
+        {/* ── Sync Banner ── */}
         {(syncStats.pending > 0 || syncStats.failed > 0) && (
           <TouchableOpacity style={styles.syncBanner} onPress={() => navigation.navigate('SyncStatus')}>
             <Icon name="cloud-sync" size={20} color={syncColor} />
@@ -214,7 +260,6 @@ const getStyles = (COLORS) => StyleSheet.create({
   exitChip:             { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.navy + '33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   exitChipText:         { color: COLORS.navy, fontWeight: '800', fontSize: 11 },
 
-  // Nav bar
   navBar:        { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 52 : (StatusBar.currentHeight || 24), paddingHorizontal: 14, paddingBottom: 12, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder, gap: 5 },
   navLogo:       { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   navLogoText:   { fontSize: 18, fontWeight: '900' },
@@ -230,20 +275,21 @@ const getStyles = (COLORS) => StyleSheet.create({
   syncCount:     { fontSize: 11, fontWeight: '700' },
   navIconBtn:    { padding: 5 },
 
-  // Stats
-  statsGrid:     { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, gap: 10 },
-  statCard:      { flex: 1, minWidth: '44%', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: COLORS.cardBorder },
-  statValue:     { color: COLORS.white, fontSize: 26, fontWeight: '900' },
-  statLabel:     { color: COLORS.gray, fontSize: 11 },
-
-  // Quick actions
   sectionTitle:  { color: COLORS.gold, fontSize: 11, fontWeight: '700', letterSpacing: 3, paddingHorizontal: 18, marginBottom: 10 },
-  qaGrid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, gap: 10, marginBottom: 16 },
-  qa:            { width: '30.5%', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, alignItems: 'center', gap: 7, borderWidth: 1, borderColor: COLORS.cardBorder },
+
+  // Stats — 3 equal columns per row
+  statsRow:      { flexDirection: 'row', paddingHorizontal: 14, gap: 10 },
+  statCard:      { flex: 1, backgroundColor: COLORS.card, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 6, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.cardBorder },
+  statIconWrap:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  statValue:     { color: COLORS.white, fontSize: 22, fontWeight: '900' },
+  statLabel:     { color: COLORS.gray, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+
+  // Quick Actions — 3 equal columns per row
+  qaRow:         { flexDirection: 'row', paddingHorizontal: 14, gap: 10 },
+  qa:            { flex: 1, backgroundColor: COLORS.card, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 6, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   qaIcon:        { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   qaLabel:       { color: COLORS.lightGray, fontSize: 11, fontWeight: '600', textAlign: 'center' },
 
-  // Sync banner
   syncBanner:    { marginHorizontal: 16, backgroundColor: COLORS.card, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   syncBannerText:{ flex: 1, fontSize: 13, fontWeight: '600' },
   retryBtn:      { backgroundColor: COLORS.danger + '33', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },

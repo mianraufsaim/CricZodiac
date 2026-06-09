@@ -3,8 +3,8 @@
 // Nav: [Z + name + Player | 🛡 Club]  ··· [☀ · logout]
 // ============================================================
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NetInfo from '@react-native-community/netinfo';
@@ -26,9 +26,10 @@ const PlayerDashboard = ({ navigation }) => {
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
   const { user, activeClub, logout } = useAuth();
-  const [stats,    setStats]    = useState(null);
-  const [player,   setPlayer]   = useState(null);
-  const [isOnline, setIsOnline] = useState(true);
+  const [stats,      setStats]      = useState(null);
+  const [player,     setPlayer]     = useState(null);
+  const [isOnline,   setIsOnline]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     load();
@@ -46,6 +47,12 @@ const PlayerDashboard = ({ navigation }) => {
       setStats(s);
     }
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
@@ -95,7 +102,7 @@ const PlayerDashboard = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
 
         {/* Attribute chips */}
         {player && (

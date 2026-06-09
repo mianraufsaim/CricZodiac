@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,10 +31,17 @@ const SuperAdminAdminListScreen = ({ navigation, route }) => {
   const accentColor = meta.color ? COLORS[meta.color] : COLORS.cyan;
   const screenTitle = title || meta.label;
 
-  const [admins,  setAdmins]  = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [admins,     setAdmins]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { loadAdmins(); }, []));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAdmins();
+    setRefreshing(false);
+  }, []);
 
   const loadAdmins = async () => {
     setLoading(true);
@@ -201,6 +208,8 @@ const SuperAdminAdminListScreen = ({ navigation, route }) => {
           keyExtractor={i => String(i.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
     </LinearGradient>

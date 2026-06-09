@@ -3,10 +3,10 @@
 // Shown when an admin manages multiple clubs — pick one to enter
 // ============================================================
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -19,10 +19,17 @@ const ClubSelectorScreen = () => {
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
   const { user, selectClub, logout } = useAuth();
-  const [clubs, setClubs]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [clubs,      setClubs]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadClubs(); }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadClubs();
+    setRefreshing(false);
+  }, []);
 
   const loadClubs = async () => {
     try {
@@ -100,6 +107,8 @@ const ClubSelectorScreen = () => {
           renderItem={renderClub}
           keyExtractor={i => i.id}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
 

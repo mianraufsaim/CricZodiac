@@ -2,8 +2,8 @@
 // CricZodiac — Scorecard Screen
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -21,6 +21,7 @@ const ScorecardScreen = ({ navigation, route }) => {
   const [innings,  setInnings]  = useState(null);
   const [tab,      setTab]      = useState('batting');
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -97,6 +98,12 @@ const ScorecardScreen = ({ navigation, route }) => {
     return `${full}.${balls}`;
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -127,7 +134,10 @@ const ScorecardScreen = ({ navigation, route }) => {
       {loading ? (
         <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 30 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}
+        >
           {tab === 'batting' ? (
             <View style={styles.tableCard}>
               <View style={styles.tableHeader}>

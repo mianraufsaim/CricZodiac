@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,10 +31,17 @@ const SuperAdminClubListScreen = ({ navigation, route }) => {
   const accentColor = meta.color ? COLORS[meta.color] : COLORS.white;
   const screenTitle = title || meta.label;
 
-  const [clubs,   setClubs]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [clubs,      setClubs]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { loadClubs(); }, []));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadClubs();
+    setRefreshing(false);
+  }, []);
 
   const loadClubs = async () => {
     setLoading(true);
@@ -124,6 +131,8 @@ const SuperAdminClubListScreen = ({ navigation, route }) => {
           keyExtractor={i => String(i.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
     </LinearGradient>

@@ -7,7 +7,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
-  Modal, ScrollView, Pressable,
+  Modal, ScrollView, Pressable, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -44,6 +44,7 @@ const PendingApprovalsScreen = ({ navigation }) => {
   const [loading, setLoading]     = useState(true);
   const [acting, setActing]       = useState(null);
   const [selected, setSelected]   = useState(null); // item shown in modal
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { loadPending(); }, []));
 
@@ -258,6 +259,12 @@ const PendingApprovalsScreen = ({ navigation }) => {
     );
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadPending();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       {/* Header */}
@@ -293,6 +300,8 @@ const PendingApprovalsScreen = ({ navigation }) => {
           renderItem={renderItem}
           keyExtractor={i => String(i.id)}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
 

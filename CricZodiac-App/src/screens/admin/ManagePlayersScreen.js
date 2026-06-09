@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, RefreshControl } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,6 +15,7 @@ const ManagePlayersScreen = ({ navigation }) => {
 
   const [players, setPlayers] = useState([]);
   const [search, setSearch]   = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
@@ -74,6 +75,12 @@ const ManagePlayersScreen = ({ navigation }) => {
     ]);
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -101,6 +108,8 @@ const ManagePlayersScreen = ({ navigation }) => {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: 16, paddingBottom: 30 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
           <View style={styles.playerCard}>
             <View style={styles.avatar}>

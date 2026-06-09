@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -11,11 +11,14 @@ const MatchHistoryScreen = ({ navigation }) => {
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
   const { user } = useAuth();
   const [history, setHistory] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = () => getPlayerByUserId(user?.id).then(p => {
+    if (p) getPlayerMatchHistory(p.id).then(setHistory);
+  });
 
   useEffect(() => {
-    getPlayerByUserId(user?.id).then(p => {
-      if (p) getPlayerMatchHistory(p.id).then(setHistory);
-    });
+    load();
   }, []);
 
   const renderMatch = ({ item }) => (
@@ -57,6 +60,12 @@ const MatchHistoryScreen = ({ navigation }) => {
     </View>
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -68,6 +77,8 @@ const MatchHistoryScreen = ({ navigation }) => {
         keyExtractor={i => String(i.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: 30 }}
         ListEmptyComponent={<Text style={styles.empty}>No match history yet</Text>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </LinearGradient>
   );

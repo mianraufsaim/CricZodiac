@@ -8,7 +8,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
-  Modal, TextInput, Animated,
+  Modal, TextInput, Animated, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -158,6 +158,7 @@ const ManageUsersScreen = ({ navigation }) => {
 
   const [users,         setUsers]         = useState([]);
   const [loading,       setLoading]       = useState(true);
+  const [refreshing,    setRefreshing]    = useState(false);
   const [tab,           setTab]           = useState('all');
   const [statusFilter,  setStatusFilter]  = useState('all');
   const [search,        setSearch]        = useState('');
@@ -304,6 +305,12 @@ const ManageUsersScreen = ({ navigation }) => {
     );
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       {/* Header */}
@@ -406,6 +413,8 @@ const ManageUsersScreen = ({ navigation }) => {
             keyExtractor={i => String(i.id)}
             renderItem={renderUser}
             contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={st.empty}>
                 <Icon name="account-off" size={48} color={COLORS.cardBorder} />

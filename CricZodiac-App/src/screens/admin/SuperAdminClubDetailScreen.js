@@ -3,10 +3,10 @@
 // View + edit club info and manage the club admin user.
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -55,6 +55,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
   const [club, setClub]         = useState(null);
   const [fetching, setFetching] = useState(true);
   const [saving, setSaving]     = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Editable club fields
   const [clubForm, setClubForm] = useState({ club_name: '', country: '', city: '', contact_email: '', status: 'active' });
@@ -165,6 +166,12 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
     setClubForm(f => ({ ...f, status: next }));
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadClub();
+    setRefreshing(false);
+  }, []);
+
   // ── Loading ───────────────────────────────────────────────
   if (fetching) return (
     <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -202,6 +209,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}
       >
 
         {/* ── Stats Row ─────────────────────────────────── */}

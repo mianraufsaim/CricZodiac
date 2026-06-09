@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Image,
+  StyleSheet, ActivityIndicator, Image, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -73,27 +73,34 @@ const PlayerProfileViewScreen = ({ route, navigation }) => {
   const [bowling,  setBowling]  = useState(null);
   const [wktBreak, setWktBreak] = useState(null);
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(useCallback(() => {
-    (async () => {
-      try {
-        const [p, bat, bwl, wb] = await Promise.all([
-          getPlayer(playerId),
-          getFullPlayerStats(playerId),
-          getFullBowlingStats(playerId),
-          getWicketBreakdown(playerId),
-        ]);
-        setPlayer(p);
-        setBatting(bat);
-        setBowling(bwl);
-        setWktBreak(wb);
-      } catch (e) {
-        console.error('PlayerProfileViewScreen:', e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [playerId]));
+  const load = useCallback(async () => {
+    try {
+      const [p, bat, bwl, wb] = await Promise.all([
+        getPlayer(playerId),
+        getFullPlayerStats(playerId),
+        getFullBowlingStats(playerId),
+        getWicketBreakdown(playerId),
+      ]);
+      setPlayer(p);
+      setBatting(bat);
+      setBowling(bwl);
+      setWktBreak(wb);
+    } catch (e) {
+      console.error('PlayerProfileViewScreen:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [playerId]);
+
+  useFocusEffect(useCallback(() => { load(); }, [playerId]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
 
   // Compute star ratings (0–5)
   const battingAvg  = batting?.outs > 0 ? batting.total_runs / batting.outs : (batting?.total_runs || 0);
@@ -132,7 +139,7 @@ const PlayerProfileViewScreen = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={st.scroll}>
+      <ScrollView contentContainerStyle={st.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
         {/* Identity Card */}
         <View style={st.identityCard}>
           {player?.profile_pic

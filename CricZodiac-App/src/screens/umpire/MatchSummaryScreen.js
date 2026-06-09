@@ -3,10 +3,10 @@
 // All data fetched live from MySQL via API — no local DB reads.
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -95,6 +95,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const [matchObj, setMatchObj] = useState(matchParam || null);
   const [loadErr,  setLoadErr]  = useState(null);
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -490,6 +491,12 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
   const getTeamScore = (inn) => `${inn?.total_runs ?? 0}/${inn?.total_wickets ?? 0}`;
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   // ── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
@@ -588,7 +595,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}
+      >
 
         {/* ── Match Identity ── */}
         <View style={styles.matchIdentity}>

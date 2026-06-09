@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,6 +31,7 @@ const AllMatchesScreen = ({ navigation }) => {
 
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadMatches = async () => {
     setLoading(true);
@@ -112,6 +113,12 @@ const AllMatchesScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadMatches();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -132,6 +139,8 @@ const AllMatchesScreen = ({ navigation }) => {
             keyExtractor={i => String(i.id)}
             renderItem={renderItem}
             contentContainerStyle={{ padding: 16 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Icon name="cricket" size={48} color={COLORS.cardBorder} />

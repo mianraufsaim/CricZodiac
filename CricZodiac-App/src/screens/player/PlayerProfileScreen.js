@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Image, KeyboardAvoidingView, Platform,
+  ScrollView, Alert, Image, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -78,6 +78,7 @@ const PlayerProfileScreen = ({ navigation }) => {
     profile_pic:  null,
   });
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const load = async () => {
@@ -99,6 +100,12 @@ const PlayerProfileScreen = ({ navigation }) => {
   };
 
   useFocusEffect(useCallback(() => { load(); }, []));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
 
   const handleSave = async () => {
     if (!form.full_name.trim()) { Alert.alert('Name is required'); return; }
@@ -157,6 +164,7 @@ const PlayerProfileScreen = ({ navigation }) => {
           contentContainerStyle={st.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}
         >
           {/* Profile Photo */}
           <TouchableOpacity style={st.photoSection} onPress={pickImage}>

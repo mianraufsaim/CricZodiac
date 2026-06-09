@@ -75,6 +75,9 @@ export const API_ENDPOINTS = {
   SYNC_PUSH:      `${API_BASE_URL}/sync/push.php`,
   SYNC_STATUS:    `${API_BASE_URL}/sync/status.php`,
 
+  // Admin
+  ADMIN_STATS: `${API_BASE_URL}/admin/stats.php`,
+
   // Upload
   UPLOAD_PROFILE: `${API_BASE_URL}/upload/profile-picture.php`,
 };

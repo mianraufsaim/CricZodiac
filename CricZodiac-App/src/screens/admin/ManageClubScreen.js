@@ -2,10 +2,10 @@
 // CricZodiac — Create / Manage Club Screen (Super Admin)
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, ActivityIndicator,
+  StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -22,13 +22,19 @@ const ManageClubScreen = ({ navigation, route }) => {
   const [form, setForm]     = useState({ name: '', country: '', city: '', contact_email: '', logo_url: '', status: 'active' });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
     if (isEdit) {
-      getClub(clubId).then(club => {
+      return getClub(clubId).then(club => {
         if (club) setForm({ name: club.name, country: club.country || '', city: club.city || '', contact_email: club.contact_email || '', logo_url: club.logo_url || '', status: club.status });
       }).finally(() => setFetching(false));
     }
+    return Promise.resolve();
+  };
+
+  useEffect(() => {
+    load();
   }, [clubId]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -72,6 +78,12 @@ const ManageClubScreen = ({ navigation, route }) => {
     </View>
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -82,7 +94,7 @@ const ManageClubScreen = ({ navigation, route }) => {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
         <View style={styles.card}>
           <Field label="CLUB NAME *"     keyName="name"          placeholder="e.g. Karachi Indoor Cricket Club" />
           <Field label="COUNTRY"         keyName="country"        placeholder="e.g. Pakistan" />

@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, Alert, Modal, ScrollView,
+  StyleSheet, Alert, Modal, ScrollView, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,6 +29,7 @@ const SuperAdminDashboard = ({ navigation }) => {
   const [stats, setStats]           = useState({ total: 0, active: 0, suspended: 0, pending: 0 });
   const [adminStats, setAdminStats] = useState({ total: 0, active: 0, blocked: 0, pending: 0 });
   const [isOnline, setIsOnline]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const unsub = NetInfo.addEventListener(state => {
@@ -90,6 +91,12 @@ const SuperAdminDashboard = ({ navigation }) => {
   // ── Helpers ───────────────────────────────────────────────
   const goClubs  = (filter, title) => navigation.navigate('SuperAdminClubList',  { filter, title });
   const goAdmins = (filter, title) => navigation.navigate('SuperAdminAdminList', { filter, title });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, []);
 
   // ── Dropdown overlay ──────────────────────────────────────
   const ClubDropdown = () => (
@@ -182,7 +189,7 @@ const SuperAdminDashboard = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
 
         {/* ── Stats Overview ──────────────────────────────── */}
         <View style={styles.overviewContainer}>

@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Modal, FlatList, Image, TextInput, ActivityIndicator,
+  StyleSheet, Modal, FlatList, Image, TextInput, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -123,6 +123,7 @@ const PlayerCompareScreen = ({ route, navigation }) => {
   const [bwlA,    setBwlA]    = useState(null);
   const [bwlB,    setBwlB]    = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [picker,  setPicker]  = useState(null); // 'A' | 'B' | null
 
   // If navigated from PlayerProfile, preload that player as A
@@ -169,6 +170,17 @@ const PlayerCompareScreen = ({ route, navigation }) => {
     return (bwl.total_runs_conceded / bwl.total_overs).toFixed(1);
   };
 
+  const load = async () => {
+    if (playerA) await selectPlayer('A', playerA);
+    if (playerB) await selectPlayer('B', playerB);
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       {/* Header */}
@@ -180,7 +192,7 @@ const PlayerCompareScreen = ({ route, navigation }) => {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={st.scroll}>
+      <ScrollView contentContainerStyle={st.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
         {/* Player selectors */}
         <View style={st.selectorRow}>
           <AvatarCard player={playerA} side="left"  onPress={() => setPicker('A')} COLORS={COLORS} st={st} />

@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -53,8 +53,9 @@ const SeriesListScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const [series, setSeries]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [series, setSeries]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadSeries = async () => {
     setLoading(true);
@@ -88,6 +89,12 @@ const SeriesListScreen = ({ navigation }) => {
   };
 
   useFocusEffect(useCallback(() => { loadSeries(); }, []));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadSeries();
+    setRefreshing(false);
+  }, []);
 
   const statusColor = (s) => s === 'active' ? COLORS.cyan : s === 'completed' ? COLORS.success : COLORS.gray;
 
@@ -183,6 +190,8 @@ const SeriesListScreen = ({ navigation }) => {
             keyExtractor={i => i.id}
             renderItem={renderItem}
             contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Icon name="trophy-outline" size={64} color={COLORS.cardBorder} />

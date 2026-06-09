@@ -3,9 +3,9 @@
 // Nav: [Z + name + Umpire | 🛡 Club]  ··· [sync · ☀ · logout]
 // ============================================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,6 +31,15 @@ const UmpireDashboard = ({ navigation }) => {
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
   const { user, activeClub, logout } = useAuth();
   const { syncStatus, syncStats }    = useSync();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async () => {};
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
 
   const syncColor =
     syncStatus === 'synced'  ? COLORS.success :
@@ -86,7 +95,7 @@ const UmpireDashboard = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />}>
         <TouchableOpacity style={styles.mainAction} onPress={() => navigation.navigate('MatchSetup')}>
           <LinearGradient colors={[COLORS.royalBlue, COLORS.purple]} style={styles.mainGrad}>
             <Icon name="cricket" size={40} color={COLORS.gold} />
