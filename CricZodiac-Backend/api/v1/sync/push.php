@@ -111,6 +111,8 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
             $d['team_a_wins'] ?? 0, $d['team_b_wins'] ?? 0,
             $d['team_a_id'] ?? null, $d['team_b_id'] ?? null,
         ]);
+        $resolvedId = resolveSeriesId($pdo, $d['id']);
+        if ($resolvedId) recomputeSeriesWins($pdo, $resolvedId);
     } elseif ($action === 'update') {
         $seriesId = resolveSeriesId($pdo, $d['id'] ?? null);
         if ($seriesId) {
@@ -125,6 +127,7 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
                     "UPDATE series SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?"
                 )->execute($params);
             }
+            recomputeSeriesWins($pdo, $seriesId);
         }
     }
     return true;
@@ -311,6 +314,84 @@ function backfillMatchTeams(PDO $pdo, int $matchId): void {
         $teamB['local_id'] ?? null,
         $matchId,
     ]);
+}
+
+// ── Fill series.team_a_id/local/team_b_id/local from the match's teams ──────
+function backfillSeriesTeams(PDO $pdo, int $matchId): void {
+    $st = $pdo->prepare("SELECT series_id FROM matches WHERE id = ? LIMIT 1");
+    $st->execute([$matchId]);
+    $match = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$match || !$match['series_id']) return;
+
+    $seriesId = (int) $match['series_id'];
+
+    $st = $pdo->prepare("
+        SELECT id, local_id, team_label
+        FROM teams
+        WHERE match_id = ? AND team_label IN ('A', 'B')
+        ORDER BY team_label ASC, id ASC
+    ");
+    $st->execute([$matchId]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $teamA = null;
+    $teamB = null;
+    foreach ($rows as $r) {
+        if ($r['team_label'] === 'A' && !$teamA) $teamA = $r;
+        if ($r['team_label'] === 'B' && !$teamB) $teamB = $r;
+    }
+    if (!$teamA && !$teamB) return;
+
+    $pdo->prepare("
+        UPDATE series
+        SET team_a_id    = COALESCE(team_a_id,    ?),
+            team_a_local = COALESCE(team_a_local,  ?),
+            team_b_id    = COALESCE(team_b_id,    ?),
+            team_b_local = COALESCE(team_b_local,  ?),
+            updated_at   = NOW()
+        WHERE id = ?
+    ")->execute([
+        $teamA ? (int) $teamA['id']    : null,
+        $teamA ? $teamA['local_id']    : null,
+        $teamB ? (int) $teamB['id']    : null,
+        $teamB ? $teamB['local_id']    : null,
+        $seriesId,
+    ]);
+}
+
+// ── Recompute series.team_a_wins / team_b_wins from match_results ────────────
+function recomputeSeriesWins(PDO $pdo, int $seriesId): void {
+    $st = $pdo->prepare("SELECT team_a_id, team_b_id FROM series WHERE id = ? LIMIT 1");
+    $st->execute([$seriesId]);
+    $series = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$series || (!$series['team_a_id'] && !$series['team_b_id'])) return;
+
+    $teamAId = $series['team_a_id'] ? (int) $series['team_a_id'] : null;
+    $teamBId = $series['team_b_id'] ? (int) $series['team_b_id'] : null;
+
+    $st = $pdo->prepare("
+        SELECT winner_team_id, COUNT(*) AS wins
+        FROM match_results
+        WHERE series_id = ?
+          AND result_type != 'tie'
+          AND winner_team_id IS NOT NULL
+        GROUP BY winner_team_id
+    ");
+    $st->execute([$seriesId]);
+    $winsRows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+    $teamAWins = 0;
+    $teamBWins = 0;
+    foreach ($winsRows as $row) {
+        $wid = (int) $row['winner_team_id'];
+        if ($teamAId && $wid === $teamAId) $teamAWins = (int) $row['wins'];
+        if ($teamBId && $wid === $teamBId) $teamBWins = (int) $row['wins'];
+    }
+
+    $pdo->prepare("
+        UPDATE series SET team_a_wins = ?, team_b_wins = ?, updated_at = NOW()
+        WHERE id = ?
+    ")->execute([$teamAWins, $teamBWins, $seriesId]);
 }
 
 function backfillMatchDependents(PDO $pdo, int $matchId): void {
@@ -515,6 +596,7 @@ function syncTeam(PDO $pdo, string $action, array $d): bool {
     if ($matchId) {
         backfillMatchDependents($pdo, (int) $matchId);
         backfillMatchTeams($pdo, (int) $matchId);
+        backfillSeriesTeams($pdo, (int) $matchId);
     }
 
     // If both Team A and Team B now exist for this match → set match status = 'toss'
@@ -2037,6 +2119,12 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
             WHERE match_id = ?
         ")->execute([$serverMatchId]);
     }
+
+    // Update series win counts after a match result is saved
+    if ($seriesId) {
+        recomputeSeriesWins($pdo, (int) $seriesId);
+    }
+
     return true;
 }
 

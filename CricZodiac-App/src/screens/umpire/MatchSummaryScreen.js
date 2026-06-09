@@ -557,15 +557,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const displayVenue      = matchObj?.venue || matchParam?.venue || null;
   const currentSeriesId   = matchObj?.series_id || matchParam?.series_id || matchParam?.series_local_id || null;
   const seriesTotalMatches = totalMatchesForSeries(seriesInfo?.format);
-  const winsNeeded = Math.ceil(seriesTotalMatches / 2);
-  const seriesUndecided = Number(seriesInfo?.team_a_wins || 0) < winsNeeded &&
-    Number(seriesInfo?.team_b_wins || 0) < winsNeeded;
   const knownMatchCount = Math.max(seriesMatches.length, Number(seriesInfo?.match_count || 0));
   const canCreateNextSeriesMatch = Boolean(
     currentSeriesId &&
     seriesInfo &&
     seriesInfo.status !== 'completed' &&
-    seriesUndecided &&
     knownMatchCount < seriesTotalMatches
   );
   const nextMatchNumber = Math.max(1, knownMatchCount + 1);
@@ -575,15 +571,20 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.navigate('SeriesList')} style={styles.backBtn}>
+          <Icon name="arrow-left" size={22} color={COLORS.white} />
+        </TouchableOpacity>
         <View style={styles.headerLeft}>
-          <Icon name="trophy" size={20} color={COLORS.gold} />
+          <Icon name="trophy" size={18} color={COLORS.gold} />
           <Text style={styles.headerTitle}>MATCH SUMMARY</Text>
         </View>
-        {result && (
+        {result ? (
           <View style={styles.savedBadge}>
             <Icon name="check-circle" size={14} color={COLORS.success} />
             <Text style={styles.savedText}>Completed</Text>
           </View>
+        ) : (
+          <View style={{ width: 70 }} />
         )}
       </View>
 
@@ -782,10 +783,6 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('SeriesList')}>
-          <Icon name="arrow-left-circle-outline" size={17} color={COLORS.gray} style={{ marginRight: 7 }} />
-          <Text style={styles.homeBtnText}>Return to Dashboard</Text>
-        </TouchableOpacity>
 
       </ScrollView>
     </LinearGradient>
@@ -800,6 +797,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   errBtnText:        { color: COLORS.white, fontWeight: '700' },
 
   header:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 52, paddingHorizontal: 20, marginBottom: 8 },
+  backBtn:           { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
   headerLeft:        { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle:       { color: COLORS.white, fontSize: 16, fontWeight: '900', letterSpacing: 2.5 },
   savedBadge:        { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.success + '22', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: COLORS.success + '55' },
@@ -866,8 +864,6 @@ const getStyles = (COLORS) => StyleSheet.create({
   newSeriesMatchBtn: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: COLORS.cyan + '77', backgroundColor: COLORS.navy + '55', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   newSeriesMatchText:{ color: COLORS.cyan, fontSize: 13, fontWeight: '800' },
 
-  homeBtn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, paddingVertical: 14 },
-  homeBtnText:       { color: COLORS.gray, fontSize: 14 },
 });
 
 export default MatchSummaryScreen;

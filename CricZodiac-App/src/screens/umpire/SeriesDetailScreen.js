@@ -185,8 +185,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const seriesDecided = seriesStats.teamAWins >= winsNeeded || seriesStats.teamBWins >= winsNeeded;
   const canCreateSeriesMatch =
     series?.status === 'active' &&
-    seriesStats.total < seriesLimit &&
-    !seriesDecided;
+    seriesStats.total < seriesLimit;
 
   const load = async () => {
     setLoading(true);
