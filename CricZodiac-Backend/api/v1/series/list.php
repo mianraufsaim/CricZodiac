@@ -42,13 +42,20 @@ $stmt = $pdo->prepare("
         s.created_at,
         s.updated_at,
         COUNT(m.id) AS match_count,
-        SUM(CASE WHEN m.status = 'live' THEN 1 ELSE 0 END) AS live_count,
+        SUM(CASE WHEN m.status IN ('live', 'innings_2') THEN 1 ELSE 0 END) AS live_count,
         SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) AS completed_count
     FROM series s
-    LEFT JOIN matches m ON m.series_id = s.id
+    LEFT JOIN matches m ON m.series_id = s.id OR m.series_local_id = s.local_id
     WHERE s.club_id = ?
     GROUP BY s.id
-    ORDER BY s.created_at DESC, s.id DESC
+    ORDER BY
+        CASE
+            WHEN s.status = 'active' THEN 0
+            WHEN s.status = 'completed' THEN 2
+            ELSE 1
+        END,
+        s.created_at DESC,
+        s.id DESC
 ");
 $stmt->execute([$clubId]);
 $series = $stmt->fetchAll(PDO::FETCH_ASSOC);

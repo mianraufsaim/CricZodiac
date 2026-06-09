@@ -56,19 +56,23 @@ $stmt = $pdo->prepare("
         m.toss_choice,
         m.batting_first,
         m.status,
-        m.result_text,
-        m.winner_team_id,
-        m.player_of_match,
+        COALESCE(m.result_text, mr.result_text) AS result_text,
+        COALESCE(m.winner_team_id, mr.winner_team_id) AS winner_team_id,
+        tw.team_name AS winner_team_name,
+        COALESCE(m.player_of_match, mr.player_of_match) AS player_of_match,
         m.created_at,
         m.updated_at
     FROM matches m
     LEFT JOIN series s ON s.id = m.series_id OR s.local_id = m.series_local_id
+    LEFT JOIN match_results mr ON mr.match_id = m.id OR mr.match_local_id = m.local_id
     LEFT JOIN teams ta ON ta.id = m.team_a_id
         OR ta.local_id = m.team_a_local
         OR ((ta.match_id = m.id OR ta.match_local_id = m.local_id) AND ta.team_label = 'A')
     LEFT JOIN teams tb ON tb.id = m.team_b_id
         OR tb.local_id = m.team_b_local
         OR ((tb.match_id = m.id OR tb.match_local_id = m.local_id) AND tb.team_label = 'B')
+    LEFT JOIN teams tw ON tw.id = COALESCE(m.winner_team_id, mr.winner_team_id)
+        OR tw.local_id = mr.winner_team_local
     WHERE " . implode(' AND ', $where) . "
     ORDER BY m.created_at DESC, m.id DESC
 ");

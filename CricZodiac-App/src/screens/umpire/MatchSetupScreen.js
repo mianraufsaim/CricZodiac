@@ -60,19 +60,30 @@ const DateField = ({ label, value, onPress, styles, COLORS }) => (
 );
 
 // Text field — outside to prevent keyboard-dismiss on re-render
-const Field = ({ label, keyName, placeholder, keyboardType = 'default', form, set, styles, COLORS }) => (
+const Field = ({ label, keyName, placeholder, keyboardType = 'default', editable = true, form, set, styles, COLORS }) => (
   <View style={styles.fieldGroup}>
     <Text style={styles.label}>{label}</Text>
     <TextInput
-      style={styles.input}
+      style={[styles.input, !editable && styles.inputReadonly]}
       placeholder={placeholder}
       placeholderTextColor={COLORS.gray}
       value={form[keyName]}
       onChangeText={v => set(keyName, v)}
       keyboardType={keyboardType}
+      editable={editable}
+      selectTextOnFocus={editable}
     />
   </View>
 );
+
+const firstText = (...values) => {
+  for (const value of values) {
+    if (value !== null && value !== undefined && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+  return '';
+};
 
 const toDateOnly = (value) => {
   if (!value) return new Date().toISOString().split('T')[0];
@@ -112,14 +123,17 @@ const MatchSetupScreen = ({ navigation, route }) => {
     seriesName = null,
     matchNumber = 1,
     match: existingMatch = null,
+    lockedTeamNames = null,
   } = route.params || {};
   const isEditingSetup = !!existingMatch?.id;
   const seriesId = routeSeriesId || existingMatch?.series_id || null;
+  const numericMatchNumber = Number(matchNumber) || 1;
+  const teamNamesLocked = numericMatchNumber > 1 && !!(lockedTeamNames?.teamAName || lockedTeamNames?.teamBName);
   const [form, setForm] = useState(() => {
     const overs = toNumber(existingMatch?.overs, 7);
     const minPlayers = minPlayersForOvers(overs);
     return {
-      title:              existingMatch?.title || (seriesId ? `Match ${matchNumber}` : ''),
+      title:              existingMatch?.title || (seriesId ? `Match ${numericMatchNumber}` : ''),
       venue:              existingMatch?.venue || '',
       match_date:         toDateOnly(existingMatch?.match_date),
       overs,
@@ -127,8 +141,8 @@ const MatchSetupScreen = ({ navigation, route }) => {
       max_overs_per_bowler: Math.min(toNumber(existingMatch?.max_overs_per_bowler, 0), overs),
       wide_value:         toNumber(existingMatch?.wide_value, 1),
       no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
-      team_a_name:        teamNameFromMatch(existingMatch, 'A'),
-      team_b_name:        teamNameFromMatch(existingMatch, 'B'),
+      team_a_name:        firstText(lockedTeamNames?.teamAName, teamNameFromMatch(existingMatch, 'A')),
+      team_b_name:        firstText(lockedTeamNames?.teamBName, teamNameFromMatch(existingMatch, 'B')),
     };
   });
   const [loading, setLoading]       = useState(false);
@@ -137,7 +151,17 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const playerMinimum = minPlayersForOvers(form.overs);
 
   useEffect(() => {
-    if (!isEditingSetup || (form.team_a_name && form.team_b_name)) return;
+    if (!teamNamesLocked) return;
+
+    setForm(f => ({
+      ...f,
+      team_a_name: firstText(lockedTeamNames?.teamAName, f.team_a_name),
+      team_b_name: firstText(lockedTeamNames?.teamBName, f.team_b_name),
+    }));
+  }, [lockedTeamNames?.teamAName, lockedTeamNames?.teamBName, teamNamesLocked]);
+
+  useEffect(() => {
+    if (teamNamesLocked || !isEditingSetup || (form.team_a_name && form.team_b_name)) return;
 
     let mounted = true;
     const loadSavedTeamNames = async () => {
@@ -159,7 +183,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
 
     loadSavedTeamNames();
     return () => { mounted = false; };
-  }, [existingMatch?.id, form.team_a_name, form.team_b_name, isEditingSetup]);
+  }, [existingMatch?.id, form.team_a_name, form.team_b_name, isEditingSetup, teamNamesLocked]);
 
   const setOvers = (overs) => {
     setForm(f => ({
@@ -214,7 +238,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
         });
       }
 
-      navigation.navigate('TeamSelection', { matchId, form: matchData, matchNumber });
+      navigation.navigate('TeamSelection', { matchId, form: matchData, matchNumber: numericMatchNumber });
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {
@@ -231,7 +255,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
         <View style={{ alignItems: 'center' }}>
           <Text style={styles.headerTitle}>{isEditingSetup ? 'Finish Match Setup' : 'Match Setup'}</Text>
           {seriesName
-            ? <Text style={styles.seriesTag}>📋 {seriesName}  ·  Match #{matchNumber}</Text>
+            ? <Text style={styles.seriesTag}>📋 {seriesName}  ·  Match #{numericMatchNumber}</Text>
             : null}
         </View>
         <View style={{ width: 24 }} />
@@ -292,8 +316,26 @@ const MatchSetupScreen = ({ navigation, route }) => {
             <View style={styles.sectionLine} />
           </View>
 
-          <Field label="TEAM A NAME *" keyName="team_a_name" placeholder="e.g. Zodiac XI"    form={form} set={set} styles={styles} COLORS={COLORS} />
-          <Field label="TEAM B NAME *" keyName="team_b_name" placeholder="e.g. Challengers" form={form} set={set} styles={styles} COLORS={COLORS} />
+          <Field
+            label="TEAM A NAME *"
+            keyName="team_a_name"
+            placeholder="e.g. Zodiac XI"
+            editable={!teamNamesLocked}
+            form={form}
+            set={set}
+            styles={styles}
+            COLORS={COLORS}
+          />
+          <Field
+            label="TEAM B NAME *"
+            keyName="team_b_name"
+            placeholder="e.g. Challengers"
+            editable={!teamNamesLocked}
+            form={form}
+            set={set}
+            styles={styles}
+            COLORS={COLORS}
+          />
 
           {/* Match Settings */}
           <View style={styles.sectionRow}>
@@ -370,6 +412,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   fieldGroup:       { marginBottom: 16 },
   label:            { color: COLORS.gray, fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 1 },
   input:            { backgroundColor: COLORS.darkGray, borderRadius: 10, paddingHorizontal: 14, height: 48, color: COLORS.white, fontSize: 15 },
+  inputReadonly:    { borderWidth: 1, borderColor: COLORS.gold + '55', color: COLORS.gold },
   dateRow:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.darkGray, borderRadius: 10, paddingHorizontal: 14, height: 48, borderWidth: 1, borderColor: COLORS.cardBorder },
   dateTxt:          { flex: 1, color: COLORS.white, fontSize: 15 },
 

@@ -30,6 +30,25 @@ const normalizeSeriesRow = (row) => ({
   team_b_wins: Number(row.team_b_wins || 0),
 });
 
+const seriesStatusRank = (status) => {
+  const normalizedStatus = String(status || '').toLowerCase();
+  if (normalizedStatus === 'active') return 0;
+  if (normalizedStatus === 'completed') return 2;
+  return 1;
+};
+
+const sortSeriesRows = (rows) =>
+  [...rows].sort((a, b) => {
+    const statusDiff = seriesStatusRank(a.status) - seriesStatusRank(b.status);
+    if (statusDiff !== 0) return statusDiff;
+
+    const createdA = new Date(a.created_at || a.start_date || 0).getTime() || 0;
+    const createdB = new Date(b.created_at || b.start_date || 0).getTime() || 0;
+    if (createdA !== createdB) return createdB - createdA;
+
+    return String(b.id).localeCompare(String(a.id));
+  });
+
 const SeriesListScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -43,7 +62,7 @@ const SeriesListScreen = ({ navigation }) => {
       try {
         const res = await ApiService.get(API_ENDPOINTS.SERIES_LIST);
         const serverSeries = res?.series || res?.data?.series || [];
-        setSeries(serverSeries.map(normalizeSeriesRow));
+        setSeries(sortSeriesRows(serverSeries.map(normalizeSeriesRow)));
 
         try {
           if (serverSeries.length) await upsertSeriesFromServer(serverSeries);
@@ -60,7 +79,7 @@ const SeriesListScreen = ({ navigation }) => {
       }
 
       const rows = await getAllSeries();
-      setSeries(rows);
+      setSeries(sortSeriesRows(rows.map(normalizeSeriesRow)));
     } catch (e) {
       console.error('SeriesListScreen:', e);
     } finally {

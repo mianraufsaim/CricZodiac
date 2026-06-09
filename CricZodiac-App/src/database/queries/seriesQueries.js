@@ -39,12 +39,18 @@ export const getAllSeries = () =>
   queryRows(`
     SELECT s.*,
       COUNT(m.id) AS match_count,
-      SUM(CASE WHEN m.status = 'live' THEN 1 ELSE 0 END) AS live_count,
+      SUM(CASE WHEN m.status IN ('live', 'innings_2') THEN 1 ELSE 0 END) AS live_count,
       SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) AS completed_count
     FROM series s
-    LEFT JOIN matches m ON m.series_id = s.id
+    LEFT JOIN matches m ON m.series_id = s.id OR m.series_id = s.server_id
     GROUP BY s.id
-    ORDER BY s.created_at DESC
+    ORDER BY
+      CASE
+        WHEN s.status = 'active' THEN 0
+        WHEN s.status = 'completed' THEN 2
+        ELSE 1
+      END,
+      s.created_at DESC
   `);
 
 // ── Pull series from server into local SQLite cache ───────
@@ -97,12 +103,15 @@ export const getSeriesMatches = (seriesId) =>
   queryRows(`
     SELECT m.*,
       t1.team_name AS team_a_name,
-      t2.team_name AS team_b_name
+      t2.team_name AS team_b_name,
+      tw.team_name AS winner_team_name
     FROM matches m
     LEFT JOIN teams t1 ON m.team_a_id = t1.id
       OR (t1.match_id = m.id AND t1.team_label = 'A')
     LEFT JOIN teams t2 ON m.team_b_id = t2.id
       OR (t2.match_id = m.id AND t2.team_label = 'B')
+    LEFT JOIN teams tw ON m.winner_team_id = tw.id
+      OR CAST(m.winner_team_id AS TEXT) = CAST(tw.server_id AS TEXT)
     WHERE m.series_id = ?
     ORDER BY m.created_at DESC
   `, [seriesId]);

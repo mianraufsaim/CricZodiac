@@ -19,6 +19,15 @@ import { API_ENDPOINTS } from '../../config/api';
 
 const FORMAT_LABELS = { bestOf1: 'Best of 1', bestOf3: 'Best of 3', bestOf5: 'Best of 5' };
 
+const firstText = (...values) => {
+  for (const value of values) {
+    if (value !== null && value !== undefined && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+  return '';
+};
+
 const normalizeSeriesRow = (row) => ({
   ...row,
   id: row.local_id || String(row.id),
@@ -46,12 +55,68 @@ const normalizeMatchRow = (row) => ({
   max_overs_per_bowler: Number(row.max_overs_per_bowler || 0),
   wide_value: Number(row.wide_value || 1),
   no_ball_value: Number(row.no_ball_value || 1),
+  winner_team_id: row.winner_team_local || (row.winner_team_id != null ? String(row.winner_team_id) : null),
 });
 
 const winsNeededFor = (format) => {
   if (format === 'bestOf5') return 3;
   if (format === 'bestOf3') return 2;
   return 1;
+};
+
+const maxMatchesFor = (format) => {
+  if (format === 'bestOf5') return 5;
+  if (format === 'bestOf3') return 3;
+  return 1;
+};
+
+const matchNumberFromTitle = (title) => {
+  const match = String(title || '').match(/\bmatch\s+(\d+)\b/i);
+  return match ? Number(match[1]) : null;
+};
+
+const getTeamName = (row, side) => {
+  const key = side === 'A' ? 'team_a' : 'team_b';
+  return firstText(
+    row?.[`${key}_name`],
+    row?.[`${key}_team_name`],
+    row?.[key]?.team_name,
+    row?.[key]?.name
+  );
+};
+
+const orderMatchesAsc = (rows) =>
+  [...(rows || [])].sort((a, b) => {
+    const titleA = matchNumberFromTitle(a.title);
+    const titleB = matchNumberFromTitle(b.title);
+    if (titleA && titleB && titleA !== titleB) return titleA - titleB;
+
+    const createdA = new Date(a.created_at || 0).getTime() || 0;
+    const createdB = new Date(b.created_at || 0).getTime() || 0;
+    if (createdA !== createdB) return createdA - createdB;
+
+    return String(a.id).localeCompare(String(b.id));
+  });
+
+const resultWinnerName = (match) => firstText(match?.winner_team_name, match?.winner_team?.team_name);
+
+const normalizeName = (value) => firstText(value).toLowerCase();
+
+const completedResultLine = (match) => {
+  if (match.status !== 'completed') return '';
+  const winnerName = resultWinnerName(match);
+  const resultText = firstText(match.result_text);
+
+  if (!winnerName) return resultText;
+  if (!resultText) return `${winnerName} won`;
+
+  const normalizedWinner = normalizeName(winnerName);
+  const normalizedResult = normalizeName(resultText);
+  const compactResult = normalizedResult.startsWith(normalizedWinner)
+    ? resultText.slice(winnerName.length).trim()
+    : resultText;
+
+  return compactResult ? `${winnerName} · ${compactResult}` : winnerName;
 };
 
 const SeriesDetailScreen = ({ navigation, route }) => {
@@ -63,19 +128,80 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const orderedMatches = useMemo(() => orderMatchesAsc(matches), [matches]);
+  const matchOrdinals = useMemo(() => {
+    const ordinals = {};
+    orderedMatches.forEach((item, index) => {
+      ordinals[item.id] = index + 1;
+    });
+    return ordinals;
+  }, [orderedMatches]);
+  const seriesTeamNames = useMemo(() => {
+    const firstMatchWithNames = orderedMatches.find(item => getTeamName(item, 'A') || getTeamName(item, 'B'));
+    return {
+      teamAName: firstText(series?.team_a_name, getTeamName(firstMatchWithNames, 'A'), 'Team A'),
+      teamBName: firstText(series?.team_b_name, getTeamName(firstMatchWithNames, 'B'), 'Team B'),
+    };
+  }, [orderedMatches, series?.team_a_name, series?.team_b_name]);
+  const knownSeriesTeams = seriesTeamNames.teamAName !== 'Team A' && seriesTeamNames.teamBName !== 'Team B';
+  const seriesStats = useMemo(() => {
+    let derivedTeamAWins = 0;
+    let derivedTeamBWins = 0;
+    const teamAName = normalizeName(seriesTeamNames.teamAName);
+    const teamBName = normalizeName(seriesTeamNames.teamBName);
+
+    for (const item of matches) {
+      if (item.status !== 'completed') continue;
+
+      const winnerName = normalizeName(resultWinnerName(item));
+      const resultText = normalizeName(item.result_text);
+      if ((winnerName && winnerName === teamAName) || (!winnerName && resultText.startsWith(teamAName))) {
+        derivedTeamAWins += 1;
+      } else if ((winnerName && winnerName === teamBName) || (!winnerName && resultText.startsWith(teamBName))) {
+        derivedTeamBWins += 1;
+      }
+    }
+
+    const numberValue = (value) => {
+      const next = Number(value);
+      return Number.isFinite(next) ? next : 0;
+    };
+
+    return {
+      total: Math.max(matches.length, numberValue(series?.match_count)),
+      live: Math.max(
+        matches.filter(m => m.status === 'live' || m.status === 'innings_2').length,
+        numberValue(series?.live_count)
+      ),
+      done: Math.max(matches.filter(m => m.status === 'completed').length, numberValue(series?.completed_count)),
+      teamAWins: Math.max(numberValue(series?.team_a_wins), derivedTeamAWins),
+      teamBWins: Math.max(numberValue(series?.team_b_wins), derivedTeamBWins),
+    };
+  }, [matches, series, seriesTeamNames]);
+  const nextMatchNumber = seriesStats.total + 1;
+  const winsNeeded = winsNeededFor(series?.format);
+  const seriesLimit = maxMatchesFor(series?.format);
+  const displaySeriesName = series?.name || seriesName || 'Series';
+  const seriesDecided = seriesStats.teamAWins >= winsNeeded || seriesStats.teamBWins >= winsNeeded;
+  const canCreateSeriesMatch =
+    series?.status === 'active' &&
+    seriesStats.total < seriesLimit &&
+    !seriesDecided;
+
   const load = async () => {
     setLoading(true);
     try {
       try {
         const [seriesRes, matchRes] = await Promise.all([
-          routeSeries ? Promise.resolve(null) : ApiService.get(API_ENDPOINTS.SERIES_LIST),
+          ApiService.get(API_ENDPOINTS.SERIES_LIST),
           ApiService.get(`${API_ENDPOINTS.MATCHES_LIST}?series_id=${encodeURIComponent(seriesId)}`),
         ]);
         const serverSeries = seriesRes?.series || seriesRes?.data?.series || [];
         const serverMatches = matchRes?.matches || matchRes?.data?.matches || [];
-        const resolvedSeries = routeSeries || serverSeries
+        const resolvedSeries = serverSeries
           .map(normalizeSeriesRow)
-          .find(s => s.id === String(seriesId) || s.server_id === String(seriesId));
+          .find(s => s.id === String(seriesId) || s.server_id === String(seriesId)) ||
+          routeSeries;
 
         if (!resolvedSeries) {
           const [localSeries, localMatches] = await Promise.all([
@@ -137,12 +263,14 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   };
 
   const handleMatchPress = async (item, index) => {
+    const matchNumber = matchNumberFromTitle(item.title) || matchOrdinals[item.id] || index + 1;
     if (item.status === MATCH_STATUS?.SETUP || item.status === 'setup') {
       navigation.navigate('MatchSetup', {
         match: item,
         seriesId,
-        seriesName,
-        matchNumber: index + 1,
+        seriesName: displaySeriesName,
+        matchNumber,
+        lockedTeamNames: matchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
       });
     } else if (item.status === 'toss') {
       try {
@@ -180,7 +308,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
             club_id:      item.club_id,
             series_id:    item.series_id,
           },
-          isFirstMatch: index === 0,
+          isFirstMatch: matchNumber === 1,
         });
       } catch (e) {
         Alert.alert('Error', 'Failed to load match teams.');
@@ -196,30 +324,33 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const renderMatch = ({ item, index }) => (
-    <TouchableOpacity
-      style={styles.matchCard}
-      onPress={() => handleMatchPress(item, index)}
-    >
-      <View style={styles.matchNum}>
-        <Text style={styles.matchNumText}>M{index + 1}</Text>
-      </View>
-      <View style={styles.matchBody}>
-        <Text style={styles.matchTitle}>{item.title}</Text>
-        <Text style={styles.matchTeams}>
-          {item.team_a_name || 'TBD'} <Text style={{ color: COLORS.gold }}>vs</Text> {item.team_b_name || 'TBD'}
-        </Text>
-        <View style={styles.matchMeta}>
-          <Text style={styles.metaText}>{item.overs} ov  ·  {item.venue || 'Indoor'}</Text>
+  const renderMatch = ({ item, index }) => {
+    const resultLine = completedResultLine(item);
+    return (
+      <TouchableOpacity
+        style={styles.matchCard}
+        onPress={() => handleMatchPress(item, index)}
+      >
+        <View style={styles.matchNum}>
+          <Icon name="trophy" size={20} color={COLORS.gold} />
         </View>
-      </View>
-      <View style={[styles.statusBadge, { borderColor: statusColor(item.status) }]}>
-        <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
-          {item.status?.toUpperCase() || 'SETUP'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.matchBody}>
+          <Text style={styles.matchTitle}>{item.title}</Text>
+          {resultLine
+            ? <Text style={styles.matchResult} numberOfLines={2}>{resultLine}</Text>
+            : null}
+          <View style={styles.matchMeta}>
+            <Text style={styles.metaText}>{item.overs} ov  ·  {item.venue || 'Indoor'}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, { borderColor: statusColor(item.status) }]}>
+          <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
+            {item.status?.toUpperCase() || 'SETUP'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
@@ -228,7 +359,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{seriesName || 'Series'}</Text>
+        <Text style={styles.title} numberOfLines={1}>{displaySeriesName}</Text>
         {series?.status === 'active'
           ? <TouchableOpacity onPress={handleClose}>
               <Icon name="close-circle-outline" size={24} color={COLORS.gray} />
@@ -250,9 +381,9 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                 <View style={styles.seriesInfo}>
                   <View style={styles.statsRow}>
                     {[
-                      { label: 'Total', value: matches.length, icon: 'cricket' },
-                      { label: 'Live',  value: matches.filter(m => m.status === 'live').length, icon: 'circle', color: COLORS.cyan },
-                      { label: 'Done',  value: matches.filter(m => m.status === 'completed').length, icon: 'check-circle', color: COLORS.gold },
+                      { label: 'Total', value: seriesStats.total, icon: 'cricket' },
+                      { label: 'Live',  value: seriesStats.live, icon: 'circle', color: COLORS.cyan },
+                      { label: 'Done',  value: seriesStats.done, icon: 'check-circle', color: COLORS.gold },
                     ].map(s => (
                       <View key={s.label} style={styles.statBox}>
                         <Icon name={s.icon} size={20} color={s.color || COLORS.white} />
@@ -271,25 +402,26 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                       <Text style={styles.bestOfTitle}>{FORMAT_LABELS[series.format] || series.format}</Text>
                       <View style={styles.winsRow}>
                         <View style={styles.winsBox}>
-                          <Text style={styles.winsNum}>{series.team_a_wins || 0}</Text>
-                          <Text style={styles.winsLabel}>Team A Wins</Text>
+                          <Text style={styles.winsNum}>{seriesStats.teamAWins}</Text>
+                          <Text style={styles.winsLabel} numberOfLines={1}>{seriesTeamNames.teamAName}</Text>
                         </View>
-                        <Text style={styles.winsNeed}>Need {winsNeededFor(series.format)} to win</Text>
+                        <Text style={styles.winsNeed}>Need {winsNeeded} to win</Text>
                         <View style={styles.winsBox}>
-                          <Text style={styles.winsNum}>{series.team_b_wins || 0}</Text>
-                          <Text style={styles.winsLabel}>Team B Wins</Text>
+                          <Text style={styles.winsNum}>{seriesStats.teamBWins}</Text>
+                          <Text style={styles.winsLabel} numberOfLines={1}>{seriesTeamNames.teamBName}</Text>
                         </View>
                       </View>
                     </View>
                   )}
 
-                  {series.status === 'active' && (
+                  {canCreateSeriesMatch && (
                     <TouchableOpacity
                       style={styles.newMatchBtn}
                       onPress={() => navigation.navigate('MatchSetup', {
                         seriesId,
-                        seriesName,
-                        matchNumber: matches.length + 1,
+                        seriesName: displaySeriesName,
+                        matchNumber: nextMatchNumber,
+                        lockedTeamNames: nextMatchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
                       })}
                     >
                       <LinearGradient colors={[COLORS.royalBlue, COLORS.purple]} style={styles.newMatchInner}>
@@ -329,11 +461,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   newMatchText:  { color: COLORS.white, fontWeight: '700', fontSize: 14 },
   sectionLabel:  { color: COLORS.gold, fontSize: 11, fontWeight: '700', letterSpacing: 3, marginBottom: 10 },
   matchCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
-  matchNum:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  matchNumText:  { color: COLORS.white, fontWeight: '700', fontSize: 12 },
+  matchNum:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.darkGray, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: COLORS.gold + '66' },
   matchBody:     { flex: 1 },
   matchTitle:    { color: COLORS.white, fontWeight: '700', fontSize: 14, marginBottom: 2 },
-  matchTeams:    { color: COLORS.gray, fontSize: 12, marginBottom: 2 },
+  matchResult:   { color: COLORS.gray, fontSize: 12, marginBottom: 2, lineHeight: 17 },
   matchMeta:     {},
   metaText:      { color: COLORS.gray, fontSize: 11 },
   statusBadge:   { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
@@ -345,7 +476,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   winsRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   winsBox:       { alignItems: 'center', flex: 1 },
   winsNum:       { color: COLORS.white, fontWeight: '900', fontSize: 28 },
-  winsLabel:     { color: COLORS.gray, fontSize: 10, marginTop: 2 },
+  winsLabel:     { color: COLORS.gray, fontSize: 10, marginTop: 2, maxWidth: 96 },
   winsNeed:      { color: COLORS.gray, fontSize: 11, textAlign: 'center', flex: 2 },
 });
 
