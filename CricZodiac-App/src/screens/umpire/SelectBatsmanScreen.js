@@ -148,12 +148,14 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   const handleConfirm = () => {
     if (mode === 'new_batsman') {
       if (!striker) { Alert.alert('Select a batsman'); return; }
+      // Preserve the original selectionType so LiveScoring knows whether to update
+      // striker or non-striker (e.g. 'new_non_striker' for run-out of non-striker)
       navigation.navigate({
         name: returnScreen,
         params: {
           batsmanSelection: {
             requestId: requestId || uuid.v4(),
-            type: 'new_batsman',
+            type: selectionType || 'new_batsman',   // ← was always 'new_batsman', now preserves type
             striker,
           },
         },

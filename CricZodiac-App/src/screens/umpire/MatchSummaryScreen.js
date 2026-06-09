@@ -14,45 +14,54 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { match: matchParam } = route.params;
+  const { match: matchParam, inningsId } = route.params || {};
   const [match, setMatch]           = useState(null);
   const [innings, setInnings]       = useState([]);
   const [teams, setTeams]           = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
   const [potm, setPotm]             = useState(null);
   const [saved, setSaved]           = useState(false);
+  const [loadErr, setLoadErr]       = useState(null);
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    const [m, inns, tms, players] = await Promise.all([
-      getMatch(matchParam.id),
-      getMatchInnings(matchParam.id),
-      getMatchTeams(matchParam.id),
-      getAllPlayers(),
-    ]);
-    setMatch(m);
-    setInnings(inns);
-    setTeams(tms);
-    setAllPlayers(players);
+    try {
+      const matchId = matchParam?.id;
+      if (!matchId) { setLoadErr('Match data missing — please go back and try again.'); return; }
+      const [m, inns, tms, players] = await Promise.all([
+        getMatch(matchId),
+        getMatchInnings(matchId),
+        getMatchTeams(matchId),
+        getAllPlayers(),
+      ]);
+      setMatch(m || matchParam);   // fall back to passed param if DB returns null
+      setInnings(inns || []);
+      setTeams(tms || []);
+      setAllPlayers(players || []);
+    } catch (err) {
+      setLoadErr(err.message);
+    }
   };
 
   const getTeamScore = (inningsItem) =>
     `${inningsItem.total_runs}/${inningsItem.total_wickets}`;
 
   const determineWinner = () => {
-    if (innings.length < 2) return null;
+    if (innings.length < 2 || teams.length < 2) return null;
     // Sort by innings_number to ensure inn1=1st innings, inn2=2nd innings
     const sorted = [...innings].sort((a, b) => a.innings_number - b.innings_number);
     const [inn1, inn2] = sorted;
-    const team1 = teams.find(t => t.id === inn1.batting_team_id);
-    const team2 = teams.find(t => t.id === inn2.batting_team_id);
-    if (inn1.total_runs > inn2.total_runs) {
-      // Team batting 1st defended successfully — won by X runs
-      return { winner: team1, loser: team2, margin: `${inn1.total_runs - inn2.total_runs} runs` };
-    } else if (inn2.total_runs > inn1.total_runs) {
-      // Team batting 2nd chased — won by wickets remaining
-      const wktsLeft = (matchParam.players_per_team - 1) - (inn2.total_wickets || 0);
+    if (!inn1 || !inn2) return null;
+    const team1 = teams.find(t => t.id === inn1.batting_team_id) || { team_name: 'Team A', id: inn1.batting_team_id };
+    const team2 = teams.find(t => t.id === inn2.batting_team_id) || { team_name: 'Team B', id: inn2.batting_team_id };
+    const r1 = inn1.total_runs || 0;
+    const r2 = inn2.total_runs || 0;
+    if (r1 > r2) {
+      return { winner: team1, loser: team2, margin: `${r1 - r2} run${r1 - r2 !== 1 ? 's' : ''}` };
+    } else if (r2 > r1) {
+      const ppt     = match?.players_per_team || matchParam?.players_per_team || 6;
+      const wktsLeft = Math.max(0, (ppt - 1) - (inn2.total_wickets || 0));
       return { winner: team2, loser: team1, margin: `${wktsLeft} wicket${wktsLeft !== 1 ? 's' : ''}` };
     }
     return { winner: null, loser: null, margin: 'TIE' };
@@ -82,6 +91,18 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       Alert.alert('Error', err.message);
     }
   };
+
+  if (loadErr) {
+    return (
+      <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Icon name="alert-circle-outline" size={48} color={COLORS.danger} />
+        <Text style={{ color: COLORS.white, fontSize: 16, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>{loadErr}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('SeriesList')} style={{ marginTop: 24, backgroundColor: COLORS.royalBlue, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+          <Text style={{ color: COLORS.white, fontWeight: '700' }}>Go to Series</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
 
   const winner = determineWinner();
 
@@ -171,7 +192,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
         <TouchableOpacity
           style={styles.homeBtn}
-          onPress={() => navigation.navigate(navigation.canGoBack() ? 'UmpireDashboard' : 'Home')}
+          onPress={() => navigation.navigate('SeriesList')}
         >
           <Text style={styles.homeBtnText}>Return to Dashboard</Text>
         </TouchableOpacity>

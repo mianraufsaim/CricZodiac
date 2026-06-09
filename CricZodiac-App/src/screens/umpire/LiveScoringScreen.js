@@ -1146,6 +1146,23 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     if (!inn) return;
 
+    // ── Guard: batsmen must be set before we touch overs ──────────────────
+    if (!str || !ns) {
+      // Determine which end is missing and open SelectBatsman directly
+      const selType = !str && !ns ? 'opening_pair' : !str ? 'new_batsman' : 'new_non_striker';
+      navigation.navigate('SelectBatsman', {
+        inningsId:           inn.id,
+        team:                battingTeam,
+        requestId:           uuid.v4(),
+        returnScreen:        'LiveScoring',
+        selectionType:       selType,
+        mode:                selType !== 'opening_pair' ? 'new_batsman' : undefined,
+        existingStrikerId:   str?.id,
+        existingNonStrikerId: ns?.id,
+      });
+      return;
+    }
+
     // ensureOver may reset legalRef/overNumRef — read AFTER
     const over = await ensureOver();
     if (!over) return;
@@ -1154,11 +1171,6 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const bwl   = bowlerRef.current;
     const legal = legalRef.current;
     const ovNum = overNumRef.current;
-
-    if (!str || !ns) {
-      Alert.alert('Select Batsmen', 'Please select both batsmen first.');
-      return;
-    }
     if (!bwl) {
       Alert.alert('Select Bowler', 'Please select a bowler first.');
       return;
@@ -1618,8 +1630,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
   };
 
   const handleEndMatch = () => {
+    // Dismiss modal first; delay replace so the modal can fully unmount
+    // before React Navigation replaces the screen — avoids timing crashes.
     setShowInningsComplete(false);
-    navigation.replace('MatchSummary', { match, inningsId: innings?.id });
+    const snapMatch   = match;
+    const snapInnings = innings;
+    setTimeout(() => {
+      navigation.replace('MatchSummary', { match: snapMatch, inningsId: snapInnings?.id });
+    }, 400);
   };
 
 
