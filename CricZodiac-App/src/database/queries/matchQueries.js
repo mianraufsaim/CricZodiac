@@ -493,6 +493,9 @@ export const enqueueInningsSync = async (inningsRow, match) => {
         bowling_team_id: inningsRow.bowling_team_id,
         total_runs:      inningsRow.total_runs      || 0,
         total_wickets:   inningsRow.total_wickets   || 0,
+        total_overs:     inningsRow.total_overs     || 0,
+        extras:          inningsRow.extras          || 0,
+        is_completed:    inningsRow.is_completed ? 1 : 0,
       }),
       SYNC_STATUS.PENDING,
     ]
@@ -500,11 +503,41 @@ export const enqueueInningsSync = async (inningsRow, match) => {
 };
 
 export const updateInnings = async (id, data) => {
+  const keys = Object.keys(data || {});
+  if (!id || keys.length === 0) return;
+
+  const current = await queryFirstRow('SELECT * FROM innings WHERE id = ?', [id]);
+  if (!current) return;
+
+  const next = { ...current, ...data, id };
+  const matchRow = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [next.match_id]);
+  const payload = {
+    id,
+    match_id:        next.match_id,
+    club_id:         matchRow?.club_id || null,
+    series_id:       matchRow?.series_id || null,
+    innings_number:  next.innings_number,
+    batting_team_id: next.batting_team_id,
+    bowling_team_id: next.bowling_team_id,
+    total_runs:      next.total_runs || 0,
+    total_wickets:   next.total_wickets || 0,
+    total_overs:     next.total_overs || 0,
+    extras:          next.extras || 0,
+    is_completed:    next.is_completed ? 1 : 0,
+  };
+
   const fields = Object.keys(data).map(k => `${k} = ?`).join(', ');
-  await executeQuery(
-    `UPDATE innings SET ${fields}, sync_status = ?, updated_at = datetime('now') WHERE id = ?`,
-    [...Object.values(data), SYNC_STATUS.PENDING, id]
-  );
+  await executeTransaction([
+    {
+      sql: `UPDATE innings SET ${fields}, sync_status = ?, updated_at = datetime('now') WHERE id = ?`,
+      params: [...Object.values(data), SYNC_STATUS.PENDING, id],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [uuid.v4(), 'innings', 'update', id, JSON.stringify(payload), SYNC_STATUS.PENDING],
+    },
+  ]);
 };
 
 export const getInnings = (id) =>

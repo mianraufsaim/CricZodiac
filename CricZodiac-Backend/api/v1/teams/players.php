@@ -30,11 +30,23 @@ $teamId = null;
 if (!empty($_GET['team_id'])) {
     $val = trim($_GET['team_id']);
     if ($isUuid($val)) {
-        $st = $pdo->prepare("SELECT id FROM teams WHERE local_id = ? AND club_id = ? LIMIT 1");
-        $st->execute([$val, $clubId]);
+        $st = $pdo->prepare("
+            SELECT id FROM teams
+            WHERE local_id = ?
+              AND (club_id = ? OR club_id IS NULL)
+            ORDER BY CASE WHEN club_id = ? THEN 0 ELSE 1 END
+            LIMIT 1
+        ");
+        $st->execute([$val, $clubId, $clubId]);
     } else {
-        $st = $pdo->prepare("SELECT id FROM teams WHERE id = ? AND club_id = ? LIMIT 1");
-        $st->execute([(int) $val, $clubId]);
+        $st = $pdo->prepare("
+            SELECT id FROM teams
+            WHERE id = ?
+              AND (club_id = ? OR club_id IS NULL)
+            ORDER BY CASE WHEN club_id = ? THEN 0 ELSE 1 END
+            LIMIT 1
+        ");
+        $st->execute([(int) $val, $clubId, $clubId]);
     }
     $row = $st->fetch(PDO::FETCH_ASSOC);
     $teamId = $row['id'] ?? null;
@@ -46,18 +58,26 @@ if (!$teamId && !empty($_GET['match_id']) && !empty($_GET['team_label'])) {
     $teamLabel = strtoupper(trim($_GET['team_label']));
 
     if ($isUuid($matchVal)) {
-        $st = $pdo->prepare("SELECT id FROM matches WHERE local_id = ? AND club_id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, local_id FROM matches WHERE local_id = ? AND club_id = ? LIMIT 1");
         $st->execute([$matchVal, $clubId]);
     } else {
-        $st = $pdo->prepare("SELECT id FROM matches WHERE id = ? AND club_id = ? LIMIT 1");
+        $st = $pdo->prepare("SELECT id, local_id FROM matches WHERE id = ? AND club_id = ? LIMIT 1");
         $st->execute([(int) $matchVal, $clubId]);
     }
     $matchRow = $st->fetch(PDO::FETCH_ASSOC);
     $matchIntId = $matchRow['id'] ?? null;
+    $matchLocalId = $matchRow['local_id'] ?? ($isUuid($matchVal) ? $matchVal : null);
 
     if ($matchIntId) {
-        $st = $pdo->prepare("SELECT id FROM teams WHERE match_id = ? AND team_label = ? AND club_id = ? LIMIT 1");
-        $st->execute([$matchIntId, $teamLabel, $clubId]);
+        $st = $pdo->prepare("
+            SELECT id FROM teams
+            WHERE team_label = ?
+              AND (match_id = ? OR match_local_id = ?)
+              AND (club_id = ? OR club_id IS NULL)
+            ORDER BY CASE WHEN club_id = ? THEN 0 ELSE 1 END
+            LIMIT 1
+        ");
+        $st->execute([$teamLabel, $matchIntId, $matchLocalId, $clubId, $clubId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
         $teamId = $row['id'] ?? null;
     }

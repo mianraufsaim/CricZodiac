@@ -28,16 +28,17 @@ $isUuid = (bool) preg_match(
 
 // Resolve match row using UUID (local_id) or integer id
 if ($isUuid) {
-    $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE local_id = ? LIMIT 1");
+    $st = $pdo->prepare("SELECT id, local_id, club_id FROM matches WHERE local_id = ? LIMIT 1");
     $st->execute([$matchParam]);
 } else {
-    $st = $pdo->prepare("SELECT id, club_id FROM matches WHERE id = ? AND club_id = ? LIMIT 1");
+    $st = $pdo->prepare("SELECT id, local_id, club_id FROM matches WHERE id = ? AND club_id = ? LIMIT 1");
     $st->execute([(int) $matchParam, $clubId]);
 }
 $matchRow = $st->fetch(PDO::FETCH_ASSOC);
 if (!$matchRow) sendError('Match not found.', 404);
 
 $matchId = (int) $matchRow['id'];
+$matchLocalId = $matchRow['local_id'] ?? ($isUuid ? $matchParam : null);
 
 $stmt = $pdo->prepare("
     SELECT
@@ -59,10 +60,11 @@ $stmt = $pdo->prepare("
     LEFT JOIN users   u  ON u.id = p.user_id
     LEFT JOIN players p2 ON p2.id = t.wk_id
     LEFT JOIN users   u2 ON u2.id = p2.user_id
-    WHERE t.match_id = ? AND t.club_id = ?
+    WHERE (t.match_id = ? OR t.match_local_id = ?)
+      AND (t.club_id = ? OR t.club_id IS NULL)
     ORDER BY t.team_label ASC
 ");
-$stmt->execute([$matchId, $clubId]);
+$stmt->execute([$matchId, $matchLocalId, $clubId]);
 $teams = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($teams as &$t) {
