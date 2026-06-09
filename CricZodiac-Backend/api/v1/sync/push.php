@@ -1966,6 +1966,14 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
         $serverPlayerId = resolvePlayerId($pdo, $playerLocal);
     }
 
+    $margin = isset($d['margin']) && is_numeric($d['margin']) ? (int) $d['margin'] : 0;
+    $marginType = $d['margin_type'] ?? null;
+    $resultText = $d['result_text'] ?? null;
+    if ($margin <= 0 && $resultText && preg_match('/\b(?:won|wins)\s+by\s+(\d+)\s+(run|runs|wicket|wickets)\b/i', $resultText, $m)) {
+        $margin = (int) $m[1];
+        $marginType = stripos($m[2], 'run') === 0 ? 'runs' : 'wickets';
+    }
+
     $pdo->prepare("
         INSERT INTO match_results (
             local_id, club_id, series_id, match_id, match_local_id,
@@ -1997,13 +2005,13 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
         $winnerLocal,
         $serverLoserId,
         $d['result_type']   ?? 'win',
-        $d['margin']        ?? 0,
-        $d['margin_type']   ?? null,
+        $margin,
+        $marginType,
         $d['team_a_score']  ?? null,
         $d['team_b_score']  ?? null,
         $serverPlayerId,
         $playerLocal,
-        $d['result_text']   ?? null,
+        $resultText,
     ]);
 
     if ($serverMatchId) {

@@ -821,6 +821,16 @@ export const saveMatchResult = async (resultData) => {
   const serverPlayerId  = resultData.player_of_match_server_id || playerRow?.server_id || numericOrNull(resultData.player_of_match);
   const clubId          = resultData.club_id || matchRow?.club_id || null;
   const seriesId        = resultData.series_id || matchRow?.series_id || null;
+  const resultText      = resultData.result_text || null;
+  const parsedMargin    = resultText?.match(/\b(?:won|wins)\s+by\s+(\d+)\s+(run|runs|wicket|wickets)\b/i);
+  const numericMargin   = Number(resultData.margin);
+  const margin          = Number.isFinite(numericMargin) && numericMargin > 0
+    ? numericMargin
+    : (parsedMargin ? Number(parsedMargin[1]) : 0);
+  const parsedMarginType = parsedMargin?.[2]?.toLowerCase().startsWith('run') ? 'runs' : (parsedMargin ? 'wickets' : null);
+  const marginType      = resultData.result_type === 'tie'
+    ? null
+    : (resultData.margin_type || parsedMarginType);
 
   await executeTransaction([
     {
@@ -836,10 +846,10 @@ export const saveMatchResult = async (resultData) => {
         resultData.match_id,       // local UUID stored locally
         resultData.winner_team_id, // local UUID stored locally
         resultData.loser_team_id,
-        resultData.result_type, resultData.margin, resultData.margin_type,
+        resultData.result_type, margin, marginType,
         resultData.team_a_score, resultData.team_b_score,
         resultData.player_of_match,
-        resultData.result_text, SYNC_STATUS.PENDING,
+        resultText, SYNC_STATUS.PENDING,
       ],
     },
     {
@@ -863,13 +873,13 @@ export const saveMatchResult = async (resultData) => {
           loser_team_id:        serverLoserId,          // INT
           loser_team_local:     resultData.loser_team_id,
           result_type:          resultData.result_type,
-          margin:               resultData.margin,
-          margin_type:          resultData.margin_type,
+          margin,
+          margin_type:          marginType,
           team_a_score:         resultData.team_a_score,
           team_b_score:         resultData.team_b_score,
           player_of_match:      serverPlayerId,         // INT
           player_of_match_local: resultData.player_of_match,
-          result_text:          resultData.result_text,
+          result_text:          resultText,
         }),
         SYNC_STATUS.PENDING,
       ],
@@ -884,7 +894,7 @@ export const saveMatchResult = async (resultData) => {
           id:              serverMatchId,            // INT — server uses this to look up the row
           local_id:        resultData.match_id,      // UUID fallback
           status:          'completed',
-          result_text:     resultData.result_text,
+          result_text:     resultText,
           winner_team_id:  serverWinnerId,           // INT
           player_of_match: serverPlayerId,           // INT
         }),

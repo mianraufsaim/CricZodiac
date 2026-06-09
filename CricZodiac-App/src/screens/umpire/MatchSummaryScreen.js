@@ -31,12 +31,12 @@ const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
   const r2 = inn2.total_runs || 0;
   if (r1 > r2) {
     const m = r1 - r2;
-    return { winner: team1, loser: team2, margin: `${m} run${m !== 1 ? 's' : ''}`, type: 'runs' };
+    return { winner: team1, loser: team2, margin: `${m} run${m !== 1 ? 's' : ''}`, margin_value: m, type: 'runs' };
   } else if (r2 > r1) {
     const w = Math.max(0, (ppt - 1) - (inn2.total_wickets || 0));
-    return { winner: team2, loser: team1, margin: `${w} wicket${w !== 1 ? 's' : ''}`, type: 'wickets' };
+    return { winner: team2, loser: team1, margin: `${w} wicket${w !== 1 ? 's' : ''}`, margin_value: w, type: 'wickets' };
   }
-  return { winner: null, loser: null, margin: 'Tied', type: 'tie' };
+  return { winner: null, loser: null, margin: 'Tied', margin_value: 0, type: 'tie' };
 };
 
 const MatchSummaryScreen = ({ navigation, route }) => {
@@ -127,8 +127,8 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               winner_team_id:  winnerTeam?.local_id || winnerTeam?.id || null,
               loser_team_id:   loserTeam?.local_id  || loserTeam?.id  || null,
               result_type:     winner.type === 'tie' ? 'tie' : 'win',
-              margin:          0,
-              margin_type:     winner.type === 'runs' ? 'runs' : 'wickets',
+              margin:          winner.margin_value ?? 0,
+              margin_type:     winner.type === 'tie' ? null : (winner.type === 'runs' ? 'runs' : 'wickets'),
               team_a_score:    `${inn1.total_runs ?? 0}/${inn1.total_wickets ?? 0}`,
               team_b_score:    inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
               player_of_match: null,
@@ -205,6 +205,13 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       const loserTeam = teams.find(t =>
         t.id === winner.loser?.id || t.local_id === winner.loser?.local_id
       ) || winner.loser;
+      const computedWinner = computeWinner(sorted, teams, ppt) || winner;
+      const savedMargin = Number(result?.margin);
+      const marginValue = Number.isFinite(savedMargin) && savedMargin > 0
+        ? savedMargin
+        : (computedWinner?.margin_value ?? 0);
+      const marginType = result?.margin_type ||
+        (computedWinner?.type === 'runs' ? 'runs' : 'wickets');
 
       await saveMatchResult({
         match_id: matchParam?.id,
@@ -214,8 +221,8 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         loser_team_id: loserTeam?.local_id || loserTeam?.id || null,
         loser_team_server_id: loserTeam?.server_id || (Number.isInteger(Number(loserTeam?.id)) ? Number(loserTeam.id) : null),
         result_type: winner.type === 'tie' ? 'tie' : 'win',
-        margin: 0,
-        margin_type: winner.type === 'runs' ? 'runs' : 'wickets',
+        margin: marginValue,
+        margin_type: marginType,
         team_a_score: `${inn1?.total_runs ?? 0}/${inn1?.total_wickets ?? 0}`,
         team_b_score: inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
         player_of_match: selectedPotm.local_id || selectedPotm.id,
@@ -279,9 +286,24 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       t.id === String(result.loser_team_id)
     );
     if (result.result_type === 'tie') {
-      winner = { type: 'tie', winner: null, loser: null, margin: 'Tied', text: result.result_text };
+      winner = { type: 'tie', winner: null, loser: null, margin: 'Tied', margin_value: 0, text: result.result_text };
     } else if (winnerTeam) {
-      winner = { type: 'win', winner: winnerTeam, loser: loserTeam, text: result.result_text };
+      const computed = sortedInnings.length >= 2 ? computeWinner(sortedInnings, teams, ppt) : null;
+      const resultMargin = Number(result.margin);
+      const resultMarginType = result.margin_type || computed?.type || 'runs';
+      const marginValue = Number.isFinite(resultMargin) && resultMargin > 0
+        ? resultMargin
+        : (computed?.margin_value ?? 0);
+      winner = {
+        type: resultMarginType,
+        winner: winnerTeam,
+        loser: loserTeam,
+        margin: marginValue > 0
+          ? `${marginValue} ${resultMarginType === 'runs' ? `run${marginValue !== 1 ? 's' : ''}` : `wicket${marginValue !== 1 ? 's' : ''}`}`
+          : computed?.margin,
+        margin_value: marginValue,
+        text: result.result_text,
+      };
     }
   }
   if (!winner && sortedInnings.length >= 2) {
