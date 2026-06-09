@@ -10,7 +10,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, ScrollView,
   RefreshControl, Modal, ActivityIndicator,
-  Alert,
   LayoutAnimation, UIManager, Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { truncateLocalDatabase } from '../../database/DatabaseHelper';
 import { clearSyncQueueByStatuses, getSyncHistory } from '../../database/queries/syncQueries';
 import { retrySingleItem, retryAllWithProgress, getSyncStatus } from '../../services/SyncService';
+import { showAlert } from '../../utils/toast';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -418,7 +418,7 @@ const SyncStatusScreen = ({ navigation }) => {
 
   const handleClearSyncQueue = ({ label, statuses, count }) => {
     if (!count) {
-      Alert.alert('Nothing to Clear', `There are no ${label.toLowerCase()} sync items.`);
+      showAlert('Nothing to Clear', `There are no ${label.toLowerCase()} sync items.`);
       return;
     }
 
@@ -427,7 +427,7 @@ const SyncStatusScreen = ({ navigation }) => {
       ? `This will clear ${count} ${label.toLowerCase()} sync queue item${count !== 1 ? 's' : ''}. Pending or failed items will stop retrying, but cricket data already saved in the app will not be deleted.`
       : `This will clear ${count} ${label.toLowerCase()} sync history item${count !== 1 ? 's' : ''}. Cricket data will not be deleted.`;
 
-    Alert.alert(`Clear ${label}?`, message, [
+    showAlert(`Clear ${label}?`, message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Clear',
@@ -438,7 +438,7 @@ const SyncStatusScreen = ({ navigation }) => {
             if (filter && statuses.includes(filter)) setFilter(null);
             await load();
           } catch (error) {
-            Alert.alert('Clear Failed', error.message || 'Could not clear sync items.');
+            showAlert('Clear Failed', error.message || 'Could not clear sync items.');
           }
         },
       },
@@ -446,7 +446,7 @@ const SyncStatusScreen = ({ navigation }) => {
   };
 
   const handleTruncateLocalDb = () => {
-    Alert.alert(
+    showAlert(
       'Truncate Local Database?',
       'This will delete all local SQLite data on this device, including sync queue, matches, teams, players, balls, scorecards, and cached server rows. MySQL server data will not be deleted.',
       [
@@ -460,9 +460,9 @@ const SyncStatusScreen = ({ navigation }) => {
               await truncateLocalDatabase();
               setFilter(null);
               await load();
-              Alert.alert('Local Database Cleared', 'The mobile SQLite database has been truncated.');
+              showAlert('Local Database Cleared', 'The mobile SQLite database has been truncated.');
             } catch (error) {
-              Alert.alert('Truncate Failed', error.message || 'Could not truncate the local database.');
+              showAlert('Truncate Failed', error.message || 'Could not truncate the local database.');
             } finally {
               setTruncatingDb(false);
             }

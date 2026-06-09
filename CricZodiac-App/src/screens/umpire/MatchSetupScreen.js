@@ -5,14 +5,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert,
-} from 'react-native';
+  StyleSheet, ScrollView, } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { createMatch, getMatchTeams, updateMatch } from '../../database/queries/matchQueries';
 import { useAuth } from '../../context/AuthContext';
+import { showAlert } from '../../utils/toast';
 
 // ── Stepper Component ─────────────────────────────────────
 const Stepper = ({ label, value, min, max, onChange, unit = '', COLORS, styles }) => (
@@ -196,15 +196,15 @@ const MatchSetupScreen = ({ navigation, route }) => {
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.team_a_name.trim() || !form.team_b_name.trim()) {
-      Alert.alert('Missing Fields', 'Please fill in match title and both team names.');
+      showAlert('Missing Fields', 'Please fill in match title and both team names.');
       return;
     }
     if (form.players_per_team < playerMinimum) {
-      Alert.alert('Invalid Match Setup', `${form.overs} overs needs at least ${playerMinimum} players per team.`);
+      showAlert('Invalid Match Setup', `${form.overs} overs needs at least ${playerMinimum} players per team.`);
       return;
     }
     if (form.max_overs_per_bowler > 0 && (form.max_overs_per_bowler * form.players_per_team) < form.overs) {
-      Alert.alert(
+      showAlert(
         'Invalid Bowler Limit',
         `${form.overs} overs cannot be completed with ${form.players_per_team} players if each bowler is limited to ${form.max_overs_per_bowler} over. Increase the limit or set it to 0.`
       );
@@ -240,7 +240,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
 
       navigation.navigate('TeamSelection', { matchId, form: matchData, matchNumber: numericMatchNumber });
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setLoading(false);
     }

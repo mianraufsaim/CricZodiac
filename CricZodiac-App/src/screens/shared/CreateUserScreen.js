@@ -8,7 +8,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Modal, Clipboard,
+  ScrollView, Modal, Clipboard,
   Linking, Share, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import DatePicker from 'react-native-date-picker';
@@ -20,6 +20,7 @@ import { PLAYER_TYPES, BATTING_HAND, BOWLING_STYLES } from '../../config/constan
 import { createUserWithPlayer } from '../../database/queries/userQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 // ── Password Generator ────────────────────────────────────
 const generatePassword = () => {
@@ -47,7 +48,7 @@ const CredentialsModal = ({ visible, creds, onClose, COLORS, cr }) => {
 
   const copyToClipboard = () => {
     Clipboard.setString(msg);
-    Alert.alert('Copied!', 'Credentials copied to clipboard.');
+    showAlert('Copied!', 'Credentials copied to clipboard.');
   };
 
   const shareWhatsApp = async () => {
@@ -186,12 +187,12 @@ const CreateUserScreen = ({ navigation, route }) => {
   const regeneratePassword = () => set('password', generatePassword());
 
   const handleCreate = async () => {
-    if (!form.name.trim())               { Alert.alert('Name is required');             return; }
+    if (!form.name.trim())               { showAlert('Name is required');             return; }
     if (!form.email.trim() && !form.phone.trim()) {
-      Alert.alert('Contact Required', 'Enter at least an email or phone number so the user can log in.');
+      showAlert('Contact Required', 'Enter at least an email or phone number so the user can log in.');
       return;
     }
-    if (!form.password.trim())           { Alert.alert('Password is required');          return; }
+    if (!form.password.trim())           { showAlert('Password is required');          return; }
 
     setSaving(true);
     try {
@@ -202,7 +203,7 @@ const CreateUserScreen = ({ navigation, route }) => {
             `${API_ENDPOINTS.USERS_CHECK}?email=${encodeURIComponent(form.email.trim())}`
           );
           if (res.exists) {
-            Alert.alert('Already Exists', 'A user with this email address already exists in your club.');
+            showAlert('Already Exists', 'A user with this email address already exists in your club.');
             setSaving(false);
             return;
           }
@@ -216,7 +217,7 @@ const CreateUserScreen = ({ navigation, route }) => {
       setCreds({ ...form, role });
       setShowCreds(true);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }

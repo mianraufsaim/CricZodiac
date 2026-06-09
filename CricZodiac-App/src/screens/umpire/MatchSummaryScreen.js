@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,6 +24,7 @@ import { getSeriesById, getSeriesMatches } from '../../database/queries/seriesQu
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import { processSyncQueue } from '../../services/SyncService';
+import { showAlert } from '../../utils/toast';
 
 const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
 
@@ -323,7 +324,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     const teamA = teams.find(t => t.team_label === 'A') || teams[0];
     const teamB = teams.find(t => t.team_label === 'B') || teams[1];
     if (!teamA || !teamB) {
-      Alert.alert('Teams not found', 'Could not load both teams for this match.');
+      showAlert('Teams not found', 'Could not load both teams for this match.');
       return;
     }
 
@@ -334,7 +335,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         loadRosterForTeam(teamB),
       ]);
       if (!teamARoster.length || !teamBRoster.length) {
-        Alert.alert('Players not found', 'Could not copy both team player lists for the re-match.');
+        showAlert('Players not found', 'Could not copy both team player lists for the re-match.');
         return;
       }
 
@@ -419,14 +420,14 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         isFirstMatch: false,
       });
     } catch (err) {
-      Alert.alert('Re-match Failed', err.message || 'Could not create the re-match.');
+      showAlert('Re-match Failed', err.message || 'Could not create the re-match.');
     } finally {
       setCreatingRematch(false);
     }
   };
 
   const handleSameTeamRematch = () => {
-    Alert.alert(
+    showAlert(
       'Start Re-match?',
       'Create a new match with the same teams, rules, and players, then go to the toss.',
       [

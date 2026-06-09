@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { getAllPlayers, upsertPlayersFromServer, deactivatePlayer } from '../../
 import { deactivateUser } from '../../database/queries/userQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 const ManagePlayersScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -63,7 +64,7 @@ const ManagePlayersScreen = ({ navigation }) => {
   };
 
   const handleDelete = (player) => {
-    Alert.alert('Delete Player', `Remove ${player.full_name}?`, [
+    showAlert('Delete Player', `Remove ${player.full_name}?`, [
       { text: 'Cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         if (player.user_id || player.user_local_id) {

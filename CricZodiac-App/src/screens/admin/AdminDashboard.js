@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Platform, StatusBar, RefreshControl,
+  ScrollView, Platform, StatusBar, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,6 +18,7 @@ import { useSync } from '../../context/SyncContext';
 import { manualRetrySync } from '../../services/SyncService';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 // ── Stat Card ─────────────────────────────────────────────────
 const StatCard = ({ icon, value, label, color, COLORS, styles }) => (
@@ -82,9 +83,9 @@ const AdminDashboard = ({ navigation }) => {
     syncStatus === 'synced'  ? COLORS.success :
     syncStatus === 'pending' ? COLORS.warning  : COLORS.danger;
 
-  const handleRetrySync = () => Alert.alert('Retry Sync', 'Retry all failed sync items?', [
+  const handleRetrySync = () => showAlert('Retry Sync', 'Retry all failed sync items?', [
     { text: 'Cancel' },
-    { text: 'Retry', onPress: async () => { await manualRetrySync(); Alert.alert('Done', 'Sync retry started.'); } },
+    { text: 'Retry', onPress: async () => { await manualRetrySync(); showAlert('Done', 'Sync retry started.'); } },
   ]);
 
   return (

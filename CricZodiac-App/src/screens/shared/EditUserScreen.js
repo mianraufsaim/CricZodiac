@@ -8,7 +8,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, KeyboardAvoidingView, Platform,
+  ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { PLAYER_TYPES, BATTING_HAND, BOWLING_STYLES } from '../../config/constants';
 import { updateUserWithPlayer } from '../../database/queries/userQueries';
+import { showAlert } from '../../utils/toast';
 
 // ── Helpers ───────────────────────────────────────────────
 const generatePassword = () => {
@@ -89,7 +90,7 @@ const EditUserScreen = ({ navigation, route }) => {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
-    if (!form.name.trim()) { Alert.alert('Name is required'); return; }
+    if (!form.name.trim()) { showAlert('Name is required'); return; }
     setSaving(true);
     try {
       const clubId = activeClub?.server_id || authUser?.club_id || user.club_id || null;
@@ -101,11 +102,11 @@ const EditUserScreen = ({ navigation, route }) => {
         player_local_id:  user.player_local_id || null,
         new_password:     newPassword.trim() || null,
       });
-      Alert.alert('Saved', `${form.name}'s profile has been updated.`, [
+      showAlert('Saved', `${form.name}'s profile has been updated.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }

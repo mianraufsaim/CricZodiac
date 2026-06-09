@@ -7,12 +7,13 @@
 import React, { useState, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Animated, Alert, Dimensions,
+  Animated, Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { saveTossResult } from '../../database/queries/matchQueries';
+import { showAlert } from '../../utils/toast';
 
 const { width } = Dimensions.get('window');
 
@@ -45,7 +46,7 @@ const ChooseBattingMode = ({ match, teamA, teamB, navigation, COLORS, styles }) 
         inningsNumber: 1,
       });
     } catch (err) {
-      Alert.alert('Error', 'Could not save batting order.');
+      showAlert('Error', 'Could not save batting order.');
     } finally {
       setSaving(false);
     }
@@ -160,7 +161,7 @@ const TossScreen = ({ navigation, route }) => {
   const handleCoinPress = () => {
     if (phase !== 'call') return;
     if (!tossCall) {
-      Alert.alert(
+      showAlert(
         'Please make a call first!',
         'Captains, please call Heads or Tails before flipping the coin.',
         [{ text: 'OK' }],
@@ -199,7 +200,7 @@ const TossScreen = ({ navigation, route }) => {
         inningsNumber: 1,
       });
     } catch (err) {
-      Alert.alert('Error', 'Failed to save toss result.');
+      showAlert('Error', 'Failed to save toss result.');
     }
   };
 

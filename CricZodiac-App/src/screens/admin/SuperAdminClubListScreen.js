@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 const FILTER_META = {
   all:       { icon: 'domain',              color: null,         label: 'All Clubs' },
@@ -50,7 +51,7 @@ const SuperAdminClubListScreen = ({ navigation, route }) => {
       const val = await ApiService.get(url);
       setClubs(val.clubs ?? []);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoading(false);
     }

@@ -7,14 +7,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NetInfo from '@react-native-community/netinfo';
 import { useTheme } from '../../context/ThemeContext';
 import { register } from '../../services/AuthService';
+import { showAlert } from '../../utils/toast';
 
 // ── Reusable input ────────────────────────────────────────
 const InputField = ({
@@ -83,15 +83,15 @@ const RegisterScreen = ({ navigation }) => {
     const { name, email, phone, club_name, password, confirm_password } = form;
 
     if (!name.trim() || !email.trim() || !phone.trim() || !club_name.trim() || !password) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields (marked *).');
+      showAlert('Missing Fields', 'Please fill in all required fields (marked *).');
       return;
     }
     if (password !== confirm_password) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      showAlert('Password Mismatch', 'Passwords do not match.');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Weak Password', 'Password must be at least 8 characters.');
+      showAlert('Weak Password', 'Password must be at least 8 characters.');
       return;
     }
 
@@ -109,13 +109,13 @@ const RegisterScreen = ({ navigation }) => {
         role:               'admin',
       });
 
-      Alert.alert(
+      showAlert(
         'Registration Submitted',
         'Your club admin account is pending approval. You will be notified once Zodiac Technologies activates it.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (err) {
-      Alert.alert('Registration Failed', err.message);
+      showAlert('Registration Failed', err.message);
     } finally {
       setLoading(false);
     }

@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, Alert, Modal, ScrollView, RefreshControl,
+  StyleSheet, Modal, ScrollView, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 const SuperAdminDashboard = ({ navigation }) => {
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
@@ -66,19 +67,19 @@ const SuperAdminDashboard = ({ navigation }) => {
         setPending(pendingRes.value.count ?? pendingRes.value.data?.count ?? 0);
       }
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     }
   };
 
   const handleLogout = () =>
-    Alert.alert('Logout', 'Sign out?', [
+    showAlert('Logout', 'Sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: logout },
     ]);
 
   const handleEnterClub = (club) => {
     setDropdown(false);
-    Alert.alert(
+    showAlert(
       `Enter ${club.name}`,
       'You will view this club as its admin. Tap "Exit Club" in the header to return.',
       [

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Image,
+  ScrollView, Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -9,6 +9,7 @@ import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { PLAYER_TYPES, BATTING_HAND, BOWLING_STYLES } from '../../config/constants';
 import { createPlayer, updatePlayer } from '../../database/queries/playerQueries';
+import { showAlert } from '../../utils/toast';
 
 const AddEditPlayerScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -32,7 +33,7 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const pickImage = () => {
-    Alert.alert('Profile Picture', 'Choose source', [
+    showAlert('Profile Picture', 'Choose source', [
       {
         text: 'Camera',
         onPress: () =>
@@ -62,15 +63,15 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
   };
 
   const handleSave = async () => {
-    if (!form.full_name.trim()) { Alert.alert('Name required'); return; }
+    if (!form.full_name.trim()) { showAlert('Name required'); return; }
     setSaving(true);
     try {
       if (isEdit) await updatePlayer(player.id, form);
       else        await createPlayer(form);
-      Alert.alert('Success', `Player ${isEdit ? 'updated' : 'added'} and queued for sync.`);
+      showAlert('Success', `Player ${isEdit ? 'updated' : 'added'} and queued for sync.`);
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setSaving(false);
     }

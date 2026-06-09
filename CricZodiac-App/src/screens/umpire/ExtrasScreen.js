@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert,
-} from 'react-native';
+  View, Text, TouchableOpacity, StyleSheet, } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { EXTRAS_TYPES } from '../../config/constants';
 import { saveBall } from '../../database/queries/matchQueries';
+import { showAlert } from '../../utils/toast';
 
 const ExtrasScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -18,7 +18,7 @@ const ExtrasScreen = ({ navigation, route }) => {
   const [saving, setSaving]     = useState(false);
 
   const handleSave = async () => {
-    if (!selected) { Alert.alert('Select extras type'); return; }
+    if (!selected) { showAlert('Select extras type'); return; }
     setSaving(true);
     try {
       await saveBall({
@@ -34,7 +34,7 @@ const ExtrasScreen = ({ navigation, route }) => {
       if (onSave) onSave();
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }

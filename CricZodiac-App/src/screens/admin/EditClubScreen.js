@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ScrollView, ActivityIndicator,
+  StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 // ── Reusable field ────────────────────────────────────────
 const Field = ({ icon, placeholder, value, onChangeText, keyboardType,
@@ -63,14 +64,14 @@ const EditClubScreen = ({ navigation }) => {
       setContactEmail(c.contact_email ?? '');
       setStatus(c.status          ?? '');
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!clubName.trim()) return Alert.alert('Validation', 'Club name is required.');
+    if (!clubName.trim()) return showAlert('Validation', 'Club name is required.');
 
     setSaving(true);
     try {
@@ -81,11 +82,11 @@ const EditClubScreen = ({ navigation }) => {
         contact_email: contactEmail.trim(),
       });
 
-      Alert.alert('Success', 'Club information updated successfully.', [
+      showAlert('Success', 'Club information updated successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }

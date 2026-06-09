@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, TextInput, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -8,6 +8,7 @@ import { getBattingScorecard } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
+import { showAlert } from '../../utils/toast';
 
 const getPlayerDisplayName = (player) => (
   player?.full_name ||
@@ -147,7 +148,7 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
 
   const handleConfirm = () => {
     if (mode === 'new_batsman') {
-      if (!striker) { Alert.alert('Select a batsman'); return; }
+      if (!striker) { showAlert('Select a batsman'); return; }
       // Preserve the original selectionType so LiveScoring knows whether to update
       // striker or non-striker (e.g. 'new_non_striker' for run-out of non-striker)
       navigation.navigate({
@@ -162,8 +163,8 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
         merge: true,
       });
     } else {
-      if (!striker) { Alert.alert('Selection Incomplete', 'Please select the Striker.'); return; }
-      if (!nonStriker) { Alert.alert('Selection Incomplete', 'Please select the Non-Striker.'); return; }
+      if (!striker) { showAlert('Selection Incomplete', 'Please select the Striker.'); return; }
+      if (!nonStriker) { showAlert('Selection Incomplete', 'Please select the Non-Striker.'); return; }
       navigation.navigate({
         name: returnScreen,
         params: {

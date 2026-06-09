@@ -5,14 +5,14 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert,
-} from 'react-native';
+  StyleSheet, ScrollView, } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { createSeries } from '../../database/queries/seriesQueries';
 import { useAuth } from '../../context/AuthContext';
+import { showAlert } from '../../utils/toast';
 
 const FORMAT_OPTIONS = [
   { id: 'bestOf1', label: 'Best of 1', desc: 'Single match decides winner' },
@@ -84,18 +84,18 @@ const CreateSeriesScreen = ({ navigation }) => {
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
-      Alert.alert('Series name is required');
+      showAlert('Series name is required');
       return;
     }
     if (form.end_date && form.end_date < form.start_date) {
-      Alert.alert('Invalid Dates', 'End date cannot be before start date.');
+      showAlert('Invalid Dates', 'End date cannot be before start date.');
       return;
     }
     setSaving(true);
     try {
       const clubId = activeClub?.server_id || user?.club_id || null;
       const seriesId = await createSeries({ ...form, club_id: clubId }, user?.id);
-      Alert.alert('✅ Series Created', `"${form.name}" is ready. Now add matches to it.`, [
+      showAlert('✅ Series Created', `"${form.name}" is ready. Now add matches to it.`, [
         {
           text: 'Add First Match',
           onPress: () => navigation.replace('MatchSetup', { seriesId, seriesName: form.name }),
@@ -106,7 +106,7 @@ const CreateSeriesScreen = ({ navigation }) => {
         },
       ]);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setSaving(false);
     }

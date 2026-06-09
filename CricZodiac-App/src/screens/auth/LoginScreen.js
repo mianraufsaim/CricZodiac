@@ -5,8 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useTheme } from '../../context/ThemeContext';
 import { login } from '../../services/AuthService';
 import { useAuth } from '../../context/AuthContext';
+import { showAlert } from '../../utils/toast';
 
 const LoginScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -35,7 +35,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
+      showAlert('Missing Fields', 'Please enter your email and password.');
       return;
     }
     setLoading(true);
@@ -43,7 +43,7 @@ const LoginScreen = ({ navigation }) => {
       const user = await login(email.trim(), password);
       setUser(user);
     } catch (err) {
-      Alert.alert('Login Failed', err.message);
+      showAlert('Login Failed', err.message);
     } finally {
       setLoading(false);
     }

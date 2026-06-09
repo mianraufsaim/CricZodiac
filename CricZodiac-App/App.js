@@ -3,13 +3,14 @@
 // ============================================================
 
 import React from 'react';
-import { StatusBar } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { SyncProvider } from './src/context/SyncContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import { toastConfig } from './src/utils/toast';
 
 // Inner component so useTheme() works inside ThemeProvider
 const AppInner = () => {
@@ -24,7 +25,11 @@ const AppInner = () => {
       <AuthProvider>
         <SyncProvider>
           <AppNavigator />
-          <Toast />
+          <Toast
+            config={toastConfig}
+            position="top"
+            topOffset={Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight || 24) + 8}
+          />
         </SyncProvider>
       </AuthProvider>
     </>

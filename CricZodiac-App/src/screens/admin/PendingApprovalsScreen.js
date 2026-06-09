@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, ActivityIndicator,
   Modal, ScrollView, Pressable, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 // ── Detail modal ──────────────────────────────────────────
 const DetailRow = ({ icon, label, value, COLORS, styles }) => (
@@ -54,7 +55,7 @@ const PendingApprovalsScreen = ({ navigation }) => {
       const res = await ApiService.get(API_ENDPOINTS.PENDING_APPROVALS);
       setItems(res.pending ?? res.data?.pending ?? []);
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not load pending requests.');
+      showAlert('Error', e.message || 'Could not load pending requests.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ const PendingApprovalsScreen = ({ navigation }) => {
       ? `Approve ${item.name}?\n\nTheir club "${item.club_name}" will become active.`
       : `Reject ${item.name}?\n\nTheir account and club will be suspended.`;
 
-    Alert.alert(label, msg, [
+    showAlert(label, msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: label,
@@ -83,7 +84,7 @@ const PendingApprovalsScreen = ({ navigation }) => {
       await ApiService.post(API_ENDPOINTS.APPROVE_USER, { user_id: userId, action });
       setItems(prev => prev.filter(i => i.id !== userId));
     } catch (e) {
-      Alert.alert('Error', e.message || 'Action failed.');
+      showAlert('Error', e.message || 'Action failed.');
     } finally {
       setActing(null);
     }

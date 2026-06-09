@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 const FILTER_META = {
   all:     { icon: 'account-group',  color: null,       label: 'All Admins' },
@@ -50,7 +51,7 @@ const SuperAdminAdminListScreen = ({ navigation, route }) => {
       const val = await ApiService.get(url);
       setAdmins(val.admins ?? []);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoading(false);
     }
@@ -60,7 +61,7 @@ const SuperAdminAdminListScreen = ({ navigation, route }) => {
     const actionLabel = action === 'approve' ? 'Approve'
       : action === 'block'   ? 'Block'
       : 'Activate';
-    Alert.alert(
+    showAlert(
       `${actionLabel} Admin`,
       `${actionLabel} ${admin.name}?`,
       [
@@ -76,7 +77,7 @@ const SuperAdminAdminListScreen = ({ navigation, route }) => {
               });
               loadAdmins();
             } catch (e) {
-              Alert.alert('Error', e.message);
+              showAlert('Error', e.message);
             }
           },
         },

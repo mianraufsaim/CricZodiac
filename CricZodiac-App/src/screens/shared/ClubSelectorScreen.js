@@ -6,13 +6,14 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, Alert, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getAllClubs } from '../../database/queries/clubQueries';
+import { showAlert } from '../../utils/toast';
 
 const ClubSelectorScreen = () => {
   const { colors: COLORS } = useTheme();
@@ -54,7 +55,7 @@ const ClubSelectorScreen = () => {
         setClubs([]);
       }
     } catch (e) {
-      Alert.alert('Error', 'Could not load clubs: ' + e.message);
+      showAlert('Error', 'Could not load clubs: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ const ClubSelectorScreen = () => {
       )}
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={() => Alert.alert('Logout', 'Sign out?', [
+      <TouchableOpacity style={styles.logoutBtn} onPress={() => showAlert('Logout', 'Sign out?', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign Out', style: 'destructive', onPress: logout },
       ])}>

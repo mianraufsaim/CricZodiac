@@ -3,13 +3,14 @@
 // ============================================================
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, FlatList } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { WICKET_TYPES } from '../../config/constants';
 import { saveWicket } from '../../database/queries/matchQueries';
 import { getTeamPlayers } from '../../database/queries/matchQueries';
 import uuid from 'react-native-uuid';
+import { showAlert } from '../../utils/toast';
 
 const WicketScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -43,9 +44,9 @@ const WicketScreen = ({ navigation, route }) => {
   }, [bowlingTeam?.id]);
 
   const handleConfirm = async () => {
-    if (!selectedType) { Alert.alert('Select Dismissal', 'Please select how the batsman was dismissed.'); return; }
+    if (!selectedType) { showAlert('Select Dismissal', 'Please select how the batsman was dismissed.'); return; }
     if (['caught', 'run_out', 'stumped'].includes(selectedType) && !fielder) {
-      Alert.alert('Select Fielder', 'Please select the fielder for this dismissal.');
+      showAlert('Select Fielder', 'Please select the fielder for this dismissal.');
       return;
     }
     setSaving(true);
@@ -71,7 +72,7 @@ const WicketScreen = ({ navigation, route }) => {
         merge: true,
       });
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setSaving(false);
     }

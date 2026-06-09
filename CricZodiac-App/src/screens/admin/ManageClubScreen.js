@@ -5,12 +5,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl,
+  StyleSheet, ScrollView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { createClub, updateClub, getClub } from '../../database/queries/clubQueries';
+import { showAlert } from '../../utils/toast';
 
 const ManageClubScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -40,18 +41,18 @@ const ManageClubScreen = ({ navigation, route }) => {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
-    if (!form.name.trim()) { Alert.alert('Required', 'Club name is required.'); return; }
+    if (!form.name.trim()) { showAlert('Required', 'Club name is required.'); return; }
     setLoading(true);
     try {
       if (isEdit) {
         await updateClub(clubId, form);
-        Alert.alert('Updated', `${form.name} has been updated.`, [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        showAlert('Updated', `${form.name} has been updated.`, [{ text: 'OK', onPress: () => navigation.goBack() }]);
       } else {
         await createClub(form);
-        Alert.alert('Created', `${form.name} has been created.`, [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        showAlert('Created', `${form.name} has been created.`, [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoading(false);
     }

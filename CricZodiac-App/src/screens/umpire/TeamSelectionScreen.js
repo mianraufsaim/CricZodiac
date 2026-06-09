@@ -3,7 +3,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert, TextInput, Animated, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated, Modal, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -11,6 +11,7 @@ import { getAllPlayers, upsertPlayersFromServer } from '../../database/queries/p
 import { createTeam, addPlayerToTeam, updateMatch } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 // ── Role Picker Modal ─────────────────────────────────────
 const RolePickerModal = ({ visible, player, captainId, wkId, onAssign, onClear, onCancel, COLORS }) => {
@@ -145,7 +146,7 @@ const TeamSelectionScreen = ({ navigation, route }) => {
       const all = await getAllPlayers();
       setPlayers(all || []);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoadingPlayers(false);
     }
@@ -183,7 +184,7 @@ const TeamSelectionScreen = ({ navigation, route }) => {
   const togglePlayer = (player, team) => {
     if (team === 'A') {
       const inB = teamBPlayers.find(p => p.id === player.id);
-      if (inB) { Alert.alert('Already in Team B', `${player.full_name} is already selected for Team B.`); return; }
+      if (inB) { showAlert('Already in Team B', `${player.full_name} is already selected for Team B.`); return; }
       const inA = teamAPlayers.find(p => p.id === player.id);
       if (inA) {
         setTeamA(prev => prev.filter(p => p.id !== player.id));
@@ -191,14 +192,14 @@ const TeamSelectionScreen = ({ navigation, route }) => {
         if (wkA?.id === player.id) setWkA(null);
       } else {
         if (teamAPlayers.length >= limit) {
-          Alert.alert('Team Full', `${form.team_a_name} already has ${limit}/${limit} players.`);
+          showAlert('Team Full', `${form.team_a_name} already has ${limit}/${limit} players.`);
           return;
         }
         setTeamA(prev => [...prev, player]);
       }
     } else {
       const inA = teamAPlayers.find(p => p.id === player.id);
-      if (inA) { Alert.alert('Already in Team A', `${player.full_name} is already selected for Team A.`); return; }
+      if (inA) { showAlert('Already in Team A', `${player.full_name} is already selected for Team A.`); return; }
       const inB = teamBPlayers.find(p => p.id === player.id);
       if (inB) {
         setTeamB(prev => prev.filter(p => p.id !== player.id));
@@ -206,7 +207,7 @@ const TeamSelectionScreen = ({ navigation, route }) => {
         if (wkB?.id === player.id) setWkB(null);
       } else {
         if (teamBPlayers.length >= limit) {
-          Alert.alert('Team Full', `${form.team_b_name} already has ${limit}/${limit} players.`);
+          showAlert('Team Full', `${form.team_b_name} already has ${limit}/${limit} players.`);
           return;
         }
         setTeamB(prev => [...prev, player]);
@@ -240,15 +241,15 @@ const TeamSelectionScreen = ({ navigation, route }) => {
 
   const handleSaveTeams = async () => {
     if (teamAPlayers.length < limit) {
-      Alert.alert('Incomplete Team', `${form.team_a_name} needs ${limit} players. You have selected ${teamAPlayers.length}/${limit}.`);
+      showAlert('Incomplete Team', `${form.team_a_name} needs ${limit} players. You have selected ${teamAPlayers.length}/${limit}.`);
       return;
     }
     if (teamBPlayers.length < limit) {
-      Alert.alert('Incomplete Team', `${form.team_b_name} needs ${limit} players. You have selected ${teamBPlayers.length}/${limit}.`);
+      showAlert('Incomplete Team', `${form.team_b_name} needs ${limit} players. You have selected ${teamBPlayers.length}/${limit}.`);
       return;
     }
     if (!captainA || !captainB) {
-      Alert.alert('No Captains', 'Please select a captain for each team.');
+      showAlert('No Captains', 'Please select a captain for each team.');
       return;
     }
     setSaving(true);
@@ -267,7 +268,7 @@ const TeamSelectionScreen = ({ navigation, route }) => {
         isFirstMatch: matchNumber === 1,
       });
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setSaving(false);
     }

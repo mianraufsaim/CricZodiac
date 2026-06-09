@@ -15,7 +15,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, StatusBar, Modal, FlatList, TextInput,
+  StatusBar, Modal, FlatList, TextInput,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -33,6 +33,7 @@ import { processSyncQueue } from '../../services/SyncService';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
+import { showAlert } from '../../utils/toast';
 
 // ── Helpers ───────────────────────────────────────────────
 const sr  = (runs, balls) => balls > 0 ? ((runs / balls) * 100).toFixed(1) : '0.0';
@@ -940,7 +941,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           target:        rTarget,
         });
       } catch (err) {
-        Alert.alert('Error', 'Could not resume match: ' + err.message);
+        showAlert('Error', 'Could not resume match: ' + err.message);
         setLoading(false);
         return;
       }
@@ -1087,7 +1088,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         }, 300);
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to init: ' + err.message);
+      showAlert('Error', 'Failed to init: ' + err.message);
       setLoading(false);
     }
   };
@@ -1172,7 +1173,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const legal = legalRef.current;
     const ovNum = overNumRef.current;
     if (!bwl) {
-      Alert.alert('Select Bowler', 'Please select a bowler first.');
+      showAlert('Select Bowler', 'Please select a bowler first.');
       return;
     }
 
@@ -1265,7 +1266,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       // Free hit after no-ball
       if (isNoBall) {
         setIsFreeHit(true);
-        Alert.alert(
+        showAlert(
           '⚡ FREE HIT!',
           'Next delivery is a FREE HIT — batsman can only be dismissed by a run-out!',
           [{ text: 'OK' }],
@@ -1334,7 +1335,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         });
       }
     } catch (err) {
-      Alert.alert('Score Error', err.message);
+      showAlert('Score Error', err.message);
     }
   };
 
@@ -1354,7 +1355,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const totWkts = totalWktsRef.current;
 
     if (!inn || !str || !bwl) {
-      Alert.alert('Setup Incomplete', 'Select batsmen and bowler first.');
+      showAlert('Setup Incomplete', 'Select batsmen and bowler first.');
       return;
     }
 
@@ -1464,7 +1465,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         });
       }
     } catch (err) {
-      Alert.alert('Wicket Error', err.message);
+      showAlert('Wicket Error', err.message);
     }
   };
 
@@ -1506,12 +1507,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const handleUndo = async () => {
     const inn = inningsRef.current;
     if (!inn) return;
-    Alert.alert('Undo Last Ball', 'Remove the last ball recorded?', [
+    showAlert('Undo Last Ball', 'Remove the last ball recorded?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Undo', style: 'destructive', onPress: async () => {
         try {
           const last = await getLastBall(inn.id);
-          if (!last) { Alert.alert('Nothing to undo'); return; }
+          if (!last) { showAlert('Nothing to undo'); return; }
           await deleteBall(last, inn.id);
 
           // ── Reload ball history ──────────────────────────
@@ -1577,7 +1578,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           });
           setExtras(eb);
 
-        } catch (e) { Alert.alert('Undo Failed', e.message); }
+        } catch (e) { showAlert('Undo Failed', e.message); }
       }},
     ]);
   };
@@ -1941,7 +1942,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           {/* End Innings button */}
           <TouchableOpacity
             style={sc.endBtn}
-            onPress={() => Alert.alert('Close Innings', 'End this innings?', [
+            onPress={() => showAlert('Close Innings', 'End this innings?', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Close Innings', onPress: () => _endInnings() },
             ])}

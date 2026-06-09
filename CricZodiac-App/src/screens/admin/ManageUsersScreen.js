@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, ActivityIndicator,
   Modal, TextInput, Animated, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -20,6 +20,7 @@ import { setUserApproval, deactivateUser, getAllUsers } from '../../database/que
 import { upsertPlayersFromServer } from '../../database/queries/playerQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 // ── Config ────────────────────────────────────────────────
 const TABS = [
@@ -85,7 +86,7 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, onEdit, COLORS, ac
   const handleApproval = () => {
     onClose();
     const approve = !user.is_approved;
-    Alert.alert(
+    showAlert(
       approve ? 'Approve User' : 'Revoke Approval',
       `${approve ? 'Approve access for' : 'Revoke access for'} ${user.name}?`,
       [
@@ -97,7 +98,7 @@ const UserActionSheet = ({ user, visible, onClose, onRefresh, onEdit, COLORS, ac
 
   const handleRemove = () => {
     onClose();
-    Alert.alert('Remove User', `Deactivate ${user.name}? They lose access but data is kept.`, [
+    showAlert('Remove User', `Deactivate ${user.name}? They lose access but data is kept.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => { await deactivateUser(localId); onRefresh(); } },
     ]);
@@ -198,7 +199,7 @@ const ManageUsersScreen = ({ navigation }) => {
         );
         setUsers(filtered);
       } catch (e) {
-        Alert.alert('Error', e.message);
+        showAlert('Error', e.message);
       }
     } finally {
       setLoading(false);

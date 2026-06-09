@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ScrollView, ActivityIndicator,
+  StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 // ── Reusable field ────────────────────────────────────────
 const Field = ({ icon, placeholder, value, onChangeText, keyboardType, autoCapitalize,
@@ -72,22 +73,22 @@ const EditProfileScreen = ({ navigation }) => {
       setEmail(p.email   ?? '');
       setPhone(p.phone   ?? '');
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!name.trim())  return Alert.alert('Validation', 'Full name is required.');
-    if (!email.trim()) return Alert.alert('Validation', 'Email is required.');
-    if (!phone.trim()) return Alert.alert('Validation', 'Phone is required.');
+    if (!name.trim())  return showAlert('Validation', 'Full name is required.');
+    if (!email.trim()) return showAlert('Validation', 'Email is required.');
+    if (!phone.trim()) return showAlert('Validation', 'Phone is required.');
 
     const changingPassword = currentPw || newPw || confirmPw;
     if (changingPassword) {
-      if (!currentPw) return Alert.alert('Validation', 'Enter your current password.');
-      if (newPw.length < 8) return Alert.alert('Validation', 'New password must be at least 8 characters.');
-      if (newPw !== confirmPw) return Alert.alert('Validation', 'New passwords do not match.');
+      if (!currentPw) return showAlert('Validation', 'Enter your current password.');
+      if (newPw.length < 8) return showAlert('Validation', 'New password must be at least 8 characters.');
+      if (newPw !== confirmPw) return showAlert('Validation', 'New passwords do not match.');
     }
 
     setSaving(true);
@@ -109,11 +110,11 @@ const EditProfileScreen = ({ navigation }) => {
       // Clear password fields
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
 
-      Alert.alert('Success', 'Profile updated successfully.', [
+      showAlert('Success', 'Profile updated successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }

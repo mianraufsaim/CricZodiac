@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -16,6 +16,7 @@ import { getSeriesById, getSeriesMatches, updateSeriesStatus } from '../../datab
 import { upsertMatchesFromServer } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 const FORMAT_LABELS = { bestOf1: 'Best of 1', bestOf3: 'Best of 3', bestOf5: 'Best of 5' };
 
@@ -249,7 +250,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   }, []);
 
   const handleClose = () => {
-    Alert.alert('Close Series', 'Mark this series as completed?', [
+    showAlert('Close Series', 'Mark this series as completed?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Close Series',
@@ -287,7 +288,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
         const teamA = teams.find(t => t.team_label === 'A') || teams[0];
         const teamB = teams.find(t => t.team_label === 'B') || teams[1];
         if (!teamA || !teamB) {
-          Alert.alert('Teams not found', 'Could not load teams for this match. Please complete team selection first.');
+          showAlert('Teams not found', 'Could not load teams for this match. Please complete team selection first.');
           return;
         }
         navigation.navigate('Toss', {
@@ -317,7 +318,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
           isFirstMatch: matchNumber === 1,
         });
       } catch (e) {
-        Alert.alert('Error', 'Failed to load match teams.');
+        showAlert('Error', 'Failed to load match teams.');
       }
     } else if (item.status === 'live' || item.status === 'innings_2') {
       navigation.navigate('LiveScoring', { matchId: item.id });

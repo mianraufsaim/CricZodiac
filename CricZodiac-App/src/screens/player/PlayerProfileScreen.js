@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, Image, KeyboardAvoidingView, Platform,
+  ScrollView, Image, KeyboardAvoidingView, Platform,
   RefreshControl, ActivityIndicator, StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,6 +19,7 @@ import { PLAYER_TYPES, BATTING_HAND, BOWLING_STYLES } from '../../config/constan
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
+import { showAlert } from '../../utils/toast';
 
 // ── Chip Selector ─────────────────────────────────────────
 const ChipSelector = ({ options, value, onChange, COLORS, st }) => (
@@ -142,7 +143,7 @@ const PlayerProfileScreen = ({ navigation }) => {
 
   // ── Save ──────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.full_name.trim()) { Alert.alert('Name is required'); return; }
+    if (!form.full_name.trim()) { showAlert('Name is required'); return; }
     setSaving(true);
     try {
       // 1. Upload image if new one was picked
@@ -175,9 +176,9 @@ const PlayerProfileScreen = ({ navigation }) => {
         });
       }
 
-      Alert.alert('Saved', 'Profile updated successfully.');
+      showAlert('Saved', 'Profile updated successfully.');
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Failed to save profile.');
+      showAlert('Error', err?.message || 'Failed to save profile.');
     } finally {
       setSaving(false);
     }
@@ -185,7 +186,7 @@ const PlayerProfileScreen = ({ navigation }) => {
 
   // ── Image picker ─────────────────────────────────────
   const pickImage = () => {
-    Alert.alert('Profile Picture', 'Choose source', [
+    showAlert('Profile Picture', 'Choose source', [
       {
         text: 'Camera',
         onPress: () => launchCamera({ mediaType: 'photo', quality: 0.8, saveToPhotos: false }, res => {

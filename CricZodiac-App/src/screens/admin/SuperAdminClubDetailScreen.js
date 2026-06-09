@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, RefreshControl,
+  ScrollView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 // ── Small helpers ─────────────────────────────────────────
 const SectionTitle = ({ title, COLORS }) => (
@@ -87,7 +88,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
         admin_phone: c.admin_phone || '',
       });
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
       navigation.goBack();
     } finally {
       setFetching(false);
@@ -95,7 +96,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
   };
 
   const handleSave = async () => {
-    if (!clubForm.club_name.trim()) { Alert.alert('Required', 'Club name cannot be empty.'); return; }
+    if (!clubForm.club_name.trim()) { showAlert('Required', 'Club name cannot be empty.'); return; }
     setSaving(true);
     try {
       await ApiService.post(API_ENDPOINTS.SUPER_ADMIN_CLUB_DETAIL, {
@@ -104,10 +105,10 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
         admin_id:      club?.admin_id,
         ...adminForm,
       });
-      Alert.alert('Saved', 'Club updated successfully.');
+      showAlert('Saved', 'Club updated successfully.');
       loadClub(); // refresh
     } catch (e) {
-      Alert.alert('Error', e.message);
+      showAlert('Error', e.message);
     } finally {
       setSaving(false);
     }
@@ -121,7 +122,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
       ? `${club?.admin_name} will be blocked and cannot log in.`
       : `${club?.admin_name} will be re-activated.`;
 
-    Alert.alert(label, msg, [
+    showAlert(label, msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: label,
@@ -136,7 +137,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
             });
             await loadClub();
           } catch (e) {
-            Alert.alert('Error', e.message);
+            showAlert('Error', e.message);
           } finally {
             setSaving(false);
           }
@@ -146,7 +147,7 @@ const SuperAdminClubDetailScreen = ({ navigation, route }) => {
   };
 
   const handleEnterClub = () => {
-    Alert.alert(
+    showAlert(
       `Enter ${club?.name}`,
       'Browse this club as its admin. Tap "EXIT" banner to return.',
       [

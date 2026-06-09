@@ -6,14 +6,14 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { API_ENDPOINTS } from '../../config/api';
 import ApiService from '../../services/ApiService';
+import { showAlert } from '../../utils/toast';
 
 // ── Reusable input ────────────────────────────────────────
 const InputField = ({
@@ -76,17 +76,17 @@ const CreateClubScreen = ({ navigation }) => {
   const handleCreate = async () => {
     const { club_name, admin_name, admin_email, admin_phone, admin_password, admin_confirm_password } = form;
 
-    if (!club_name.trim())   { Alert.alert('Missing Fields', 'Club name is required.');         return; }
-    if (!admin_name.trim())  { Alert.alert('Missing Fields', 'Admin full name is required.');   return; }
-    if (!admin_email.trim()) { Alert.alert('Missing Fields', 'Admin email is required.');        return; }
-    if (!admin_phone.trim()) { Alert.alert('Missing Fields', 'Admin phone is required.');        return; }
-    if (!admin_password)     { Alert.alert('Missing Fields', 'Password is required.');           return; }
+    if (!club_name.trim())   { showAlert('Missing Fields', 'Club name is required.');         return; }
+    if (!admin_name.trim())  { showAlert('Missing Fields', 'Admin full name is required.');   return; }
+    if (!admin_email.trim()) { showAlert('Missing Fields', 'Admin email is required.');        return; }
+    if (!admin_phone.trim()) { showAlert('Missing Fields', 'Admin phone is required.');        return; }
+    if (!admin_password)     { showAlert('Missing Fields', 'Password is required.');           return; }
     if (admin_password !== admin_confirm_password) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      showAlert('Password Mismatch', 'Passwords do not match.');
       return;
     }
     if (admin_password.length < 8) {
-      Alert.alert('Weak Password', 'Password must be at least 8 characters.');
+      showAlert('Weak Password', 'Password must be at least 8 characters.');
       return;
     }
 
@@ -103,13 +103,13 @@ const CreateClubScreen = ({ navigation }) => {
         admin_password: admin_password,
       });
 
-      Alert.alert(
+      showAlert(
         '✓ Club Created',
         `${club_name.trim()} has been created and the admin account is active.`,
         [{ text: 'Done', onPress: () => navigation.goBack() }]
       );
     } catch (err) {
-      Alert.alert('Creation Failed', err.message);
+      showAlert('Creation Failed', err.message);
     } finally {
       setLoading(false);
     }
