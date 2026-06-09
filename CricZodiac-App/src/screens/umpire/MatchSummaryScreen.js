@@ -6,15 +6,52 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { saveMatchResult } from '../../database/queries/matchQueries';
+import {
+  addPlayerToTeam,
+  createMatch,
+  createTeam,
+  getTeamPlayers,
+  saveMatchResult,
+  updateMatch,
+  upsertTeamPlayersFromServer,
+} from '../../database/queries/matchQueries';
+import { getSeriesById, getSeriesMatches } from '../../database/queries/seriesQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import { processSyncQueue } from '../../services/SyncService';
+
+const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
+
+const totalMatchesForSeries = (format) => SERIES_TOTAL_MATCHES[format] || 1;
+
+const normalizeSeries = (row) => row ? ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  match_count: Number(row.match_count || 0),
+  completed_count: Number(row.completed_count || 0),
+  team_a_wins: Number(row.team_a_wins || 0),
+  team_b_wins: Number(row.team_b_wins || 0),
+}) : null;
+
+const normalizeSeriesMatch = (row) => ({
+  ...row,
+  id: row.local_id || String(row.id),
+  server_id: row.server_id ?? (row.local_id ? String(row.id) : row.server_id),
+  club_id: row.club_id != null ? String(row.club_id) : null,
+  series_id: row.series_local_id || (row.series_id != null ? String(row.series_id) : null),
+  overs: Number(row.overs || 6),
+  players_per_team: Number(row.players_per_team || 6),
+  max_overs_per_bowler: Number(row.max_overs_per_bowler || 0),
+  wide_value: Number(row.wide_value || 1),
+  no_ball_value: Number(row.no_ball_value || 1),
+});
 
 // ── Pure winner helper ────────────────────────────────────
 const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
@@ -52,6 +89,9 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const [potmPlayers, setPotmPlayers] = useState([]);
   const [selectedPotm, setSelectedPotm] = useState(null);
   const [savingPotm, setSavingPotm] = useState(false);
+  const [creatingRematch, setCreatingRematch] = useState(false);
+  const [seriesInfo, setSeriesInfo] = useState(null);
+  const [seriesMatches, setSeriesMatches] = useState([]);
   const [matchObj, setMatchObj] = useState(matchParam || null);
   const [loadErr,  setLoadErr]  = useState(null);
   const [loading,  setLoading]  = useState(true);
@@ -68,12 +108,15 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         setLoading(false);
         return;
       }
+      const seriesIdForMatch = matchParam?.series_id || matchParam?.series_local_id || null;
 
       // ── Fetch all data from API in parallel ──────────────────────────
-      const [innsRes, teamsRes, resultRes] = await Promise.all([
+      const [innsRes, teamsRes, resultRes, seriesRes, matchesRes] = await Promise.all([
         ApiService.get(`${API_ENDPOINTS.MATCHES_SCORE}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
         ApiService.get(`${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
         ApiService.get(`${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
+        seriesIdForMatch ? ApiService.get(API_ENDPOINTS.SERIES_LIST).catch(() => null) : Promise.resolve(null),
+        seriesIdForMatch ? ApiService.get(`${API_ENDPOINTS.MATCHES_LIST}?series_id=${encodeURIComponent(seriesIdForMatch)}`).catch(() => null) : Promise.resolve(null),
       ]);
 
       // ── Parse innings ────────────────────────────────────────────────
@@ -103,6 +146,28 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       }));
 
       const players = await loadPlayersForTeams(normalizedTeams);
+
+      // ── Parse series context for next-match actions ──────────────────
+      const serverSeries = seriesRes?.series || seriesRes?.data?.series || [];
+      const resolvedSeries = serverSeries
+        .map(normalizeSeries)
+        .find(s => s.id === String(seriesIdForMatch) || s.server_id === String(seriesIdForMatch)) || null;
+      const serverMatches = matchesRes?.matches || matchesRes?.data?.matches || [];
+      let nextSeriesInfo = resolvedSeries;
+      let nextSeriesMatches = serverMatches.map(normalizeSeriesMatch);
+
+      if (seriesIdForMatch && (!nextSeriesInfo || !nextSeriesMatches.length)) {
+        try {
+          const [localSeries, localMatches] = await Promise.all([
+            nextSeriesInfo ? Promise.resolve(nextSeriesInfo) : getSeriesById(seriesIdForMatch),
+            nextSeriesMatches.length ? Promise.resolve(nextSeriesMatches) : getSeriesMatches(seriesIdForMatch),
+          ]);
+          nextSeriesInfo = nextSeriesInfo || normalizeSeries(localSeries);
+          nextSeriesMatches = nextSeriesMatches.length ? nextSeriesMatches : (localMatches || []).map(normalizeSeriesMatch);
+        } catch (seriesErr) {
+          console.warn('[MatchSummary] series context:', seriesErr.message);
+        }
+      }
 
       // ── Parse result ─────────────────────────────────────────────────
       const sr = resultRes?.result || resultRes?.data?.result || null;
@@ -151,6 +216,13 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       setInnings(validInnings);
       setTeams(normalizedTeams);
       setPotmPlayers(players);
+      setSeriesInfo(nextSeriesInfo);
+      setSeriesMatches(nextSeriesMatches);
+      setMatchObj(prev => ({
+        ...(prev || {}),
+        ...(matchParam || {}),
+        series_id: seriesIdForMatch || prev?.series_id || matchParam?.series_id || null,
+      }));
       setResult(apiResult || null);
       setPotmName(
         (apiResult?.player_of_match_name || '').trim() || null
@@ -190,6 +262,177 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       }
     }
     return [...merged.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
+  };
+
+  const loadRosterForTeam = async (team) => {
+    const teamId = team?.local_id || team?.id;
+    if (!teamId) return [];
+
+    try {
+      const qParts = [`team_id=${encodeURIComponent(teamId)}`];
+      if (matchParam?.id) qParts.push(`match_id=${encodeURIComponent(matchParam.id)}`);
+      if (team?.team_label) qParts.push(`team_label=${encodeURIComponent(team.team_label)}`);
+      if (team?.club_id || matchParam?.club_id) qParts.push(`club_id=${encodeURIComponent(team?.club_id || matchParam?.club_id)}`);
+      const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
+      const rows = res?.players || res?.data?.players || [];
+      if (rows.length) {
+        await upsertTeamPlayersFromServer(rows, teamId).catch(() => {});
+        return rows
+          .map((row, index) => ({
+            player_id: row.player_uuid || row.player_local_id || (row.player_id != null ? String(row.player_id) : null),
+            server_id: row.player_id || null,
+            batting_order: Number(row.batting_order || index + 1),
+          }))
+          .filter(row => row.player_id)
+          .sort((a, b) => a.batting_order - b.batting_order);
+      }
+    } catch (err) {
+      console.warn('[MatchSummary] rematch roster API:', err.message);
+    }
+
+    const localRows = await getTeamPlayers(teamId).catch(() => []);
+    return (localRows || [])
+      .map((row, index) => ({
+        player_id: row.player_id,
+        server_id: row.player_server_id || null,
+        batting_order: Number(row.batting_order || index + 1),
+      }))
+      .filter(row => row.player_id)
+      .sort((a, b) => a.batting_order - b.batting_order);
+  };
+
+  const resolveRosterPlayer = (roster, localValue, serverValue) => {
+    if (localValue) return localValue;
+    const byServer = roster.find(row => serverValue != null && String(row.server_id) === String(serverValue));
+    return byServer?.player_id || (serverValue != null ? String(serverValue) : roster[0]?.player_id || null);
+  };
+
+  const handleNewMatch = () => {
+    const seriesId = matchObj?.series_id || matchParam?.series_id || matchParam?.series_local_id || null;
+    navigation.navigate('MatchSetup', {
+      seriesId,
+      seriesName: seriesInfo?.name || matchParam?.series_name || null,
+      matchNumber: Math.max(1, seriesMatches.length + 1),
+    });
+  };
+
+  const createSameTeamRematch = async () => {
+    if (creatingRematch) return;
+
+    const teamA = teams.find(t => t.team_label === 'A') || teams[0];
+    const teamB = teams.find(t => t.team_label === 'B') || teams[1];
+    if (!teamA || !teamB) {
+      Alert.alert('Teams not found', 'Could not load both teams for this match.');
+      return;
+    }
+
+    setCreatingRematch(true);
+    try {
+      const [teamARoster, teamBRoster] = await Promise.all([
+        loadRosterForTeam(teamA),
+        loadRosterForTeam(teamB),
+      ]);
+      if (!teamARoster.length || !teamBRoster.length) {
+        Alert.alert('Players not found', 'Could not copy both team player lists for the re-match.');
+        return;
+      }
+
+      const seriesId = matchObj?.series_id || matchParam?.series_id || matchParam?.series_local_id || null;
+      const nextMatchNumber = Math.max(1, seriesMatches.length + 1);
+      const matchData = {
+        title: seriesId ? `Match ${nextMatchNumber}` : `${displayMatchTitle} Re-match`,
+        venue: matchObj?.venue || matchParam?.venue || '',
+        match_date: new Date().toISOString().split('T')[0],
+        overs: Number(matchObj?.overs || matchParam?.overs || 6),
+        players_per_team: Math.max(
+          Number(matchObj?.players_per_team || matchParam?.players_per_team || 0),
+          teamARoster.length,
+          teamBRoster.length
+        ),
+        max_overs_per_bowler: Number(matchObj?.max_overs_per_bowler || matchParam?.max_overs_per_bowler || 0),
+        wide_value: Number(matchObj?.wide_value || matchParam?.wide_value || 1),
+        no_ball_value: Number(matchObj?.no_ball_value || matchParam?.no_ball_value || 1),
+        series_id: seriesId,
+        club_id: matchObj?.club_id || matchParam?.club_id || seriesInfo?.club_id || null,
+        team_a_name: teamA.team_name,
+        team_b_name: teamB.team_name,
+      };
+
+      const newMatchId = await createMatch(matchData);
+      const captainAId = resolveRosterPlayer(teamARoster, teamA.captain_local, teamA.captain_id);
+      const captainBId = resolveRosterPlayer(teamBRoster, teamB.captain_local, teamB.captain_id);
+      const wkAId = resolveRosterPlayer(teamARoster, teamA.wk_local, teamA.wk_id);
+      const wkBId = resolveRosterPlayer(teamBRoster, teamB.wk_local, teamB.wk_id);
+
+      const newTeamAId = await createTeam({
+        match_id: newMatchId,
+        club_id: matchData.club_id,
+        series_id: matchData.series_id,
+        team_name: teamA.team_name,
+        team_label: 'A',
+        captain_id: captainAId,
+        wk_id: wkAId,
+      });
+      const newTeamBId = await createTeam({
+        match_id: newMatchId,
+        club_id: matchData.club_id,
+        series_id: matchData.series_id,
+        team_name: teamB.team_name,
+        team_label: 'B',
+        captain_id: captainBId,
+        wk_id: wkBId,
+      });
+
+      await updateMatch(newMatchId, { team_a_id: newTeamAId, team_b_id: newTeamBId });
+
+      for (const [index, row] of teamARoster.entries()) {
+        await addPlayerToTeam(newTeamAId, row.player_id, row.batting_order || index + 1);
+      }
+      for (const [index, row] of teamBRoster.entries()) {
+        await addPlayerToTeam(newTeamBId, row.player_id, row.batting_order || index + 1);
+      }
+
+      processSyncQueue().catch(() => {});
+      navigation.navigate('Toss', {
+        match: { id: newMatchId, ...matchData, players_per_team: Number(matchData.players_per_team) },
+        teamA: {
+          id: newTeamAId,
+          team_name: teamA.team_name,
+          team_label: 'A',
+          captain_id: captainAId,
+          captain_name: teamA.captain_name,
+          match_id: newMatchId,
+          club_id: matchData.club_id,
+          series_id: matchData.series_id,
+        },
+        teamB: {
+          id: newTeamBId,
+          team_name: teamB.team_name,
+          team_label: 'B',
+          captain_id: captainBId,
+          captain_name: teamB.captain_name,
+          match_id: newMatchId,
+          club_id: matchData.club_id,
+          series_id: matchData.series_id,
+        },
+        isFirstMatch: true,
+      });
+    } catch (err) {
+      Alert.alert('Re-match Failed', err.message || 'Could not create the re-match.');
+    } finally {
+      setCreatingRematch(false);
+    }
+  };
+
+  const handleSameTeamRematch = () => {
+    Alert.alert(
+      'Start Re-match?',
+      'Create a new match with the same teams, rules, and players, then go to the toss.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Create & Toss', onPress: createSameTeamRematch },
+      ],
+    );
   };
 
   const handleSavePotm = async () => {
@@ -312,6 +555,20 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
   const displayMatchTitle = matchObj?.title || matchParam?.title || 'Match';
   const displayVenue      = matchObj?.venue || matchParam?.venue || null;
+  const currentSeriesId   = matchObj?.series_id || matchParam?.series_id || matchParam?.series_local_id || null;
+  const seriesTotalMatches = totalMatchesForSeries(seriesInfo?.format);
+  const winsNeeded = Math.ceil(seriesTotalMatches / 2);
+  const seriesUndecided = Number(seriesInfo?.team_a_wins || 0) < winsNeeded &&
+    Number(seriesInfo?.team_b_wins || 0) < winsNeeded;
+  const knownMatchCount = Math.max(seriesMatches.length, Number(seriesInfo?.match_count || 0));
+  const canCreateNextSeriesMatch = Boolean(
+    currentSeriesId &&
+    seriesInfo &&
+    seriesInfo.status !== 'completed' &&
+    seriesUndecided &&
+    knownMatchCount < seriesTotalMatches
+  );
+  const nextMatchNumber = Math.max(1, knownMatchCount + 1);
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
@@ -488,6 +745,43 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           </>
         )}
 
+        {canCreateNextSeriesMatch && (
+          <View style={styles.nextMatchPanel}>
+            <View style={styles.nextMatchHeader}>
+              <View>
+                <Text style={styles.nextMatchKicker}>SERIES CONTINUES</Text>
+                <Text style={styles.nextMatchTitle}>Match {nextMatchNumber} of {seriesTotalMatches}</Text>
+              </View>
+              <Icon name="cricket" size={22} color={COLORS.gold} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.rematchBtn, creatingRematch && { opacity: 0.6 }]}
+              onPress={handleSameTeamRematch}
+              disabled={creatingRematch}
+            >
+              <LinearGradient colors={[COLORS.gold, '#B8942A']} style={styles.rematchBtnInner}>
+                {creatingRematch
+                  ? <ActivityIndicator size="small" color={COLORS.navy} />
+                  : <Icon name="repeat-variant" size={18} color={COLORS.navy} />
+                }
+                <Text style={styles.rematchBtnText}>
+                  {creatingRematch ? 'CREATING RE-MATCH...' : 'RE-MATCH SAME TEAMS'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.newSeriesMatchBtn}
+              onPress={handleNewMatch}
+              disabled={creatingRematch}
+            >
+              <Icon name="plus-circle-outline" size={18} color={COLORS.cyan} />
+              <Text style={styles.newSeriesMatchText}>New Match</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('SeriesList')}>
           <Icon name="arrow-left-circle-outline" size={17} color={COLORS.gray} style={{ marginRight: 7 }} />
           <Text style={styles.homeBtnText}>Return to Dashboard</Text>
@@ -561,6 +855,16 @@ const getStyles = (COLORS) => StyleSheet.create({
   savePotmBtn:       { height: 42, borderRadius: 11, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   savePotmBtnDisabled:{ opacity: 0.45 },
   savePotmText:      { color: COLORS.navy, fontWeight: '900', fontSize: 12, letterSpacing: 0.5 },
+
+  nextMatchPanel:    { backgroundColor: COLORS.card, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.gold + '55' },
+  nextMatchHeader:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  nextMatchKicker:   { color: COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 2.2 },
+  nextMatchTitle:    { color: COLORS.white, fontSize: 15, fontWeight: '800', marginTop: 3 },
+  rematchBtn:        { borderRadius: 12, overflow: 'hidden', marginBottom: 10 },
+  rematchBtnInner:   { height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  rematchBtnText:    { color: COLORS.navy, fontSize: 12, fontWeight: '900', letterSpacing: 0.8 },
+  newSeriesMatchBtn: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: COLORS.cyan + '77', backgroundColor: COLORS.navy + '55', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  newSeriesMatchText:{ color: COLORS.cyan, fontSize: 13, fontWeight: '800' },
 
   homeBtn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, paddingVertical: 14 },
   homeBtnText:       { color: COLORS.gray, fontSize: 14 },
