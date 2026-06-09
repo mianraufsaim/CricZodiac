@@ -1825,11 +1825,54 @@ function syncBowlingScorecard(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncMatchResult(PDO $pdo, string $action, array $d): bool {
+    // Resolve server integer IDs from INT columns in payload (sent by app after server sync).
+    // match_id, winner_team_id, loser_team_id, player_of_match are server INT ids.
+    // *_local / match_local_id are UUID strings.
+    $serverMatchId   = isset($d['match_id'])       && is_numeric($d['match_id'])       ? (int) $d['match_id']       : null;
+    $serverWinnerId  = isset($d['winner_team_id'])  && is_numeric($d['winner_team_id'])  ? (int) $d['winner_team_id']  : null;
+    $serverLoserId   = isset($d['loser_team_id'])   && is_numeric($d['loser_team_id'])   ? (int) $d['loser_team_id']   : null;
+    $serverPlayerId  = isset($d['player_of_match']) && is_numeric($d['player_of_match']) ? (int) $d['player_of_match'] : null;
+
+    $matchLocalId   = $d['match_local_id']    ?? null;
+    $winnerLocal    = $d['winner_team_local']  ?? null;
+    $loserLocal     = $d['loser_team_local']   ?? null;
+    $playerLocal    = $d['player_of_match_local'] ?? null;
+
     $pdo->prepare("
-        INSERT INTO match_results (local_id, match_local_id, winner_team_local, loser_team_local, result_type, margin, margin_type, team_a_score, team_b_score, player_of_match_local, result_text, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE winner_team_local=VALUES(winner_team_local), result_text=VALUES(result_text), margin=VALUES(margin)
-    ")->execute([$d['id'], $d['match_id'], $d['winner_team_id'] ?? null, $d['loser_team_id'] ?? null, $d['result_type'] ?? 'win', $d['margin'] ?? 0, $d['margin_type'] ?? null, $d['team_a_score'] ?? null, $d['team_b_score'] ?? null, $d['player_of_match'] ?? null, $d['result_text'] ?? null]);
+        INSERT INTO match_results (
+            local_id, match_id, match_local_id,
+            winner_team_id, winner_team_local,
+            loser_team_id,
+            result_type, margin, margin_type,
+            team_a_score, team_b_score,
+            player_of_match, player_of_match_local,
+            result_text, created_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+        ON DUPLICATE KEY UPDATE
+            winner_team_id    = COALESCE(VALUES(winner_team_id),   winner_team_id),
+            winner_team_local = COALESCE(VALUES(winner_team_local), winner_team_local),
+            loser_team_id     = COALESCE(VALUES(loser_team_id),    loser_team_id),
+            result_text       = VALUES(result_text),
+            margin            = VALUES(margin),
+            margin_type       = VALUES(margin_type),
+            player_of_match   = COALESCE(VALUES(player_of_match),  player_of_match),
+            player_of_match_local = COALESCE(VALUES(player_of_match_local), player_of_match_local)
+    ")->execute([
+        $d['id'],
+        $serverMatchId,
+        $matchLocalId,
+        $serverWinnerId,
+        $winnerLocal,
+        $serverLoserId,
+        $d['result_type']   ?? 'win',
+        $d['margin']        ?? 0,
+        $d['margin_type']   ?? null,
+        $d['team_a_score']  ?? null,
+        $d['team_b_score']  ?? null,
+        $serverPlayerId,
+        $playerLocal,
+        $d['result_text']   ?? null,
+    ]);
     return true;
 }
 
