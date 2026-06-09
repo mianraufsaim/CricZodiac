@@ -55,6 +55,7 @@ export const API_ENDPOINTS = {
   PLAYERS_STATS:       `${API_BASE_URL}/players/stats.php`,
   PLAYERS_LEADERBOARD: `${API_BASE_URL}/players/leaderboard.php`,
   PLAYERS_COMPARE:     `${API_BASE_URL}/players/compare.php`,
+  PLAYERS_MY_STATS:    `${API_BASE_URL}/players/my-stats.php`,
 
   // Series
   SERIES_LIST:    `${API_BASE_URL}/series/list.php`,
