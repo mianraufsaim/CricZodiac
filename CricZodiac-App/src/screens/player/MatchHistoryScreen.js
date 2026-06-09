@@ -214,7 +214,6 @@ const MatchHistoryScreen = () => {
   const load = useCallback(async () => {
     try {
       const res = await ApiService.get(API_ENDPOINTS.PLAYERS_MATCH_HISTORY);
-      console.log('[MatchHistory] raw response:', JSON.stringify(res));
       if (res?.success) setMatches(res.matches || []);
     } catch (e) {
       console.log('[MatchHistory] error:', e?.message);

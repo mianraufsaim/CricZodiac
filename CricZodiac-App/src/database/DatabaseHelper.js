@@ -656,8 +656,6 @@ const initializeTables = async (database) => {
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }
-
-  console.log('[DB] All tables initialized successfully');
 };
 
 // ── Generic Query Helpers ─────────────────────────────────
