@@ -1,254 +1,281 @@
 // ============================================================
-// CricZodiac — Leaderboard / Stats Dashboard
-// Mirrors: Pavilions app Dashboard
+// CricZodiac — Leaderboard
+// All data fetched live from API (club-scoped, no local SQLite)
+// Tabs: BATTING | BOWLING   •   Top 5 per section
 // ============================================================
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Image, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl, Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import {
-  getMyStats, getTopAverages, getTopScores, getLeastScores,
-  getMostSixes, getMostFours, getTopWicketTakers,
-  getTopEconomy, getLeastEconomy, getTopBowler, getLeastBowler,
-} from '../../database/queries/leaderboardQueries';
-import { getPlayerByUserId } from '../../database/queries/playerQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
-// ── Stat Chip ────────────────────────────────────────────
-const StatChip = ({ label, value, styles }) => (
-  <View style={styles.chip}>
-    <Text style={styles.chipValue}>{value ?? '—'}</Text>
-    <Text style={styles.chipLabel}>{label}</Text>
+// ── Rank colours ─────────────────────────────────────────────
+const RANK_COLOR  = ['#D4AF37', '#A8A9AD', '#CD7F32', null, null]; // gold/silver/bronze
+const RANK_ICON   = ['crown', 'medal', 'medal-outline'];
+
+// ── Avatar ────────────────────────────────────────────────────
+const Avatar = ({ uri, name, size = 32, COLORS }) => {
+  const bg = COLORS.royalBlue;
+  if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: '#fff', fontWeight: '800', fontSize: size * 0.38 }}>
+        {name?.[0]?.toUpperCase() || '?'}
+      </Text>
+    </View>
+  );
+};
+
+// ── Single leaderboard row ────────────────────────────────────
+const LBRow = ({ item, rank, valueKey, suffix, COLORS, styles, navigation }) => {
+  const rankCol = RANK_COLOR[rank] ?? COLORS.gray;
+  const isTop3  = rank < 3;
+  return (
+    <TouchableOpacity
+      style={[styles.row, rank === 0 && styles.rowGold]}
+      onPress={() => navigation?.navigate('PlayerProfileView', { playerId: item.id })}
+      activeOpacity={0.75}
+    >
+      {/* Rank badge */}
+      <View style={[styles.rankWrap, isTop3 && { backgroundColor: rankCol + '22' }]}>
+        {isTop3
+          ? <Icon name={RANK_ICON[rank]} size={14} color={rankCol} />
+          : <Text style={[styles.rankNum, { color: COLORS.gray }]}>{rank + 1}</Text>
+        }
+      </View>
+
+      <Avatar uri={item.profile_pic} name={item.full_name} size={30} COLORS={COLORS} />
+
+      <Text style={styles.playerName} numberOfLines={1}>{item.full_name}</Text>
+
+      <View style={styles.valueWrap}>
+        <Text style={[styles.valueText, isTop3 && { color: rankCol }]}>
+          {item[valueKey] ?? '—'}
+        </Text>
+        {suffix ? <Text style={styles.valueSuffix}>{suffix}</Text> : null}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ── Section card ─────────────────────────────────────────────
+const Section = ({ icon, title, iconColor, data, valueKey, suffix, navigation, COLORS, styles }) => (
+  <View style={styles.card}>
+    {/* Card header */}
+    <View style={[styles.cardHeader, { borderLeftColor: iconColor }]}>
+      <View style={[styles.cardIconWrap, { backgroundColor: iconColor + '22' }]}>
+        <Icon name={icon} size={16} color={iconColor} />
+      </View>
+      <Text style={styles.cardTitle}>{title}</Text>
+    </View>
+
+    {/* Rows */}
+    {!data || data.length === 0 ? (
+      <View style={styles.emptyWrap}>
+        <Icon name="database-off-outline" size={22} color={COLORS.gray} />
+        <Text style={styles.emptyText}>No data yet</Text>
+      </View>
+    ) : data.map((item, idx) => (
+      <LBRow
+        key={item.id || idx}
+        item={item}
+        rank={idx}
+        valueKey={valueKey}
+        suffix={suffix}
+        COLORS={COLORS}
+        styles={styles}
+        navigation={navigation}
+      />
+    ))}
   </View>
 );
 
-// ── Leaderboard Section ───────────────────────────────────
-const Section = ({ title, data, valueKey, valueLabel, onViewAll, navigation, COLORS, styles }) => (
-  <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {onViewAll && (
-        <TouchableOpacity onPress={onViewAll}>
-          <Text style={styles.viewAll}>View All</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-    {!data || data.length === 0
-      ? <Text style={styles.noData}>No data yet</Text>
-      : data.slice(0, 5).map((item, idx) => (
-        <TouchableOpacity
-          key={item.id || idx}
-          style={styles.row}
-          onPress={() => navigation?.navigate('PlayerProfileView', { playerId: item.id })}
-        >
-          <View style={styles.rankBadge}>
-            <Text style={[styles.rank, idx === 0 && { color: COLORS.gold }]}>{idx + 1}</Text>
+// ── Tab bar ───────────────────────────────────────────────────
+const TabBar = ({ active, onChange, COLORS, styles }) => (
+  <View style={styles.tabBar}>
+    {['BATTING', 'BOWLING'].map(tab => (
+      <TouchableOpacity
+        key={tab}
+        style={[styles.tab, active === tab && styles.tabActive]}
+        onPress={() => onChange(tab)}
+        activeOpacity={0.75}
+      >
+        <Icon
+          name={tab === 'BATTING' ? 'cricket' : 'baseball-bat'}
+          size={14}
+          color={active === tab ? COLORS.gold : COLORS.gray}
+        />
+        <Text style={[styles.tabText, active === tab && styles.tabTextActive]}>{tab}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
+// ── My Stats Bar ──────────────────────────────────────────────
+const MyStatsBar = ({ myStats, COLORS, styles }) => {
+  if (!myStats) return null;
+  const chips = [
+    { label: 'Runs',    value: myStats.total_runs  ?? '—' },
+    { label: 'Sixes',   value: myStats.total_sixes ?? '—' },
+    { label: 'Avg',     value: myStats.avg_score   ?? '—' },
+    { label: 'SR',      value: myStats.strike_rate ?? '—' },
+  ];
+  return (
+    <View style={styles.myBar}>
+      <Text style={styles.myBarLabel}>MY STATS</Text>
+      <View style={styles.myChips}>
+        {chips.map((c, i) => (
+          <View key={c.label} style={styles.myChip}>
+            {i > 0 && <View style={styles.chipDiv} />}
+            <Text style={styles.myChipVal}>{c.value}</Text>
+            <Text style={styles.myChipLbl}>{c.label}</Text>
           </View>
-          {item.profile_pic
-            ? <Image source={{ uri: item.profile_pic }} style={styles.avatar} />
-            : <View style={[styles.avatar, styles.avatarFallback]}>
-                <Text style={styles.avatarInitial}>{item.full_name?.[0] || '?'}</Text>
-              </View>
-          }
-          <Text style={styles.playerName} numberOfLines={1}>{item.full_name}</Text>
-          <Text style={[styles.statValue, idx === 0 && { color: COLORS.gold }]}>
-            {item[valueKey] ?? '—'}
-            {valueLabel ? <Text style={styles.statUnit}> {valueLabel}</Text> : null}
-          </Text>
-        </TouchableOpacity>
-      ))}
-  </View>
-);
-
-// ── Double Section (two columns) ─────────────────────────
-const DoubleSection = ({ leftTitle, leftData, leftKey, rightTitle, rightData, rightKey, navigation, COLORS, styles }) => (
-  <View style={styles.doubleRow}>
-    <View style={[styles.section, { flex: 1, marginRight: 6 }]}>
-      <Text style={styles.sectionTitle}>{leftTitle}</Text>
-      {!leftData || leftData.length === 0
-        ? <Text style={styles.noData}>No data</Text>
-        : leftData.slice(0, 5).map((item, idx) => (
-          <TouchableOpacity key={item.id || idx} style={styles.row}
-            onPress={() => navigation?.navigate('PlayerProfileView', { playerId: item.id })}>
-            <Text style={[styles.rank, { width: 18 }, idx === 0 && { color: COLORS.gold }]}>{idx + 1}</Text>
-            {item.profile_pic
-              ? <Image source={{ uri: item.profile_pic }} style={styles.avatarSm} />
-              : <View style={[styles.avatarSm, styles.avatarFallback]}>
-                  <Text style={[styles.avatarInitial, { fontSize: 9 }]}>{item.full_name?.[0]}</Text>
-                </View>}
-            <Text style={styles.playerNameSm} numberOfLines={1}>{item.full_name}</Text>
-            <Text style={[styles.statValueSm, idx === 0 && { color: COLORS.gold }]}>{item[leftKey] ?? '—'}</Text>
-          </TouchableOpacity>
         ))}
+      </View>
     </View>
-    <View style={[styles.section, { flex: 1, marginLeft: 6 }]}>
-      <Text style={styles.sectionTitle}>{rightTitle}</Text>
-      {!rightData || rightData.length === 0
-        ? <Text style={styles.noData}>No data</Text>
-        : rightData.slice(0, 5).map((item, idx) => (
-          <TouchableOpacity key={item.id || idx} style={styles.row}
-            onPress={() => navigation?.navigate('PlayerProfileView', { playerId: item.id })}>
-            <Text style={[styles.rank, { width: 18 }, idx === 0 && { color: '#e74c3c' }]}>{idx + 1}</Text>
-            {item.profile_pic
-              ? <Image source={{ uri: item.profile_pic }} style={styles.avatarSm} />
-              : <View style={[styles.avatarSm, styles.avatarFallback]}>
-                  <Text style={[styles.avatarInitial, { fontSize: 9 }]}>{item.full_name?.[0]}</Text>
-                </View>}
-            <Text style={styles.playerNameSm} numberOfLines={1}>{item.full_name}</Text>
-            <Text style={[styles.statValueSm, idx === 0 && { color: '#e74c3c' }]}>{item[rightKey] ?? '—'}</Text>
-          </TouchableOpacity>
-        ))}
-    </View>
-  </View>
-);
+  );
+};
 
-// ── Main Screen ───────────────────────────────────────────
+// ── Main Screen ───────────────────────────────────────────────
 const LeaderboardScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
+  const { activeClub, viewingAsClub, user } = useAuth();
+  const effectiveClub    = viewingAsClub ?? activeClub;
+  const isSuperAdminView = !!viewingAsClub;
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
-  const { user } = useAuth();
-  const [myStats,   setMyStats]   = useState(null);
-  const [data,      setData]      = useState({});
-  const [loading,   setLoading]   = useState(true);
+  const [activeTab,  setActiveTab]  = useState('BATTING');
+  const [data,       setData]       = useState(null);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadAll = async () => {
+  const loadData = useCallback(async () => {
     try {
-      let playerRow = null;
-      if (user?.id) playerRow = await getPlayerByUserId(user.id);
+      const params = {};
+      if (isSuperAdminView && effectiveClub?.id) params.club_id = effectiveClub.id;
+      const res = await ApiService.get(API_ENDPOINTS.PLAYERS_LEADERBOARD, { params });
+      if (res?.success) setData(res);
+    } catch (_) {}
+    finally { setLoading(false); }
+  }, [isSuperAdminView, effectiveClub?.id]);
 
-      const [
-        ms, topAvg, topScores, leastScores,
-        mostSix, mostFour, topWkt,
-        topEco, leastEco, topBwl, leastBwl,
-      ] = await Promise.all([
-        playerRow ? getMyStats(playerRow.id) : Promise.resolve(null),
-        getTopAverages(10), getTopScores(10), getLeastScores(10),
-        getMostSixes(10),   getMostFours(10), getTopWicketTakers(10),
-        getTopEconomy(10),  getLeastEconomy(10),
-        getTopBowler(10),   getLeastBowler(10),
-      ]);
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-      setMyStats(ms);
-      setData({ topAvg, topScores, leastScores, mostSix, mostFour, topWkt, topEco, leastEco, topBwl, leastBwl });
-    } catch (e) {
-      console.error('LeaderboardScreen:', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
-  useFocusEffect(useCallback(() => { loadAll(); }, []));
-  const onRefresh = () => { setRefreshing(true); loadAll(); };
+  const batting = data?.batting ?? {};
+  const bowling = data?.bowling ?? {};
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Leaderboard</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('PlayerCompare')}>
-          <Icon name="compare" size={24} color={COLORS.gold} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('PlayerCompare')}
+          style={styles.compareBtn}
+          activeOpacity={0.75}
+        >
+          <Icon name="compare" size={18} color={COLORS.gold} />
+          <Text style={styles.compareTxt}>Compare</Text>
         </TouchableOpacity>
       </View>
 
-      {loading
-        ? <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
-        : (
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gold} />}
-          >
-            {/* Personal Stats Bar */}
-            {myStats && (
-              <View style={styles.myStatsBar}>
-                <StatChip label="Strike Rate" value={myStats.strike_rate} styles={styles} />
-                <View style={styles.chipDivider} />
-                <StatChip label="Avg Score"   value={myStats.avg_score}   styles={styles} />
-                <View style={styles.chipDivider} />
-                <StatChip label="Avg Eco"     value={myStats.avg_eco}     styles={styles} />
-                <View style={styles.chipDivider} />
-                <StatChip label="Avg Wkts"    value={myStats.avg_wickets} styles={styles} />
-              </View>
-            )}
+      {/* Tab Bar */}
+      <TabBar active={activeTab} onChange={setActiveTab} COLORS={COLORS} styles={styles} />
 
-            {/* Top Averages */}
-            <Section title="🏏 Top Averages" data={data.topAvg} valueKey="average" navigation={navigation} COLORS={COLORS} styles={styles} />
+      {loading ? (
+        <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 60 }} />
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" colors={['#D4AF37']} />
+          }
+        >
+          {/* My Stats Bar */}
+          <MyStatsBar myStats={data?.my_stats} COLORS={COLORS} styles={styles} />
 
-            {/* Top/Least Scores */}
-            <DoubleSection
-              leftTitle="Top Scores"    leftData={data.topScores}    leftKey="total_runs"
-              rightTitle="Least Scores" rightData={data.leastScores} rightKey="total_runs"
-              navigation={navigation} COLORS={COLORS} styles={styles}
-            />
-
-            {/* Most Sixes / Fours */}
-            <DoubleSection
-              leftTitle="Most Sixes"  leftData={data.mostSix}  leftKey="total_sixes"
-              rightTitle="Most Fours" rightData={data.mostFour} rightKey="total_fours"
-              navigation={navigation} COLORS={COLORS} styles={styles}
-            />
-
-            {/* Top Wicket Takers */}
-            <Section title="🎯 Top Wicket Takers" data={data.topWkt} valueKey="total_wickets" navigation={navigation} COLORS={COLORS} styles={styles} />
-
-            {/* Top/Least Economy */}
-            <DoubleSection
-              leftTitle="Top Economy"    leftData={data.topEco}   leftKey="economy"
-              rightTitle="Least Economy" rightData={data.leastEco} rightKey="economy"
-              navigation={navigation} COLORS={COLORS} styles={styles}
-            />
-
-            {/* Top/Least Bowler */}
-            <DoubleSection
-              leftTitle="Top Bowler (RC)"    leftData={data.topBwl}   leftKey="runs_conceded"
-              rightTitle="Least Bowler (RC)" rightData={data.leastBwl} rightKey="runs_conceded"
-              navigation={navigation} COLORS={COLORS} styles={styles}
-            />
-          </ScrollView>
-        )}
+          {activeTab === 'BATTING' ? (
+            <>
+              <Section icon="trending-up"        title="Top Averages"       iconColor={COLORS.gold}       data={batting.top_averages}  valueKey="average"    navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="run-fast"           title="Top Run Scorers"    iconColor={COLORS.cyan}       data={batting.top_scores}    valueKey="total_runs" suffix="runs" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="star-shooting"      title="Highest Score"      iconColor={COLORS.orange}     data={batting.highest_score} valueKey="best_score" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="numeric-6-circle"   title="Most Sixes"         iconColor={COLORS.purple}     data={batting.most_sixes}    valueKey="total_sixes" suffix="×6" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="numeric-4-circle"   title="Most Fours"         iconColor={COLORS.royalBlue}  data={batting.most_fours}    valueKey="total_fours" suffix="×4" navigation={navigation} COLORS={COLORS} styles={styles} />
+            </>
+          ) : (
+            <>
+              <Section icon="bullseye-arrow"     title="Top Wicket Takers"  iconColor={COLORS.gold}       data={bowling.top_wickets}        valueKey="total_wickets"    suffix="wkts" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="speedometer"        title="Best Economy"       iconColor={COLORS.success}    data={bowling.best_economy}       valueKey="economy"           navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="speedometer-slow"   title="Highest Economy"    iconColor={COLORS.danger}     data={bowling.worst_economy}      valueKey="economy"           navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section icon="fire"               title="Most Runs Conceded" iconColor={COLORS.orange}     data={bowling.most_runs_conceded} valueKey="runs_conceded"     suffix="rc" navigation={navigation} COLORS={COLORS} styles={styles} />
+            </>
+          )}
+        </ScrollView>
+      )}
     </LinearGradient>
   );
 };
 
+// ── Styles ────────────────────────────────────────────────────
 const getStyles = (COLORS) => StyleSheet.create({
-  header:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 4 },
-  headerTitle:    { color: COLORS.white, fontSize: 20, fontWeight: '800' },
-  scroll:         { padding: 16, paddingBottom: 40 },
+  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 52, paddingHorizontal: 20, paddingBottom: 8 },
+  headerTitle:  { color: COLORS.white, fontSize: 22, fontWeight: '900' },
+  compareBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.gold + '22', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: COLORS.gold + '55' },
+  compareTxt:   { color: COLORS.gold, fontSize: 12, fontWeight: '700' },
 
-  myStatsBar:     { flexDirection: 'row', backgroundColor: COLORS.card, borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.cardBorder, alignItems: 'center' },
-  chip:           { flex: 1, alignItems: 'center' },
-  chipValue:      { color: COLORS.white, fontWeight: '800', fontSize: 16 },
-  chipLabel:      { color: COLORS.gray, fontSize: 9, marginTop: 2, textAlign: 'center' },
-  chipDivider:    { width: 1, height: 32, backgroundColor: COLORS.cardBorder },
+  // Tab bar
+  tabBar:       { flexDirection: 'row', marginHorizontal: 16, marginBottom: 4, backgroundColor: COLORS.card, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: COLORS.cardBorder },
+  tab:          { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 11 },
+  tabActive:    { backgroundColor: COLORS.gold + '22' },
+  tabText:      { color: COLORS.gray, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  tabTextActive:{ color: COLORS.gold },
 
-  section:        { backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
-  sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle:   { color: COLORS.white, fontWeight: '700', fontSize: 13 },
-  viewAll:        { color: COLORS.gold, fontSize: 11 },
-  noData:         { color: COLORS.gray, fontSize: 12, textAlign: 'center', paddingVertical: 8 },
+  scroll:       { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40, gap: 12 },
 
-  row:            { flexDirection: 'row', alignItems: 'center', paddingVertical: 5 },
-  rankBadge:      { width: 22, alignItems: 'center' },
-  rank:           { color: COLORS.gray, fontWeight: '700', fontSize: 12 },
-  avatar:         { width: 28, height: 28, borderRadius: 14, marginHorizontal: 8 },
-  avatarSm:       { width: 22, height: 22, borderRadius: 11, marginHorizontal: 6 },
-  avatarFallback: { backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial:  { color: COLORS.white, fontWeight: '700', fontSize: 11 },
-  playerName:     { flex: 1, color: COLORS.white, fontSize: 13, fontWeight: '600' },
-  playerNameSm:   { flex: 1, color: COLORS.white, fontSize: 11, fontWeight: '600' },
-  statValue:      { color: COLORS.white, fontWeight: '700', fontSize: 13, marginLeft: 4 },
-  statValueSm:    { color: COLORS.white, fontWeight: '700', fontSize: 11 },
-  statUnit:       { color: COLORS.gray, fontWeight: '400', fontSize: 10 },
+  // My stats bar
+  myBar:        { backgroundColor: COLORS.card, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.gold + '44' },
+  myBarLabel:   { color: COLORS.gold, fontSize: 9, fontWeight: '800', letterSpacing: 2, marginBottom: 10 },
+  myChips:      { flexDirection: 'row' },
+  myChip:       { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  chipDiv:      { width: 1, height: 28, backgroundColor: COLORS.cardBorder, marginRight: 10 },
+  myChipVal:    { color: COLORS.white, fontWeight: '900', fontSize: 17, flex: 1, textAlign: 'center' },
+  myChipLbl:    { position: 'absolute', bottom: -12, left: 0, right: 0, color: COLORS.gray, fontSize: 9, textAlign: 'center' },
 
-  doubleRow:      { flexDirection: 'row', marginBottom: 12 },
+  // Section card
+  card:         { backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.cardBorder, overflow: 'hidden' },
+  cardHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderLeftWidth: 3, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder },
+  cardIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  cardTitle:    { color: COLORS.white, fontWeight: '800', fontSize: 13, letterSpacing: 0.3 },
+
+  // Rows
+  row:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10, borderTopWidth: 1, borderTopColor: COLORS.cardBorder + '88' },
+  rowGold:      { backgroundColor: COLORS.gold + '0A' },
+  rankWrap:     { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  rankNum:      { fontSize: 12, fontWeight: '700' },
+  playerName:   { flex: 1, color: COLORS.white, fontSize: 13, fontWeight: '600' },
+  valueWrap:    { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  valueText:    { color: COLORS.white, fontWeight: '800', fontSize: 14 },
+  valueSuffix:  { color: COLORS.gray, fontSize: 10, fontWeight: '500' },
+
+  // Empty state
+  emptyWrap:    { alignItems: 'center', paddingVertical: 20, gap: 6 },
+  emptyText:    { color: COLORS.gray, fontSize: 12 },
 });
 
 export default LeaderboardScreen;

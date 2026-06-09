@@ -214,6 +214,13 @@ const AdminDashboard = ({ navigation }) => {
         {/* Row 2: Pending Approvals · Sync Status · Theme */}
         <View style={[styles.qaRow, { marginTop: 10, marginBottom: 16 }]}>
           <QuickAction
+            icon="compare"
+            label="Compare Players"
+            color={COLORS.warning}
+            onPress={() => navigation.navigate('PlayerCompare')}
+            styles={styles}
+          />
+          <QuickAction
             icon="cloud-sync-outline"
             label="Sync Status"
             color={COLORS.cyan}

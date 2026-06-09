@@ -52,7 +52,8 @@ export const API_ENDPOINTS = {
   PLAYERS_UPDATE: `${API_BASE_URL}/players/update.php`,
   PLAYERS_LIST:   `${API_BASE_URL}/players/list.php`,
   PLAYERS_DELETE: `${API_BASE_URL}/players/delete.php`,
-  PLAYERS_STATS:  `${API_BASE_URL}/players/stats.php`,
+  PLAYERS_STATS:       `${API_BASE_URL}/players/stats.php`,
+  PLAYERS_LEADERBOARD: `${API_BASE_URL}/players/leaderboard.php`,
 
   // Series
   SERIES_LIST:    `${API_BASE_URL}/series/list.php`,
