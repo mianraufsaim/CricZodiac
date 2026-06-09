@@ -415,7 +415,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           club_id: matchData.club_id,
           series_id: matchData.series_id,
         },
-        isFirstMatch: true,
+        isFirstMatch: false,
       });
     } catch (err) {
       Alert.alert('Re-match Failed', err.message || 'Could not create the re-match.');
