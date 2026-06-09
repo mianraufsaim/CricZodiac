@@ -36,8 +36,8 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM matches WHERE club_id = ? AND status
 $stmt->execute([$clubId]);
 $liveMatches = (int) $stmt->fetchColumn();
 
-// ── Total Teams ───────────────────────────────────────────────
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM teams WHERE club_id = ?");
+// ── Total Teams (unique by name — same team name across matches = 1) ──
+$stmt = $pdo->prepare("SELECT COUNT(DISTINCT team_name) FROM teams WHERE club_id = ?");
 $stmt->execute([$clubId]);
 $totalTeams = (int) $stmt->fetchColumn();
 
@@ -46,13 +46,12 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM players WHERE club_id = ? AND is_act
 $stmt->execute([$clubId]);
 $totalPlayers = (int) $stmt->fetchColumn();
 
-// ── Total Team Players (distinct players assigned to a team) ──
-// Count distinct player_id entries in team_players for this club's teams
+// ── Total Team Players (unique player_id in this club's team_players) ──
+// team_players has one row per player per match — count DISTINCT player_id
 $stmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT tp.player_id)
-    FROM team_players tp
-    INNER JOIN teams t ON t.id = tp.team_id
-    WHERE t.club_id = ?
+    SELECT COUNT(DISTINCT player_id)
+    FROM team_players
+    WHERE club_id = ?
 ");
 $stmt->execute([$clubId]);
 $totalTeamPlayers = (int) $stmt->fetchColumn();
