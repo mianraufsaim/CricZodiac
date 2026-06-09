@@ -359,23 +359,29 @@ function backfillSeriesTeams(PDO $pdo, int $matchId): void {
     ]);
 }
 
-// ── Mark series completed when all its matches are done ──────────────────────
+// ── Mark series completed only when ALL format-required matches are done ─────
 function checkAndCompleteSeries(PDO $pdo, int $seriesId): void {
-    // Count total and completed matches for this series
+    // Get the series format so we know the required number of matches
+    $st = $pdo->prepare("SELECT format FROM series WHERE id = ? LIMIT 1");
+    $st->execute([$seriesId]);
+    $series = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$series) return;
+
+    $formatMax = ['bestOf1' => 1, 'bestOf3' => 3, 'bestOf5' => 5];
+    $required  = $formatMax[$series['format']] ?? 1;
+
+    // Count how many matches in this series are completed
     $st = $pdo->prepare("
-        SELECT
-            COUNT(*)                                          AS total,
-            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done
+        SELECT COUNT(*) AS done
         FROM matches
-        WHERE series_id = ?
+        WHERE series_id = ? AND status = 'completed'
     ");
     $st->execute([$seriesId]);
-    $row = $st->fetch(PDO::FETCH_ASSOC);
+    $row  = $st->fetch(PDO::FETCH_ASSOC);
+    $done = (int)($row['done'] ?? 0);
 
-    $total = (int)($row['total'] ?? 0);
-    $done  = (int)($row['done']  ?? 0);
-
-    if ($total > 0 && $done >= $total) {
+    // Only complete the series once ALL required matches are played
+    if ($done >= $required) {
         $pdo->prepare("
             UPDATE series
             SET status = 'completed', updated_at = NOW()
