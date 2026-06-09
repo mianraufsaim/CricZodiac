@@ -797,7 +797,7 @@ export const saveMatchResult = async (resultData) => {
   // SQLite teams/players/matches tables store server_id alongside the local UUID.
   const [matchRow, winnerRow, loserRow, playerRow] = await Promise.all([
     resultData.match_id
-      ? queryFirstRow('SELECT server_id FROM matches WHERE id = ?', [resultData.match_id])
+      ? queryFirstRow('SELECT server_id, club_id, series_id FROM matches WHERE id = ?', [resultData.match_id])
       : null,
     resultData.winner_team_id
       ? queryFirstRow('SELECT server_id FROM teams WHERE id = ?', [resultData.winner_team_id])
@@ -819,16 +819,20 @@ export const saveMatchResult = async (resultData) => {
   const serverWinnerId  = resultData.winner_team_server_id || winnerRow?.server_id || numericOrNull(resultData.winner_team_id);
   const serverLoserId   = resultData.loser_team_server_id || loserRow?.server_id || numericOrNull(resultData.loser_team_id);
   const serverPlayerId  = resultData.player_of_match_server_id || playerRow?.server_id || numericOrNull(resultData.player_of_match);
+  const clubId          = resultData.club_id || matchRow?.club_id || null;
+  const seriesId        = resultData.series_id || matchRow?.series_id || null;
 
   await executeTransaction([
     {
       sql: `INSERT OR REPLACE INTO match_results (
-              id, match_id, winner_team_id, loser_team_id, result_type,
+              id, club_id, series_id, match_id, winner_team_id, loser_team_id, result_type,
               margin, margin_type, team_a_score, team_b_score,
               player_of_match, result_text, sync_status
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       params: [
         id,
+        clubId,
+        seriesId,
         resultData.match_id,       // local UUID stored locally
         resultData.winner_team_id, // local UUID stored locally
         resultData.loser_team_id,
@@ -850,6 +854,8 @@ export const saveMatchResult = async (resultData) => {
         uuid.v4(), 'match_results', 'create', id,
         JSON.stringify({
           id,
+          club_id:              clubId,
+          series_id:            seriesId,
           match_id:             serverMatchId,          // INT
           match_local_id:       resultData.match_id,    // UUID
           winner_team_id:       serverWinnerId,         // INT
@@ -994,12 +1000,14 @@ export const upsertMatchResultFromServer = async (serverResult, matchLocalId) =>
 
   await executeQuery(
     `INSERT OR REPLACE INTO match_results (
-       id, match_id, winner_team_id, loser_team_id, result_type,
+       id, club_id, series_id, match_id, winner_team_id, loser_team_id, result_type,
        margin, margin_type, team_a_score, team_b_score,
        player_of_match, result_text, sync_status
-     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       localId,
+      serverResult.club_id != null ? String(serverResult.club_id) : null,
+      serverResult.series_id != null ? String(serverResult.series_id) : null,
       matchLocalId,
       winnerLocal,
       loserLocal,

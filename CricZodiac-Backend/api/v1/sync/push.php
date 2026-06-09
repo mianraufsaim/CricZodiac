@@ -1942,10 +1942,20 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
     $loserLocal     = $d['loser_team_local']   ?? null;
     $playerLocal    = $d['player_of_match_local'] ?? null;
 
+    $matchRow = null;
+    if ($serverMatchId) {
+        $matchRow = resolveMatchRow($pdo, $serverMatchId);
+    }
     if (!$serverMatchId && $matchLocalId) {
         $matchRow = resolveMatchRow($pdo, $matchLocalId);
         $serverMatchId = isset($matchRow['id']) ? (int)$matchRow['id'] : null;
     }
+    $clubId = isset($d['club_id']) && is_numeric($d['club_id'])
+        ? (int) $d['club_id']
+        : ($matchRow['club_id'] ?? null);
+    $seriesId = resolveSeriesId($pdo, $d['series_id'] ?? null)
+        ?? ($matchRow['series_id'] ?? null);
+
     if (!$serverWinnerId && $winnerLocal) {
         $serverWinnerId = resolveTeamId($pdo, $winnerLocal);
     }
@@ -1958,15 +1968,17 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
 
     $pdo->prepare("
         INSERT INTO match_results (
-            local_id, match_id, match_local_id,
+            local_id, club_id, series_id, match_id, match_local_id,
             winner_team_id, winner_team_local,
             loser_team_id,
             result_type, margin, margin_type,
             team_a_score, team_b_score,
             player_of_match, player_of_match_local,
             result_text, created_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
         ON DUPLICATE KEY UPDATE
+            club_id           = COALESCE(VALUES(club_id),          club_id),
+            series_id         = COALESCE(VALUES(series_id),        series_id),
             winner_team_id    = COALESCE(VALUES(winner_team_id),   winner_team_id),
             winner_team_local = COALESCE(VALUES(winner_team_local), winner_team_local),
             loser_team_id     = COALESCE(VALUES(loser_team_id),    loser_team_id),
@@ -1977,6 +1989,8 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
             player_of_match_local = COALESCE(VALUES(player_of_match_local), player_of_match_local)
     ")->execute([
         $d['id'],
+        $clubId,
+        $seriesId,
         $serverMatchId,
         $matchLocalId,
         $serverWinnerId,

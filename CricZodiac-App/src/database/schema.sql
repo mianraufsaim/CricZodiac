@@ -262,6 +262,8 @@ CREATE TABLE IF NOT EXISTS bowling_scorecards (
 -- Match Results
 CREATE TABLE IF NOT EXISTS match_results (
   id             TEXT PRIMARY KEY,
+  club_id        TEXT,
+  series_id      TEXT,
   match_id       TEXT NOT NULL UNIQUE REFERENCES matches(id),
   winner_team_id TEXT REFERENCES teams(id),
   loser_team_id  TEXT REFERENCES teams(id),

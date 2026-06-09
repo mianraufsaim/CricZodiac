@@ -370,6 +370,8 @@ CREATE TABLE IF NOT EXISTS bowling_scorecards (
 CREATE TABLE IF NOT EXISTS match_results (
     id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     local_id              VARCHAR(36) UNIQUE,
+    club_id               INT UNSIGNED,
+    series_id             INT UNSIGNED,
     match_id              INT UNSIGNED UNIQUE,
     match_local_id        VARCHAR(36),
     winner_team_id        INT UNSIGNED,
@@ -383,7 +385,10 @@ CREATE TABLE IF NOT EXISTS match_results (
     player_of_match       INT UNSIGNED,
     player_of_match_local VARCHAR(36),
     result_text           VARCHAR(500),
-    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_club        (club_id),
+    INDEX idx_series      (series_id),
+    INDEX idx_match       (match_id)
 ) ENGINE=InnoDB;
 
 -- ── Sync Logs (duplicate-event prevention) ────────────────

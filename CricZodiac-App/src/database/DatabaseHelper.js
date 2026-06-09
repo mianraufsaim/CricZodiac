@@ -332,6 +332,8 @@ const initializeTables = async (database) => {
     tx.executeSql(`
       CREATE TABLE IF NOT EXISTS match_results (
         id                TEXT PRIMARY KEY,
+        club_id           TEXT,
+        series_id         TEXT,
         match_id          TEXT NOT NULL UNIQUE,
         winner_team_id    TEXT,
         loser_team_id     TEXT,
@@ -443,6 +445,8 @@ const initializeTables = async (database) => {
     `ALTER TABLE toss_results ADD COLUMN series_id TEXT;`,
     `ALTER TABLE toss_results ADD COLUMN calling_captain_id TEXT;`,
     `ALTER TABLE toss_results ADD COLUMN toss_winner_id TEXT;`,
+    `ALTER TABLE match_results ADD COLUMN club_id TEXT;`,
+    `ALTER TABLE match_results ADD COLUMN series_id TEXT;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }
