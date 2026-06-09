@@ -61,7 +61,8 @@ const AdminDashboard = ({ navigation }) => {
         params.club_id = effectiveClub.id;
       }
       const res = await ApiService.get(API_ENDPOINTS.ADMIN_STATS, { params });
-      if (res?.success && res?.data) setStats(res.data);
+      // sendSuccess() merges fields at root level (no 'data' wrapper)
+      if (res?.success) setStats(res);
     } catch (_) {
       // Values stay null → UI shows '—'
     } finally {
@@ -212,13 +213,6 @@ const AdminDashboard = ({ navigation }) => {
 
         {/* Row 2: Pending Approvals · Sync Status · Theme */}
         <View style={[styles.qaRow, { marginTop: 10, marginBottom: 16 }]}>
-          <QuickAction
-            icon="account-clock-outline"
-            label="Approvals"
-            color={COLORS.warning}
-            onPress={() => navigation.navigate('PendingApprovals')}
-            styles={styles}
-          />
           <QuickAction
             icon="cloud-sync-outline"
             label="Sync Status"
