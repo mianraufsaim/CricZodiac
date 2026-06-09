@@ -225,6 +225,48 @@ export const getTeamPlayers = async (teamId) => {
   return resolved;
 };
 
+// Fallback: returns ALL players from team_players (no team filter).
+// Used when the bowling team has no cached players in SQLite.
+export const getAllTeamPlayers = async () => {
+  const rows = await queryRows(`
+    SELECT
+      tp.*,
+      p.user_id AS player_user_id,
+      p.player_type,
+      p.profile_pic
+    FROM team_players tp
+    JOIN players p ON tp.player_id = p.id
+    ORDER BY tp.batting_order ASC
+  `);
+
+  const userColumns = await queryRows('PRAGMA table_info(users)');
+  let hasServerId = false;
+  for (const column of userColumns) {
+    if (column.name === 'server_id') { hasServerId = true; break; }
+  }
+
+  const users = await queryRows(
+    `SELECT id, ${hasServerId ? 'server_id' : 'NULL AS server_id'}, name FROM users`
+  );
+  const namesByUserRef = new Map();
+  for (const user of users) {
+    const name = (user.name || '').trim();
+    if (!name) continue;
+    if (user.id != null) namesByUserRef.set(String(user.id), name);
+    if (user.server_id != null) {
+      namesByUserRef.set(String(user.server_id), name);
+      namesByUserRef.set(`u_${user.server_id}`, name);
+    }
+  }
+
+  const resolved = [];
+  for (const row of rows) {
+    const userRef = row.player_user_id != null ? String(row.player_user_id) : '';
+    resolved.push({ ...row, full_name: namesByUserRef.get(userRef) || 'Unknown' });
+  }
+  return resolved;
+};
+
 // Cache team players received from the server into SQLite.
 // serverPlayers: array from GET /teams/players.php
 // teamLocalId: the SQLite UUID for this team

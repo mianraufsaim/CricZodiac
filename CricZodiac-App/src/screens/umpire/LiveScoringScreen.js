@@ -22,11 +22,14 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import {
   createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
-  saveBall, getCurrentOver, getMatchInnings, getTeamPlayers,
+  saveBall, getCurrentOver, getMatchInnings, getTeamPlayers, getAllTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket,
+  upsertTeamPlayersFromServer,
 } from '../../database/queries/matchQueries';
 import { processSyncQueue } from '../../services/SyncService';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
 
 // ── Helpers ───────────────────────────────────────────────
@@ -635,13 +638,48 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     let active = true;
-    if (bowlingTeam?.id) {
-      getTeamPlayers(bowlingTeam.id)
-        .then(players => { if (active) setBowlingPlayers(players); })
-        .catch(() => { if (active) setBowlingPlayers([]); });
-    } else {
-      setBowlingPlayers([]);
-    }
+    const loadFielders = async () => {
+      if (!bowlingTeam?.id) { setBowlingPlayers([]); return; }
+
+      // 1. Try API first to get fresh player list
+      try {
+        const qParts = [`team_id=${encodeURIComponent(bowlingTeam.id)}`];
+        if (bowlingTeam.match_id)   qParts.push(`match_id=${encodeURIComponent(bowlingTeam.match_id)}`);
+        if (bowlingTeam.team_label) qParts.push(`team_label=${encodeURIComponent(bowlingTeam.team_label)}`);
+        if (bowlingTeam.club_id)    qParts.push(`club_id=${encodeURIComponent(bowlingTeam.club_id)}`);
+        const res = await ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${qParts.join('&')}`);
+        const serverList = res?.players || res?.data?.players || [];
+        if (serverList.length) {
+          const mapped = serverList.map(sp => ({
+            id:          sp.player_uuid || String(sp.player_id),
+            player_id:   sp.player_uuid || String(sp.player_id),
+            full_name:   (sp.full_name || sp.name || 'Unknown').trim(),
+            player_type: sp.player_type || 'allrounder',
+          }));
+          if (active) setBowlingPlayers(mapped);
+          upsertTeamPlayersFromServer(serverList, bowlingTeam.id).catch(() => {});
+          return;
+        }
+      } catch (_) {}
+
+      // 2. Fall back to SQLite by team_id
+      try {
+        const local = await getTeamPlayers(bowlingTeam.id);
+        if (local.length) {
+          if (active) setBowlingPlayers(local);
+          return;
+        }
+      } catch (_) {}
+
+      // 3. Last resort — all players in team_players table (no team filter)
+      try {
+        const all = await getAllTeamPlayers();
+        if (active) setBowlingPlayers(all);
+      } catch (_) {
+        if (active) setBowlingPlayers([]);
+      }
+    };
+    loadFielders();
     return () => { active = false; };
   }, [bowlingTeam?.id]);
 
