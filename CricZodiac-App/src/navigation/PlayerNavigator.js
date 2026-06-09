@@ -49,14 +49,14 @@ const PlayerNavigator = () => {
         tabBarLabelStyle: { fontSize: 11, marginBottom: 4 },
         tabBarIcon: ({ color, size }) => {
           const icons = {
-            Home: 'home', Stats: 'podium', History: 'history',
+            Home: 'view-dashboard', Stats: 'podium', History: 'history',
             Leaderboard: 'trophy', Profile: 'account-circle',
           };
           return <Icon name={icons[route.name] || 'circle'} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Home"        component={HomeStack}          options={{ tabBarLabel: 'Home' }} />
+      <Tab.Screen name="Home"        component={HomeStack}          options={{ tabBarLabel: 'Dashboard' }} />
       <Tab.Screen name="Stats"       component={StatsStack}         options={{ tabBarLabel: 'Stats' }} />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen}  options={{ tabBarLabel: 'Leaderboard' }} />
       <Tab.Screen name="History"     component={MatchHistoryScreen} />
