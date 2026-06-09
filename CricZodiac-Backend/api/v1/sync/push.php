@@ -359,6 +359,31 @@ function backfillSeriesTeams(PDO $pdo, int $matchId): void {
     ]);
 }
 
+// ── Mark series completed when all its matches are done ──────────────────────
+function checkAndCompleteSeries(PDO $pdo, int $seriesId): void {
+    // Count total and completed matches for this series
+    $st = $pdo->prepare("
+        SELECT
+            COUNT(*)                                          AS total,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS done
+        FROM matches
+        WHERE series_id = ?
+    ");
+    $st->execute([$seriesId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    $total = (int)($row['total'] ?? 0);
+    $done  = (int)($row['done']  ?? 0);
+
+    if ($total > 0 && $done >= $total) {
+        $pdo->prepare("
+            UPDATE series
+            SET status = 'completed', updated_at = NOW()
+            WHERE id = ? AND status != 'completed'
+        ")->execute([$seriesId]);
+    }
+}
+
 // ── Recompute series.team_a_wins / team_b_wins from match_results ────────────
 function recomputeSeriesWins(PDO $pdo, int $seriesId): void {
     $st = $pdo->prepare("SELECT team_a_id, team_b_id FROM series WHERE id = ? LIMIT 1");
@@ -2120,9 +2145,10 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
         ")->execute([$serverMatchId]);
     }
 
-    // Update series win counts after a match result is saved
+    // Update series win counts and check if series is fully done
     if ($seriesId) {
         recomputeSeriesWins($pdo, (int) $seriesId);
+        checkAndCompleteSeries($pdo, (int) $seriesId);
     }
 
     return true;
