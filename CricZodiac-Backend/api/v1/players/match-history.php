@@ -1,7 +1,8 @@
 <?php
 // GET /api/v1/players/match-history.php
-// Returns the logged-in player's match-by-match history (batting + bowling).
-// Club-scoped. Completed matches only.
+// Returns the logged-in player's match history.
+// Primary source: team_players (player was in the team).
+// Enriched with batting/bowling scorecards where available.
 require_once __DIR__ . '/../../../includes/cors.php';
 require_once __DIR__ . '/../../../includes/response.php';
 require_once __DIR__ . '/../../../includes/auth.php';
@@ -12,86 +13,84 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') sendError('Method not allowed.', 405);
 $authUser = requireAuth();
 $pdo      = getDB();
 $userId   = (int) $authUser['id'];
-$clubId   = $authUser['club_id'] ? (int) $authUser['club_id'] : null;
-if (!$clubId) sendError('No club associated with your account.', 400);
 
-// Resolve player
-$stmt = $pdo->prepare("SELECT id FROM players WHERE user_id = ? AND club_id = ? LIMIT 1");
-$stmt->execute([$userId, $clubId]);
+// ── Resolve player (search by user_id across any club) ───
+$stmt = $pdo->prepare("SELECT id, club_id FROM players WHERE user_id = ? LIMIT 1");
+$stmt->execute([$userId]);
 $player = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$player) sendSuccess(['has_player' => false, 'matches' => []]);
-$pid = (int) $player['id'];
 
-// ── All completed matches this player appeared in (batted OR bowled) ──
+$pid    = (int) $player['id'];
+$clubId = (int) $player['club_id'];
+
+// ── All completed matches where this player was in team_players ──
 $stmt = $pdo->prepare("
-    SELECT DISTINCT m.id AS match_id, m.match_date, m.venue, m.status,
-           s.name AS series_name
-    FROM matches m
+    SELECT DISTINCT
+        m.id           AS match_id,
+        m.match_date,
+        m.venue,
+        m.overs,
+        m.status,
+        m.result_text,
+        COALESCE(m.winner_team_id, mr.winner_team_id) AS winner_team_id,
+        s.name         AS series_name,
+        t.id           AS player_team_id,
+        t.team_name    AS player_team
+    FROM team_players tp
+    JOIN teams t  ON t.id = tp.team_id
+    JOIN matches m ON m.id = t.match_id
     LEFT JOIN series s ON s.id = m.series_id
-    WHERE m.club_id = ? AND m.status = 'completed'
-      AND (
-          EXISTS (
-              SELECT 1 FROM batting_scorecards bs
-              JOIN innings i ON bs.innings_id = i.id
-              WHERE i.match_id = m.id AND bs.player_id = ?
-          )
-          OR
-          EXISTS (
-              SELECT 1 FROM bowling_scorecards bwl
-              JOIN innings i ON bwl.innings_id = i.id
-              WHERE i.match_id = m.id AND bwl.player_id = ?
-          )
-      )
+    LEFT JOIN match_results mr ON mr.match_id = m.id
+    WHERE tp.player_id = ?
+      AND m.club_id = ?
+      AND m.status = 'completed'
     ORDER BY m.match_date DESC
     LIMIT 50
 ");
-$stmt->execute([$clubId, $pid, $pid]);
+$stmt->execute([$pid, $clubId]);
 $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if (empty($matches)) {
+    sendSuccess(['has_player' => true, 'matches' => []]);
+}
 
 $result = [];
 
 foreach ($matches as $m) {
-    $mid = (int) $m['match_id'];
+    $mid          = (int) $m['match_id'];
+    $playerTeamId = (int) $m['player_team_id'];
 
-    // ── Team names for this match ──
-    $ts = $pdo->prepare("SELECT team_name FROM teams WHERE match_id = ? AND club_id = ? ORDER BY id ASC LIMIT 2");
-    $ts->execute([$mid, $clubId]);
-    $teams = $ts->fetchAll(PDO::FETCH_COLUMN);
-    $teamA = $teams[0] ?? 'Team A';
-    $teamB = $teams[1] ?? 'Team B';
+    // ── Both team names for this match ──
+    $ts = $pdo->prepare("SELECT id, team_name FROM teams WHERE match_id = ? ORDER BY id ASC LIMIT 2");
+    $ts->execute([$mid]);
+    $teams  = $ts->fetchAll(PDO::FETCH_ASSOC);
+    $teamA  = $teams[0]['team_name'] ?? 'Team A';
+    $teamB  = $teams[1]['team_name'] ?? 'Team B';
 
-    // ── Match result ──
-    $rs = $pdo->prepare("
-        SELECT mr.winner_team_id, mr.result_type, mr.win_margin, mr.win_type,
-               t.team_name AS winner_name
-        FROM match_results mr
-        LEFT JOIN teams t ON t.id = mr.winner_team_id
-        WHERE mr.match_id = ?
-        LIMIT 1
-    ");
-    $rs->execute([$mid]);
-    $matchResult = $rs->fetch(PDO::FETCH_ASSOC);
-
-    // Find which team this player was in for this match
-    $tps = $pdo->prepare("
-        SELECT t.id AS team_id, t.team_name
-        FROM team_players tp
-        JOIN teams t ON t.id = tp.team_id
-        WHERE tp.player_id = ? AND t.match_id = ?
-        LIMIT 1
-    ");
-    $tps->execute([$pid, $mid]);
-    $playerTeam = $tps->fetch(PDO::FETCH_ASSOC);
-
-    // Win / loss for this player
+    // ── Win / Loss for this player ──
+    $winnerId    = $m['winner_team_id'] ? (int) $m['winner_team_id'] : null;
     $resultLabel = 'N/A';
-    if ($matchResult && $playerTeam) {
-        if ($matchResult['result_type'] === 'tie' || $matchResult['result_type'] === 'draw') {
-            $resultLabel = strtoupper($matchResult['result_type']);
-        } elseif ($matchResult['winner_team_id'] == $playerTeam['team_id']) {
-            $resultLabel = 'WON';
-        } else {
-            $resultLabel = 'LOST';
+    if ($winnerId) {
+        $resultLabel = ($winnerId === $playerTeamId) ? 'WON' : 'LOST';
+    }
+
+    // ── result_text fallback ──
+    $resultText = $m['result_text'];
+    if (!$resultText && $winnerId) {
+        // Build from match_results if result_text is missing
+        $mrs = $pdo->prepare("SELECT win_margin, win_type, result_type FROM match_results WHERE match_id = ? LIMIT 1");
+        $mrs->execute([$mid]);
+        $mr = $mrs->fetch(PDO::FETCH_ASSOC);
+        if ($mr) {
+            if ($mr['result_type'] === 'tie')  $resultText = 'Match Tied';
+            elseif ($mr['result_type'] === 'draw') $resultText = 'Match Draw';
+            elseif ($mr['win_margin'] && $mr['win_type']) {
+                // find winner name
+                $ws = $pdo->prepare("SELECT team_name FROM teams WHERE id = ? LIMIT 1");
+                $ws->execute([$winnerId]);
+                $wt = $ws->fetchColumn();
+                $resultText = ($wt ?: 'Winner') . ' won by ' . $mr['win_margin'] . ' ' . $mr['win_type'];
+            }
         }
     }
 
@@ -110,8 +109,6 @@ foreach ($matches as $m) {
     ");
     $bs->execute([$mid, $pid]);
     $batting = $bs->fetch(PDO::FETCH_ASSOC);
-
-    // SR
     if ($batting) {
         $balls = (int)($batting['balls_faced'] ?? 0);
         $runs  = (int)($batting['runs_scored'] ?? 0);
@@ -130,27 +127,25 @@ foreach ($matches as $m) {
     ");
     $bwl->execute([$mid, $pid]);
     $bowling = $bwl->fetch(PDO::FETCH_ASSOC);
-
-    if ($bowling && $bowling['overs_bowled'] > 0) {
-        $bowling['economy'] = round($bowling['runs_conceded'] / $bowling['overs_bowled'], 2);
-    } else {
-        $bowling['economy'] = 0;
+    $hasBowling = $bowling && ((float)$bowling['overs_bowled'] > 0);
+    if ($hasBowling) {
+        $bowling['economy'] = $bowling['overs_bowled'] > 0
+            ? round($bowling['runs_conceded'] / $bowling['overs_bowled'], 2) : 0;
     }
-    $hasBowling = $bowling && ((int)$bowling['overs_bowled'] > 0);
 
     $result[] = [
-        'match_id'     => $mid,
-        'match_date'   => $m['match_date'],
-        'venue'        => $m['venue'],
-        'series_name'  => $m['series_name'],
-        'team_a'       => $teamA,
-        'team_b'       => $teamB,
-        'player_team'  => $playerTeam['team_name'] ?? null,
-        'result'       => $resultLabel,
-        'win_margin'   => $matchResult['win_margin'] ?? null,
-        'win_type'     => $matchResult['win_type'] ?? null,
-        'batting'      => $batting ?: null,
-        'bowling'      => $hasBowling ? $bowling : null,
+        'match_id'    => $mid,
+        'match_date'  => $m['match_date'],
+        'venue'       => $m['venue'],
+        'overs'       => $m['overs'],
+        'series_name' => $m['series_name'],
+        'team_a'      => $teamA,
+        'team_b'      => $teamB,
+        'player_team' => $m['player_team'],
+        'result'      => $resultLabel,
+        'result_text' => $resultText,
+        'batting'     => $batting ?: null,
+        'bowling'     => $hasBowling ? $bowling : null,
     ];
 }
 
