@@ -119,11 +119,7 @@ const TossScreen = ({ navigation, route }) => {
 
   const { match, teamA, teamB, isFirstMatch = true } = route.params;
 
-  // Non-first match → straight to pick mode
-  if (!isFirstMatch) {
-    return <ChooseBattingMode match={match} teamA={teamA} teamB={teamB} navigation={navigation} COLORS={COLORS} styles={styles} />;
-  }
-
+  // Hooks must all be declared before any early return (Rules of Hooks)
   const [selectedCaptain, setSelectedCaptain] = useState(null);
   const [tossCall, setTossCall]               = useState(null);   // 'heads' | 'tails'
   const [tossResult, setTossResult]           = useState(null);
@@ -131,6 +127,11 @@ const TossScreen = ({ navigation, route }) => {
 
   const flipAnim   = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  // Non-first match → straight to pick mode (after all hooks)
+  if (!isFirstMatch) {
+    return <ChooseBattingMode match={match} teamA={teamA} teamB={teamB} navigation={navigation} COLORS={COLORS} styles={styles} />;
+  }
 
   // Just run the flip animation — call is already set by HEADS/TAILS buttons
   const doFlip = () => {
