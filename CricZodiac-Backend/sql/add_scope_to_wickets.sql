@@ -17,11 +17,19 @@ SELECT
   COALESCE(w.innings_id, i.id, b.innings_id) AS expected_innings_id,
   COALESCE(w.batsman_id, bat.id, b.striker_id) AS expected_batsman_id,
   COALESCE(w.bowler_id, bowl.id, b.bowler_id) AS expected_bowler_id,
-  COALESCE(w.fielder_id, f.id) AS expected_fielder_id
+  COALESCE(w.fielder_id, f.id) AS expected_fielder_id,
+  CASE
+    WHEN o.over_number IS NOT NULL AND b.ball_number IS NOT NULL
+    THEN CONCAT(GREATEST(o.over_number - 1, 0), '.', b.ball_number)
+    ELSE w.over_at_fall
+  END AS expected_over_at_fall
 FROM wickets w
 LEFT JOIN balls b
   ON b.id = w.ball_id
   OR b.local_id = w.ball_local_id
+LEFT JOIN overs o
+  ON o.id = b.over_id
+  OR o.local_id = b.over_local_id
 LEFT JOIN innings i
   ON i.id = w.innings_id
   OR i.local_id = w.innings_local_id
@@ -42,12 +50,20 @@ WHERE w.club_id IS NULL
    OR w.innings_id IS NULL
    OR w.batsman_id IS NULL
    OR w.bowler_id IS NULL
-   OR (w.fielder_local_id IS NOT NULL AND w.fielder_id IS NULL);
+   OR (w.fielder_local_id IS NOT NULL AND w.fielder_id IS NULL)
+   OR (
+        o.over_number IS NOT NULL
+        AND b.ball_number IS NOT NULL
+        AND (w.over_at_fall IS NULL OR w.over_at_fall <> CONCAT(GREATEST(o.over_number - 1, 0), '.', b.ball_number))
+      );
 
 UPDATE wickets w
 LEFT JOIN balls b
   ON b.id = w.ball_id
   OR b.local_id = w.ball_local_id
+LEFT JOIN overs o
+  ON o.id = b.over_id
+  OR o.local_id = b.over_local_id
 LEFT JOIN innings i
   ON i.id = w.innings_id
   OR i.local_id = w.innings_local_id
@@ -74,7 +90,12 @@ SET
   w.bowler_id = COALESCE(w.bowler_id, bowl.id, b.bowler_id),
   w.bowler_local_id = COALESCE(w.bowler_local_id, bowl.local_id, b.bowler_local_id),
   w.fielder_id = COALESCE(w.fielder_id, f.id),
-  w.fielder_local_id = COALESCE(w.fielder_local_id, f.local_id)
+  w.fielder_local_id = COALESCE(w.fielder_local_id, f.local_id),
+  w.over_at_fall = CASE
+    WHEN o.over_number IS NOT NULL AND b.ball_number IS NOT NULL
+    THEN CONCAT(GREATEST(o.over_number - 1, 0), '.', b.ball_number)
+    ELSE w.over_at_fall
+  END
 WHERE w.club_id IS NULL
    OR w.series_id IS NULL
    OR w.match_id IS NULL
@@ -82,7 +103,12 @@ WHERE w.club_id IS NULL
    OR w.innings_id IS NULL
    OR w.batsman_id IS NULL
    OR w.bowler_id IS NULL
-   OR (w.fielder_local_id IS NOT NULL AND w.fielder_id IS NULL);
+   OR (w.fielder_local_id IS NOT NULL AND w.fielder_id IS NULL)
+   OR (
+        o.over_number IS NOT NULL
+        AND b.ball_number IS NOT NULL
+        AND (w.over_at_fall IS NULL OR w.over_at_fall <> CONCAT(GREATEST(o.over_number - 1, 0), '.', b.ball_number))
+      );
 
 -- Repair batting dismissal metadata from wickets.
 UPDATE batting_scorecards bs

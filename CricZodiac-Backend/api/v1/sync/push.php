@@ -683,7 +683,7 @@ function resolveOverRow(PDO $pdo, $value): ?array {
     $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $value);
     if ($isUuid) {
         $st = $pdo->prepare("
-            SELECT o.id, o.innings_id, o.match_id,
+            SELECT o.id, o.innings_id, o.match_id, o.over_number,
                    COALESCE(o.club_id,   i.club_id)   AS club_id,
                    COALESCE(o.series_id, i.series_id) AS series_id
             FROM overs o
@@ -693,7 +693,7 @@ function resolveOverRow(PDO $pdo, $value): ?array {
         $st->execute([$value]);
     } else {
         $st = $pdo->prepare("
-            SELECT o.id, o.innings_id, o.match_id,
+            SELECT o.id, o.innings_id, o.match_id, o.over_number,
                    COALESCE(o.club_id,   i.club_id)   AS club_id,
                    COALESCE(o.series_id, i.series_id) AS series_id
             FROM overs o
@@ -711,6 +711,7 @@ function resolveBallRow(PDO $pdo, $value): ?array {
     if (isUuidValue($value)) {
         $st = $pdo->prepare("
             SELECT id, local_id, club_id, series_id, match_id,
+                   over_id, over_local_id, ball_number,
                    innings_id, innings_local_id,
                    striker_id, striker_local_id,
                    bowler_id, bowler_local_id
@@ -722,6 +723,7 @@ function resolveBallRow(PDO $pdo, $value): ?array {
     } else {
         $st = $pdo->prepare("
             SELECT id, local_id, club_id, series_id, match_id,
+                   over_id, over_local_id, ball_number,
                    innings_id, innings_local_id,
                    striker_id, striker_local_id,
                    bowler_id, bowler_local_id
@@ -780,6 +782,17 @@ function resolveBattingOrder(PDO $pdo, ?int $inningsId, ?int $clubId, ?int $seri
     $row = $st->fetch(PDO::FETCH_ASSOC);
 
     return $row ? (int)$row['batting_order'] : 0;
+}
+
+function formatOverAtFallFromBall(?array $ballRow, ?array $overRow, $payloadValue = null): ?string {
+    $overNumber = isset($overRow['over_number']) ? (int)$overRow['over_number'] : null;
+    $ballNumber = isset($ballRow['ball_number']) ? (int)$ballRow['ball_number'] : null;
+
+    if ($overNumber && $ballNumber) {
+        return max(0, $overNumber - 1) . '.' . max(0, $ballNumber);
+    }
+
+    return $payloadValue !== null && $payloadValue !== '' ? (string)$payloadValue : null;
 }
 
 function syncInnings(PDO $pdo, string $action, array $d): bool {
@@ -1593,6 +1606,8 @@ function syncWicket(PDO $pdo, string $action, array $d): bool {
     $clubId = $ballRow['club_id'] ?? ($inningsRow['club_id'] ?? null);
     $seriesId = $ballRow['series_id'] ?? ($inningsRow['series_id'] ?? null);
     $matchId = $ballRow['match_id'] ?? ($inningsRow['match_id'] ?? null);
+    $overRow = resolveOverRow($pdo, $ballRow['over_id'] ?? null)
+        ?: resolveOverRow($pdo, $ballRow['over_local_id'] ?? null);
 
     $batsmanId = resolvePlayerId($pdo, $d['batsman_id'] ?? null) ?? ($ballRow['striker_id'] ?? null);
     $bowlerId = resolvePlayerId($pdo, $d['bowler_id'] ?? null) ?? ($ballRow['bowler_id'] ?? null);
@@ -1616,7 +1631,11 @@ function syncWicket(PDO $pdo, string $action, array $d): bool {
         ? $d['fielder_id']
         : resolvePlayerLocalId($pdo, $fielderId ? (int)$fielderId : null);
     $wicketType = $d['wicket_type'] ?? 'other';
+    if (in_array($wicketType, ['caught', 'run_out', 'stumped'], true) && !$fielderId) {
+        throw new Exception('Wicket sync requires fielder_id for ' . $wicketType . '.');
+    }
     $battingOrder = resolveBattingOrder($pdo, (int)$inningsId, $clubId ? (int)$clubId : null, $seriesId ? (int)$seriesId : null, $matchId ? (int)$matchId : null, (int)$batsmanId);
+    $overAtFall = formatOverAtFallFromBall($ballRow, $overRow, $d['over_at_fall'] ?? null);
 
     $pdo->prepare("
         INSERT INTO wickets (
@@ -1663,7 +1682,7 @@ function syncWicket(PDO $pdo, string $action, array $d): bool {
         $fielderId,
         $fielderLocalId,
         $d['runs_at_fall'] ?? 0,
-        $d['over_at_fall'] ?? null,
+        $overAtFall,
     ]);
 
     recomputeScorecardsForInnings($pdo, (int)$inningsId);

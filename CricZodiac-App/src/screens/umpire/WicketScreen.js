@@ -31,13 +31,23 @@ const WicketScreen = ({ navigation, route }) => {
   const [saving, setSaving]               = useState(false);
 
   React.useEffect(() => {
+    let active = true;
     if (bowlingTeam) {
-      getTeamPlayers(bowlingTeam.id).then(setFieldingTeam).catch(() => {});
+      getTeamPlayers(bowlingTeam.id)
+        .then(players => { if (active) setFieldingTeam(players); })
+        .catch(() => { if (active) setFieldingTeam([]); });
+    } else {
+      setFieldingTeam([]);
     }
-  }, []);
+    return () => { active = false; };
+  }, [bowlingTeam?.id]);
 
   const handleConfirm = async () => {
     if (!selectedType) { Alert.alert('Select Dismissal', 'Please select how the batsman was dismissed.'); return; }
+    if (['caught', 'run_out', 'stumped'].includes(selectedType) && !fielder) {
+      Alert.alert('Select Fielder', 'Please select the fielder for this dismissal.');
+      return;
+    }
     setSaving(true);
     try {
       const ballId = uuid.v4();
@@ -121,6 +131,9 @@ const WicketScreen = ({ navigation, route }) => {
             />
           </>
         )}
+        {['caught', 'run_out', 'stumped'].includes(selectedType) && fieldingTeam.length === 0 && (
+          <Text style={styles.fielderWarn}>No fielders found for the bowling team.</Text>
+        )}
       </ScrollView>
     </LinearGradient>
   );
@@ -143,6 +156,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   fielderBtn:       { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: COLORS.card, borderRadius: 10, marginRight: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   fielderBtnSelected: { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue },
   fielderText:      { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
+  fielderWarn:      { color: COLORS.warning, fontSize: 12, fontWeight: '700', marginBottom: 16 },
 });
 
 export default WicketScreen;

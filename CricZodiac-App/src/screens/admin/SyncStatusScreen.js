@@ -16,6 +16,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
+import { truncateLocalDatabase } from '../../database/DatabaseHelper';
 import { clearSyncQueueByStatuses, getSyncHistory } from '../../database/queries/syncQueries';
 import { retrySingleItem, retryAllWithProgress, getSyncStatus } from '../../services/SyncService';
 
@@ -347,6 +348,7 @@ const SyncStatusScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [filter,     setFilter]     = useState(null);
   const [countdown,  setCountdown]  = useState(AUTO_RETRY_INTERVAL);
+  const [truncatingDb, setTruncatingDb] = useState(false);
 
   // Retry-all modal state
   const [modalVisible, setModalVisible] = useState(false);
@@ -441,6 +443,33 @@ const SyncStatusScreen = ({ navigation }) => {
         },
       },
     ]);
+  };
+
+  const handleTruncateLocalDb = () => {
+    Alert.alert(
+      'Truncate Local Database?',
+      'This will delete all local SQLite data on this device, including sync queue, matches, teams, players, balls, scorecards, and cached server rows. MySQL server data will not be deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Truncate',
+          style: 'destructive',
+          onPress: async () => {
+            setTruncatingDb(true);
+            try {
+              await truncateLocalDatabase();
+              setFilter(null);
+              await load();
+              Alert.alert('Local Database Cleared', 'The mobile SQLite database has been truncated.');
+            } catch (error) {
+              Alert.alert('Truncate Failed', error.message || 'Could not truncate the local database.');
+            } finally {
+              setTruncatingDb(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const toggleFilter = (f) => {
@@ -582,6 +611,26 @@ const SyncStatusScreen = ({ navigation }) => {
         </View>
       )}
 
+      <View style={styles.localDbPanel}>
+        <View style={styles.clearHeader}>
+          <Icon name="database-remove-outline" size={15} color={COLORS.danger} />
+          <Text style={styles.localDbTitle}>LOCAL SQLITE DATABASE</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.truncateBtn, truncatingDb && styles.clearBtnDisabled]}
+          onPress={handleTruncateLocalDb}
+          disabled={truncatingDb}
+        >
+          {truncatingDb
+            ? <ActivityIndicator size="small" color={COLORS.white} />
+            : <Icon name="database-remove" size={17} color={COLORS.white} />
+          }
+          <Text style={styles.truncateBtnText}>
+            {truncatingDb ? 'TRUNCATING...' : 'TRUNCATE LOCAL DB'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Item list */}
       <FlatList
         data={filtered}
@@ -652,6 +701,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   clearBtn:        { width: '48%', minHeight: 36, borderRadius: 9, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 8 },
   clearBtnDisabled:{ opacity: 0.45 },
   clearBtnText:    { fontSize: 11, fontWeight: '800' },
+  localDbPanel:    { marginHorizontal: 16, marginBottom: 10, backgroundColor: COLORS.card, borderRadius: 12, borderWidth: 1, borderColor: COLORS.danger + '44', padding: 10 },
+  localDbTitle:    { color: COLORS.danger, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  truncateBtn:     { minHeight: 40, borderRadius: 10, backgroundColor: COLORS.danger, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  truncateBtnText: { color: COLORS.white, fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
 
   // History item
   historyItem:     { backgroundColor: COLORS.card, borderRadius: 14, marginBottom: 8, borderWidth: 1, overflow: 'hidden' },

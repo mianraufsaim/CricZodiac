@@ -32,6 +32,8 @@ import uuid from 'react-native-uuid';
 // ── Helpers ───────────────────────────────────────────────
 const sr  = (runs, balls) => balls > 0 ? ((runs / balls) * 100).toFixed(1) : '0.0';
 const eco = (runs, overs) => overs > 0 ? (runs / overs).toFixed(1) : '0.0';
+const fallOverLabel = (overNumber, legalBallNumber) =>
+  `${Math.max(0, (Number(overNumber) || 1) - 1)}.${Math.max(0, Number(legalBallNumber) || 0)}`;
 
 const ballLabel = (ball) => {
   if (ball.is_wicket) return 'W';
@@ -141,6 +143,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
 
   const needsFielder  = ['caught', 'run_out', 'stumped'].includes(selType);
   const needsWhoIsOut = BOTH_ENDS_TYPES.includes(selType);
+  const canConfirm    = !!selType && (!needsFielder || !!selFielder);
 
   // Reset each time modal opens; auto-select run_out on free hit
   React.useEffect(() => {
@@ -179,6 +182,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
     fielderSel:    { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue },
     fielderTxt:    { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
     fielderTxtSel: { color: '#FFFFFF' },
+    fielderWarn:   { color: COLORS.warning, fontSize: 12, fontWeight: '700', marginHorizontal: 16, marginBottom: 16 },
     actions:       { flexDirection: 'row', gap: 10, marginHorizontal: 16 },
     cancelBtn:     { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
     cancelTxt:     { color: COLORS.gray, fontWeight: '700', fontSize: 15 },
@@ -247,7 +251,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
           {/* Fielder picker */}
           {needsFielder && bowlingPlayers.length > 0 && (
             <>
-              <Text style={wdStyles.fielderHdr}>FIELDER (optional)</Text>
+              <Text style={wdStyles.fielderHdr}>FIELDER (required)</Text>
               <FlatList
                 data={bowlingPlayers}
                 horizontal
@@ -267,6 +271,9 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
               />
             </>
           )}
+          {needsFielder && bowlingPlayers.length === 0 && (
+            <Text style={wdStyles.fielderWarn}>No fielders found for the bowling team.</Text>
+          )}
 
           {/* Buttons */}
           <View style={wdStyles.actions}>
@@ -274,11 +281,11 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
               <Text style={wdStyles.cancelTxt}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[wdStyles.confirmBtn, !selType && wdStyles.confirmDis]}
-              disabled={!selType}
+              style={[wdStyles.confirmBtn, !canConfirm && wdStyles.confirmDis]}
+              disabled={!canConfirm}
               onPress={() => onConfirm(selType, selFielder, dismissed)}
             >
-              <Text style={wdStyles.confirmTxt}>CONFIRM WICKET</Text>
+              <Text style={wdStyles.confirmTxt}>{needsFielder && !selFielder ? 'SELECT FIELDER' : 'CONFIRM WICKET'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -627,10 +634,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
   useEffect(() => { initScoring(); }, []);
 
   useEffect(() => {
+    let active = true;
     if (bowlingTeam?.id) {
-      getTeamPlayers(bowlingTeam.id).then(setBowlingPlayers).catch(() => {});
+      getTeamPlayers(bowlingTeam.id)
+        .then(players => { if (active) setBowlingPlayers(players); })
+        .catch(() => { if (active) setBowlingPlayers([]); });
+    } else {
+      setBowlingPlayers([]);
     }
-  }, []);
+    return () => { active = false; };
+  }, [bowlingTeam?.id]);
 
   // Keep refs in sync
   useEffect(() => { inningsRef.current       = innings;       }, [innings]);
@@ -1126,7 +1139,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         wicket_type:  dismissalType,
         fielder_id:   fielder?.id || null,
         runs_at_fall: totRuns,
-        over_at_fall: `${ovNum}.${newLegal}`,
+        over_at_fall: fallOverLabel(ovNum, newLegal),
       });
 
       // 3. Update counts + UI

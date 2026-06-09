@@ -12,6 +12,25 @@ const DATABASE_VERSION = '1.0';
 
 let db = null;
 
+const LOCAL_TABLES = [
+  'sync_queue',
+  'match_results',
+  'bowling_scorecards',
+  'batting_scorecards',
+  'wickets',
+  'balls',
+  'overs',
+  'innings',
+  'toss_results',
+  'team_players',
+  'teams',
+  'matches',
+  'series',
+  'players',
+  'users',
+  'clubs',
+];
+
 // ── Open / Initialize ─────────────────────────────────────
 export const getDatabase = async () => {
   if (db) return db;
@@ -673,6 +692,30 @@ export const executeTransaction = async (queries) => {
   });
 };
 
+export const truncateLocalDatabase = async () => {
+  const database = await getDatabase();
+  return new Promise((resolve, reject) => {
+    database.transaction(
+      tx => {
+        tx.executeSql('PRAGMA foreign_keys = OFF;');
+        for (const table of LOCAL_TABLES) {
+          tx.executeSql(`DELETE FROM ${table};`);
+        }
+        tx.executeSql(
+          `DELETE FROM sqlite_sequence WHERE name IN (${LOCAL_TABLES.map(() => '?').join(',')});`,
+          LOCAL_TABLES
+        );
+        tx.executeSql('PRAGMA foreign_keys = ON;');
+      },
+      error => {
+        console.error('[DB] Truncate local database error:', error);
+        reject(error);
+      },
+      () => resolve(true)
+    );
+  });
+};
+
 export const queryRows = async (sql, params = []) => {
   const result = await executeQuery(sql, params);
   const rows = [];
@@ -691,6 +734,7 @@ export default {
   getDatabase,
   executeQuery,
   executeTransaction,
+  truncateLocalDatabase,
   queryRows,
   queryFirstRow,
 };
