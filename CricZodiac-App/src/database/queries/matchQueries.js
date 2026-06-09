@@ -435,6 +435,15 @@ export const saveTossResult = async (tossData) => {
 // ── Innings ───────────────────────────────────────────────
 
 export const createInnings = async (inningsData) => {
+  // Prevent duplicate innings for the same match + innings_number.
+  // If one already exists (even is_completed=1), return its id rather than
+  // inserting a phantom duplicate that poisons the match summary display.
+  const existing = await queryFirstRow(
+    'SELECT id FROM innings WHERE match_id = ? AND innings_number = ? LIMIT 1',
+    [inningsData.match_id, inningsData.innings_number]
+  );
+  if (existing?.id) return existing.id;
+
   const id = inningsData.id || uuid.v4();
   // Resolve club_id + series_id from match if not provided
   const matchRow = await queryFirstRow('SELECT club_id, series_id FROM matches WHERE id = ?', [inningsData.match_id]);
@@ -749,6 +758,30 @@ export const saveWicket = async (wicketData) => {
 
 export const saveMatchResult = async (resultData) => {
   const id = resultData.id || uuid.v4();
+
+  // ── Resolve server integer IDs before building sync payloads ──────────
+  // The server's match_results and matches tables use INT foreign keys.
+  // SQLite teams/players/matches tables store server_id alongside the local UUID.
+  const [matchRow, winnerRow, loserRow, playerRow] = await Promise.all([
+    resultData.match_id
+      ? queryFirstRow('SELECT server_id FROM matches WHERE id = ?', [resultData.match_id])
+      : null,
+    resultData.winner_team_id
+      ? queryFirstRow('SELECT server_id FROM teams WHERE id = ?', [resultData.winner_team_id])
+      : null,
+    resultData.loser_team_id
+      ? queryFirstRow('SELECT server_id FROM teams WHERE id = ?', [resultData.loser_team_id])
+      : null,
+    resultData.player_of_match
+      ? queryFirstRow('SELECT server_id FROM players WHERE id = ?', [resultData.player_of_match])
+      : null,
+  ]);
+
+  const serverMatchId   = matchRow?.server_id   || null;
+  const serverWinnerId  = winnerRow?.server_id  || null;
+  const serverLoserId   = loserRow?.server_id   || null;
+  const serverPlayerId  = playerRow?.server_id  || null;
+
   await executeTransaction([
     {
       sql: `INSERT OR REPLACE INTO match_results (
@@ -757,23 +790,191 @@ export const saveMatchResult = async (resultData) => {
               player_of_match, result_text, sync_status
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       params: [
-        id, resultData.match_id, resultData.winner_team_id, resultData.loser_team_id,
+        id,
+        resultData.match_id,       // local UUID stored locally
+        resultData.winner_team_id, // local UUID stored locally
+        resultData.loser_team_id,
         resultData.result_type, resultData.margin, resultData.margin_type,
         resultData.team_a_score, resultData.team_b_score,
-        resultData.player_of_match, resultData.result_text, SYNC_STATUS.PENDING,
+        resultData.player_of_match,
+        resultData.result_text, SYNC_STATUS.PENDING,
       ],
     },
     {
       sql: `UPDATE matches SET status = 'completed', result_text = ?, winner_team_id = ?, player_of_match = ?, sync_status = ? WHERE id = ?`,
       params: [resultData.result_text, resultData.winner_team_id, resultData.player_of_match, SYNC_STATUS.PENDING, resultData.match_id],
     },
+    // Sync payload for match_results — server integer IDs in the right columns
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'match_results', 'create', id, JSON.stringify({ ...resultData, id }), SYNC_STATUS.PENDING],
+      params: [
+        uuid.v4(), 'match_results', 'create', id,
+        JSON.stringify({
+          id,
+          match_id:             serverMatchId,          // INT
+          match_local_id:       resultData.match_id,    // UUID
+          winner_team_id:       serverWinnerId,         // INT
+          winner_team_local:    resultData.winner_team_id,
+          loser_team_id:        serverLoserId,          // INT
+          loser_team_local:     resultData.loser_team_id,
+          result_type:          resultData.result_type,
+          margin:               resultData.margin,
+          margin_type:          resultData.margin_type,
+          team_a_score:         resultData.team_a_score,
+          team_b_score:         resultData.team_b_score,
+          player_of_match:      serverPlayerId,         // INT
+          player_of_match_local: resultData.player_of_match,
+          result_text:          resultData.result_text,
+        }),
+        SYNC_STATUS.PENDING,
+      ],
+    },
+    // Sync payload for matches table — mark as completed with server integer IDs
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        uuid.v4(), 'matches', 'update', resultData.match_id,
+        JSON.stringify({
+          id:              serverMatchId,            // INT — server uses this to look up the row
+          local_id:        resultData.match_id,      // UUID fallback
+          status:          'completed',
+          result_text:     resultData.result_text,
+          winner_team_id:  serverWinnerId,           // INT
+          player_of_match: serverPlayerId,           // INT
+        }),
+        SYNC_STATUS.PENDING,
+      ],
     },
   ]);
   return id;
+};
+
+export const getMatchResult = (matchId) =>
+  queryFirstRow('SELECT * FROM match_results WHERE match_id = ? LIMIT 1', [matchId]);
+
+// ── Upsert innings rows from server response ───────────────
+// serverInnings : array from GET /matches/score.php
+// matchLocalId  : the local UUID of the match
+export const upsertInningsFromServer = async (serverInnings, matchLocalId) => {
+  if (!serverInnings?.length) return;
+  for (const inn of serverInnings) {
+    const localId = inn.local_id || uuid.v4();
+
+    // Resolve batting team local UUID
+    let battingLocal = inn.batting_team_local || null;
+    if (!battingLocal && inn.batting_team_id) {
+      const row = await queryFirstRow('SELECT id FROM teams WHERE server_id = ?', [inn.batting_team_id]);
+      battingLocal = row?.id || String(inn.batting_team_id);
+    }
+
+    // Resolve bowling team local UUID
+    let bowlingLocal = inn.bowling_team_local || null;
+    if (!bowlingLocal && inn.bowling_team_id) {
+      const row = await queryFirstRow('SELECT id FROM teams WHERE server_id = ?', [inn.bowling_team_id]);
+      bowlingLocal = row?.id || String(inn.bowling_team_id);
+    }
+
+    await executeQuery(
+      `INSERT OR REPLACE INTO innings (
+         id, server_id, match_id, innings_number,
+         batting_team_id, bowling_team_id,
+         total_runs, total_wickets, total_overs, is_completed, sync_status
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        localId,
+        inn.id   || null,
+        matchLocalId,
+        inn.innings_number,
+        battingLocal,
+        bowlingLocal,
+        inn.total_runs    || 0,
+        inn.total_wickets || 0,
+        inn.total_overs   || 0,
+        inn.is_completed  || 0,
+        SYNC_STATUS.SYNCED,
+      ]
+    );
+  }
+};
+
+// ── Upsert teams from server response ─────────────────────
+// serverTeams  : array from GET /teams/list.php?match_id=...
+// matchLocalId : the local UUID of the match
+export const upsertTeamsFromServer = async (serverTeams, matchLocalId) => {
+  if (!serverTeams?.length) return;
+  for (const t of serverTeams) {
+    const localId = t.local_id || uuid.v4();
+    await executeQuery(
+      `INSERT OR REPLACE INTO teams (
+         id, server_id, match_id, club_id, series_id,
+         team_name, team_label, captain_id, sync_status
+       ) VALUES (?,?,?,?,?,?,?,?,?)`,
+      [
+        localId,
+        t.id    || null,
+        matchLocalId,
+        t.club_id   != null ? String(t.club_id)   : null,
+        t.series_id != null ? String(t.series_id) : null,
+        t.team_name || `Team ${t.team_label || ''}`,
+        t.team_label || null,
+        t.captain_local || (t.captain_id != null ? String(t.captain_id) : null),
+        SYNC_STATUS.SYNCED,
+      ]
+    );
+  }
+};
+
+// ── Upsert match result from server response ───────────────
+// serverResult : object from GET /matches/result.php
+// matchLocalId : the local UUID of the match
+export const upsertMatchResultFromServer = async (serverResult, matchLocalId) => {
+  if (!serverResult) return;
+  const localId = serverResult.local_id || uuid.v4();
+
+  // Resolve winner team local UUID
+  let winnerLocal = serverResult.winner_team_local || null;
+  if (!winnerLocal && serverResult.winner_team_id) {
+    const row = await queryFirstRow('SELECT id FROM teams WHERE server_id = ?', [serverResult.winner_team_id]);
+    winnerLocal = row?.id || String(serverResult.winner_team_id);
+  }
+
+  // Resolve loser team local UUID
+  let loserLocal = serverResult.loser_team_local || null;
+  if (!loserLocal && serverResult.loser_team_id) {
+    const row = await queryFirstRow('SELECT id FROM teams WHERE server_id = ?', [serverResult.loser_team_id]);
+    loserLocal = row?.id || String(serverResult.loser_team_id);
+  }
+
+  // Resolve POTM player local UUID
+  let playerLocal = serverResult.player_of_match_local || null;
+  if (!playerLocal && serverResult.player_of_match) {
+    const row = await queryFirstRow('SELECT id FROM players WHERE server_id = ?', [serverResult.player_of_match]);
+    playerLocal = row?.id || null;
+  }
+
+  await executeQuery(
+    `INSERT OR REPLACE INTO match_results (
+       id, match_id, winner_team_id, loser_team_id, result_type,
+       margin, margin_type, team_a_score, team_b_score,
+       player_of_match, result_text, sync_status
+     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      localId,
+      matchLocalId,
+      winnerLocal,
+      loserLocal,
+      serverResult.result_type  || 'win',
+      serverResult.margin       || 0,
+      serverResult.margin_type  || 'runs',
+      serverResult.team_a_score || null,
+      serverResult.team_b_score || null,
+      playerLocal,
+      serverResult.result_text  || null,
+      SYNC_STATUS.SYNCED,
+    ]
+  );
 };
 
 // ── Scorecard Queries ─────────────────────────────────────

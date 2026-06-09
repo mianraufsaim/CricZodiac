@@ -21,7 +21,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import {
-  createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings,
+  createInnings, enqueueInningsSync, createOver, enqueueOverSync, updateOver, updateInnings, updateMatch,
   saveBall, getCurrentOver, getMatchInnings, getMatch, getMatchTeams,
   getTeamPlayers, getAllTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
@@ -1613,14 +1613,25 @@ const LiveScoringScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleStartNextInnings = () => {
-    // Dismiss modal first; delay replace so the modal can fully unmount
-    // before React Navigation replaces the screen — avoids timing crashes.
+  const handleStartNextInnings = async () => {
     setShowInningsComplete(false);
-    const snapRuns = totalRunsRef.current;
+    const snapRuns    = totalRunsRef.current;
+    const snapMatch   = match;
+    const snapInnings = inningsRef.current;
+
+    // Belt-and-suspenders: ensure innings 1 is marked complete regardless
+    // of whether _endInnings ran cleanly before navigation.
+    try {
+      if (snapInnings?.id) {
+        await updateInnings(snapInnings.id, { is_completed: 1 });
+      }
+    } catch (e) {
+      console.warn('[handleStartNextInnings] is_completed update failed:', e.message);
+    }
+
     setTimeout(() => {
       navigation.replace('LiveScoring', {
-        match,
+        match:         snapMatch,
         battingTeam:   bowlingTeam,
         bowlingTeam:   battingTeam,
         inningsNumber: 2,

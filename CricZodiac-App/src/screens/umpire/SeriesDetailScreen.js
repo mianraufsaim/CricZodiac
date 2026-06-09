@@ -185,9 +185,13 @@ const SeriesDetailScreen = ({ navigation, route }) => {
       } catch (e) {
         Alert.alert('Error', 'Failed to load match teams.');
       }
-    } else if (item.status === 'live') {
+    } else if (item.status === 'live' || item.status === 'innings_2') {
       navigation.navigate('LiveScoring', { matchId: item.id });
+    } else if (item.status === 'completed') {
+      // Open the full match summary for completed matches
+      navigation.navigate('MatchSummary', { match: item });
     } else {
+      // Fallback for any other status (e.g. unknown)
       navigation.navigate('Scorecard', { matchId: item.id });
     }
   };
