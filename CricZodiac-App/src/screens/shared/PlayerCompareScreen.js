@@ -72,7 +72,7 @@ const SelectorCard = ({ player, side, onPress, COLORS, styles }) => (
 );
 
 // ── Compare row ────────────────────────────────────────────
-const CompRow = ({ label, valA, valB, higherWins, isLast, COLORS, styles }) => {
+const CompRow = ({ label, valA, valB, higherWins, isLast, idx, COLORS, styles }) => {
   const a = parseFloat(valA);
   const b = parseFloat(valB);
   const hasData = !isNaN(a) && !isNaN(b);
@@ -80,29 +80,63 @@ const CompRow = ({ label, valA, valB, higherWins, isLast, COLORS, styles }) => {
   const bWins = hasData && (higherWins ? b > a : (b < a && b > 0));
   const tie   = hasData && a === b;
 
+  const rowBg = idx % 2 !== 0 ? (COLORS.cardBorder + '33') : 'transparent';
+
   return (
-    <View style={[styles.compRow, isLast && { borderBottomWidth: 0 }]}>
-      {/* Player A value */}
-      <View style={[styles.compValWrap, { alignItems: 'flex-end' }]}>
-        <Text style={[styles.compVal, aWins && styles.compWinnerA, tie && styles.compTie]}>
-          {valA ?? '—'}
-        </Text>
-        {aWins && <View style={styles.winDot} />}
+    <View style={[styles.compRow, isLast && { borderBottomWidth: 0 }, { backgroundColor: rowBg }]}>
+
+      {/* ── Player A cell ── */}
+      <View style={[styles.compCell, { alignItems: 'flex-end' }]}>
+        <View style={[
+          styles.compPill,
+          aWins && { backgroundColor: COLORS.gold + '22', borderColor: COLORS.gold + '88', borderWidth: 1 },
+          tie && { borderColor: COLORS.purple + '66', borderWidth: 1 },
+        ]}>
+          {aWins && (
+            <Icon name="chevron-up" size={11} color={COLORS.gold} style={{ marginRight: 2 }} />
+          )}
+          <Text style={[
+            styles.compVal,
+            aWins && { color: COLORS.gold, fontWeight: '900' },
+            bWins && { color: COLORS.gray },
+            tie   && { color: COLORS.purple },
+          ]}>
+            {valA ?? '—'}
+          </Text>
+        </View>
       </View>
 
-      {/* Label */}
+      {/* ── Center label ── */}
       <View style={styles.compLabelWrap}>
         <Text style={styles.compLabel}>{label}</Text>
-        {tie && hasData && <Text style={styles.tieText}>TIE</Text>}
+        {tie && hasData && (
+          <View style={styles.tiePill}>
+            <Text style={styles.tieText}>TIE</Text>
+          </View>
+        )}
       </View>
 
-      {/* Player B value */}
-      <View style={[styles.compValWrap, { alignItems: 'flex-start' }]}>
-        {bWins && <View style={[styles.winDot, { backgroundColor: COLORS.cyan }]} />}
-        <Text style={[styles.compVal, bWins && styles.compWinnerB, tie && styles.compTie]}>
-          {valB ?? '—'}
-        </Text>
+      {/* ── Player B cell ── */}
+      <View style={[styles.compCell, { alignItems: 'flex-start' }]}>
+        <View style={[
+          styles.compPill,
+          bWins && { backgroundColor: COLORS.cyan + '22', borderColor: COLORS.cyan + '88', borderWidth: 1 },
+          tie && { borderColor: COLORS.purple + '66', borderWidth: 1 },
+        ]}>
+          <Text style={[
+            styles.compVal,
+            bWins && { color: COLORS.cyan, fontWeight: '900' },
+            aWins && { color: COLORS.gray },
+            tie   && { color: COLORS.purple },
+          ]}>
+            {valB ?? '—'}
+          </Text>
+          {bWins && (
+            <Icon name="chevron-up" size={11} color={COLORS.cyan} style={{ marginLeft: 2 }} />
+          )}
+        </View>
       </View>
+
     </View>
   );
 };
@@ -320,28 +354,28 @@ const PlayerCompareScreen = ({ navigation, route }) => {
             {/* Batting */}
             <View style={styles.compCard}>
               <SectionHeader icon="cricket" title="Batting" color={COLORS.gold} styles={styles} />
-              <CompRow label="Innings"     valA={batA.batting_innings} valB={batB.batting_innings} higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Runs"        valA={batA.total_runs}      valB={batB.total_runs}      higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Average"     valA={batA.average}         valB={batB.average}         higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Strike Rate" valA={batA.strike_rate}     valB={batB.strike_rate}     higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Highest"     valA={batA.highest_score}   valB={batB.highest_score}   higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="50s"         valA={batA.fifties}         valB={batB.fifties}         higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="100s"        valA={batA.hundreds}        valB={batB.hundreds}        higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Sixes"       valA={batA.total_sixes}     valB={batB.total_sixes}     higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Fours"       valA={batA.total_fours}     valB={batB.total_fours}     higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Ducks"       valA={batA.ducks}           valB={batB.ducks}           higherWins={false} COLORS={COLORS} styles={styles} isLast />
+              <CompRow idx={0} label="Innings"     valA={batA.batting_innings} valB={batB.batting_innings} higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={1} label="Runs"        valA={batA.total_runs}      valB={batB.total_runs}      higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={2} label="Average"     valA={batA.average}         valB={batB.average}         higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={3} label="Strike Rate" valA={batA.strike_rate}     valB={batB.strike_rate}     higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={4} label="Highest"     valA={batA.highest_score}   valB={batB.highest_score}   higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={5} label="50s"         valA={batA.fifties}         valB={batB.fifties}         higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={6} label="100s"        valA={batA.hundreds}        valB={batB.hundreds}        higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={7} label="Sixes"       valA={batA.total_sixes}     valB={batB.total_sixes}     higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={8} label="Fours"       valA={batA.total_fours}     valB={batB.total_fours}     higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={9} label="Ducks"       valA={batA.ducks}           valB={batB.ducks}           higherWins={false} COLORS={COLORS} styles={styles} isLast />
             </View>
 
             {/* Bowling */}
             <View style={styles.compCard}>
               <SectionHeader icon="bullseye-arrow" title="Bowling" color={COLORS.cyan} styles={styles} />
-              <CompRow label="Innings"     valA={bwlA.bowling_innings}    valB={bwlB.bowling_innings}    higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Wickets"     valA={bwlA.total_wickets}      valB={bwlB.total_wickets}      higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Economy"     valA={bwlA.economy}            valB={bwlB.economy}            higherWins={false} COLORS={COLORS} styles={styles} />
-              <CompRow label="Overs"       valA={bwlA.total_overs}        valB={bwlB.total_overs}        higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Runs Given"  valA={bwlA.total_runs_conceded}valB={bwlB.total_runs_conceded}higherWins={false} COLORS={COLORS} styles={styles} />
-              <CompRow label="Maidens"     valA={bwlA.total_maidens}      valB={bwlB.total_maidens}      higherWins COLORS={COLORS} styles={styles} />
-              <CompRow label="Avg Wickets" valA={bwlA.avg_wickets}        valB={bwlB.avg_wickets}        higherWins COLORS={COLORS} styles={styles} isLast />
+              <CompRow idx={0} label="Innings"     valA={bwlA.bowling_innings}     valB={bwlB.bowling_innings}     higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={1} label="Wickets"     valA={bwlA.total_wickets}       valB={bwlB.total_wickets}       higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={2} label="Economy"     valA={bwlA.economy}             valB={bwlB.economy}             higherWins={false} COLORS={COLORS} styles={styles} />
+              <CompRow idx={3} label="Overs"       valA={bwlA.total_overs}         valB={bwlB.total_overs}         higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={4} label="Runs Given"  valA={bwlA.total_runs_conceded} valB={bwlB.total_runs_conceded} higherWins={false} COLORS={COLORS} styles={styles} />
+              <CompRow idx={5} label="Maidens"     valA={bwlA.total_maidens}       valB={bwlB.total_maidens}       higherWins COLORS={COLORS} styles={styles} />
+              <CompRow idx={6} label="Avg Wickets" valA={bwlA.avg_wickets}         valB={bwlB.avg_wickets}         higherWins COLORS={COLORS} styles={styles} isLast />
             </View>
           </>
         )}
@@ -423,17 +457,15 @@ const getStyles = (COLORS) => StyleSheet.create({
   secIconWrap: { width: 26, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   secTitle:    { color: COLORS.white, fontWeight: '800', fontSize: 13, letterSpacing: 0.3 },
 
-  // Compare row
-  compRow:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder + '66' },
-  compValWrap: { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  compVal:     { color: COLORS.white, fontSize: 14, fontWeight: '600' },
-  compWinnerA: { color: COLORS.gold, fontWeight: '900', fontSize: 15 },
-  compWinnerB: { color: COLORS.cyan, fontWeight: '900', fontSize: 15 },
-  compTie:     { color: COLORS.purple, fontWeight: '800' },
-  compLabelWrap:{ flex: 3, alignItems: 'center' },
-  compLabel:   { color: COLORS.gray, fontSize: 11, textAlign: 'center' },
-  tieText:     { color: COLORS.purple, fontSize: 8, fontWeight: '800', letterSpacing: 1, marginTop: 1 },
-  winDot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.gold },
+  // Compare row — pill design
+  compRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: COLORS.cardBorder + '55' },
+  compCell:     { flex: 2, alignItems: 'center' },
+  compPill:     { flexDirection: 'row', alignItems: 'center', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 0 },
+  compVal:      { color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  compLabelWrap:{ flex: 3, alignItems: 'center', gap: 2 },
+  compLabel:    { color: COLORS.gray, fontSize: 11, fontWeight: '500', textAlign: 'center', letterSpacing: 0.2 },
+  tiePill:      { backgroundColor: COLORS.purple + '33', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
+  tieText:      { color: COLORS.purple, fontSize: 8, fontWeight: '800', letterSpacing: 1 },
 
   // Hint
   hintWrap:    { alignItems: 'center', paddingVertical: 50, gap: 12 },
