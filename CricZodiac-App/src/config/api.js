@@ -67,8 +67,9 @@ export const API_ENDPOINTS = {
   MATCHES_CREATE: `${API_BASE_URL}/matches/create.php`,
   MATCHES_LIST:   `${API_BASE_URL}/matches/list.php`,
   MATCHES_TOSS:   `${API_BASE_URL}/matches/toss.php`,
-  MATCHES_SCORE:  `${API_BASE_URL}/matches/score.php`,
-  MATCHES_RESULT: `${API_BASE_URL}/matches/result.php`,
+  MATCHES_SCORE:      `${API_BASE_URL}/matches/score.php`,
+  MATCHES_RESULT:     `${API_BASE_URL}/matches/result.php`,
+  MATCHES_SCORECARD:  `${API_BASE_URL}/matches/scorecard.php`,
 
   // Sync
   SYNC_PUSH:      `${API_BASE_URL}/sync/push.php`,

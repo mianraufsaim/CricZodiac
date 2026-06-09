@@ -151,7 +151,30 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         .filter(inn => (inn.total_overs || 0) > 0 || (inn.total_runs || 0) > 0 || (inn.total_wickets || 0) > 0)
         .sort((a, b) => a.innings_number - b.innings_number);
 
-      // ── 7. Auto-finalize: save result if complete innings but no result ─
+      // ── 7. Auto-pick POTM: top scorer across all innings ──────────────
+      let autoPotmId   = null;
+      let autoPotmName = null;
+      try {
+        const topScorer = await queryFirstRow(
+          `SELECT bs.player_id,
+                  bs.runs_scored,
+                  COALESCE(u.name, p.full_name) AS display_name
+             FROM batting_scorecards bs
+             JOIN innings  i ON i.id  = bs.innings_id
+             JOIN players  p ON p.id  = bs.player_id
+             LEFT JOIN users u ON u.id = p.user_id
+            WHERE i.match_id = ?
+            ORDER BY bs.runs_scored DESC, bs.balls_faced ASC
+            LIMIT 1`,
+          [matchId]
+        );
+        if (topScorer?.player_id && topScorer?.display_name) {
+          autoPotmId   = topScorer.player_id;
+          autoPotmName = topScorer.display_name.trim();
+        }
+      } catch (_) {}
+
+      // ── 8. Auto-finalize: save result if complete innings but no result ─
       let finalResult = existingResult;
       if (!existingResult && validInnings.length >= 2 && (tms || []).length >= 2) {
         try {
@@ -168,7 +191,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               margin_type:     winner.type === 'runs' ? 'runs' : 'wickets',
               team_a_score:    `${inn1.total_runs ?? 0}/${inn1.total_wickets ?? 0}`,
               team_b_score:    inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
-              player_of_match: null,
+              player_of_match: autoPotmId,
               result_text:     winner.type === 'tie'
                 ? 'Match Tied!'
                 : `${winner.winner.team_name} won by ${winner.margin}`,
@@ -180,19 +203,30 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         }
       }
 
-      // ── 8. Resolve POTM player name ────────────────────────────────────
-      let resolvedPotmName = null;
-      if (finalResult?.player_of_match) {
-        try {
+      // ── 9. Resolve POTM name — always try API first ───────────────────
+      // result.php returns player_of_match_name directly from MySQL JOIN.
+      // Use that; fall back to the auto top-scorer name we picked above.
+      let resolvedPotmName = autoPotmName;
+      try {
+        const rRes = await ApiService.get(
+          `${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`
+        );
+        const sr = rRes?.result || rRes?.data?.result || null;
+        if (sr?.player_of_match_name) {
+          resolvedPotmName = sr.player_of_match_name.trim();
+        } else if (finalResult?.player_of_match) {
+          // API result exists but no POTM name there — look up locally
           const potmRow = await queryFirstRow(
-            `SELECT p.full_name, u.name AS user_name
-               FROM players p
-               LEFT JOIN users u ON p.user_id = u.id
+            `SELECT COALESCE(u.name, p.full_name) AS display_name
+               FROM players p LEFT JOIN users u ON u.id = p.user_id
               WHERE p.id = ?`,
             [finalResult.player_of_match]
           );
-          resolvedPotmName = (potmRow?.user_name || potmRow?.full_name || '').trim() || null;
-        } catch (_) {}
+          const fromDb = (potmRow?.display_name || '').trim();
+          if (fromDb) resolvedPotmName = fromDb;
+        }
+      } catch (_) {
+        // API unavailable — keep autoPotmName already set
       }
 
       // ── 9. Commit to state ─────────────────────────────────────────────
@@ -283,7 +317,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
             </LinearGradient>
           ) : (
             <LinearGradient colors={['#1A3000', '#0E1A00']} style={styles.resultBanner}>
-              <Icon name="trophy" size={34} color={COLORS.gold} style={{ marginBottom: 8 }} />
+              <Icon name="trophy" size={34} color="#D4AF37" style={{ marginBottom: 8 }} />
               <Text style={styles.resultWinnerName}>{winner.winner?.team_name}</Text>
               <View style={styles.resultMarginRow}>
                 <Text style={styles.resultMarginLabel}>WON BY</Text>
@@ -388,11 +422,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   matchVenue:        { color: COLORS.gray, fontSize: 13, marginTop: 4 },
 
   resultBanner:      { borderRadius: 20, paddingVertical: 28, paddingHorizontal: 24, alignItems: 'center', marginBottom: 22, borderWidth: 1.5, borderColor: COLORS.gold + '50' },
-  resultWinnerName:  { color: COLORS.white, fontSize: 26, fontWeight: '900', textAlign: 'center' },
+  resultWinnerName:  { color: '#FFFFFF', fontSize: 26, fontWeight: '900', textAlign: 'center' },
   resultMarginRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  resultMarginLabel: { color: COLORS.gray, fontSize: 11, fontWeight: '700', letterSpacing: 2 },
-  resultMarginValue: { color: COLORS.gold, fontSize: 18, fontWeight: '900' },
-  tieText:           { color: COLORS.white, fontSize: 24, fontWeight: '900', letterSpacing: 3 },
+  resultMarginLabel: { color: '#A0A0A0', fontSize: 11, fontWeight: '700', letterSpacing: 2 },
+  resultMarginValue: { color: '#D4AF37', fontSize: 18, fontWeight: '900' },
+  tieText:           { color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: 3 },
 
   sectionLabel:      { color: COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 3, marginBottom: 10 },
 
@@ -413,8 +447,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   noDataText:        { color: COLORS.gray, fontSize: 14 },
 
   potmCard:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: COLORS.gold + '60', gap: 14 },
-  potmAvatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.royalBlue, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.gold },
-  potmAvatarText:    { color: COLORS.white, fontWeight: '900', fontSize: 22 },
+  potmAvatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: '#2C4BB5', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#D4AF37' },
+  potmAvatarText:    { color: '#FFFFFF', fontWeight: '900', fontSize: 22 },
   potmName:          { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   potmSub:           { color: COLORS.gold, fontSize: 11, marginTop: 2 },
 

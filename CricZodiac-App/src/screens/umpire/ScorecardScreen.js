@@ -3,36 +3,90 @@
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { getBattingScorecard, getBowlingScorecard, getInnings } from '../../database/queries/matchQueries';
+import ApiService from '../../services/ApiService';
+import { API_ENDPOINTS } from '../../config/api';
 
 const ScorecardScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
 
   const { inningsId, match, liveOverNumber, liveLegalBalls } = route.params;
-  const [batting, setBatting]   = useState([]);
-  const [bowling, setBowling]   = useState([]);
-  const [innings, setInnings]   = useState(null);
-  const [tab, setTab]           = useState('batting');
+  const [batting,  setBatting]  = useState([]);
+  const [bowling,  setBowling]  = useState([]);
+  const [innings,  setInnings]  = useState(null);
+  const [tab,      setTab]      = useState('batting');
+  const [loading,  setLoading]  = useState(true);
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    const [bat, bowl, inn] = await Promise.all([
-      getBattingScorecard(inningsId),
-      getBowlingScorecard(inningsId),
-      getInnings(inningsId),
-    ]);
-    setBatting(bat);
-    setBowling(bowl);
-    setInnings(inn);
+    setLoading(true);
+    try {
+      // ── 1. Try local SQLite first (works during live scoring / offline) ─
+      const [bat, bowl, inn] = await Promise.all([
+        getBattingScorecard(inningsId),
+        getBowlingScorecard(inningsId),
+        getInnings(inningsId),
+      ]);
+
+      if (bat?.length || bowl?.length) {
+        // Local data available — use it
+        setBatting(bat || []);
+        setBowling(bowl || []);
+        setInnings(inn || null);
+        setLoading(false);
+
+        // Still refresh from API in background to get latest/most accurate data
+        fetchFromApi(inningsId, match?.id).then(api => {
+          if (api) {
+            if (api.batting?.length) setBatting(api.batting);
+            if (api.bowling?.length) setBowling(api.bowling);
+            if (api.innings)         setInnings(api.innings);
+          }
+        }).catch(() => {});
+        return;
+      }
+
+      // ── 2. Local DB empty (DB cleared) — fetch from API ─────────────────
+      const api = await fetchFromApi(inningsId, match?.id);
+      if (api) {
+        setBatting(api.batting || []);
+        setBowling(api.bowling || []);
+        setInnings(api.innings || inn || null);
+      } else {
+        // Nothing anywhere — show empty with whatever innings data we have
+        setInnings(inn || null);
+      }
+    } catch (err) {
+      console.warn('[Scorecard] load error:', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // If live over data was passed (innings still in progress), use it directly
+  // Fetch scorecard from server API — returns { innings, batting, bowling } or null
+  const fetchFromApi = async (localInningsId, localMatchId) => {
+    try {
+      const params = [`innings_id=${encodeURIComponent(localInningsId)}`];
+      if (localMatchId) params.push(`match_id=${encodeURIComponent(localMatchId)}`);
+      const res = await ApiService.get(`${API_ENDPOINTS.MATCHES_SCORECARD}?${params.join('&')}`);
+      const innings = res?.innings || res?.data?.innings || null;
+      const batting = res?.batting || res?.data?.batting || [];
+      const bowling = res?.bowling || res?.data?.bowling || [];
+      if (innings || batting.length || bowling.length) {
+        return { innings, batting, bowling };
+      }
+    } catch (e) {
+      console.warn('[Scorecard] API fetch:', e.message);
+    }
+    return null;
+  };
+
   const liveOversStr = (liveOverNumber != null && liveLegalBalls != null)
     ? `${liveOverNumber - 1}.${liveLegalBalls}`
     : null;
@@ -70,66 +124,77 @@ const ScorecardScreen = ({ navigation, route }) => {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        {tab === 'batting' ? (
-          <View style={styles.tableCard}>
-            {/* Header */}
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 3 }]}>Batsman</Text>
-              <Text style={styles.th}>R</Text>
-              <Text style={styles.th}>B</Text>
-              <Text style={styles.th}>4s</Text>
-              <Text style={styles.th}>6s</Text>
-              <Text style={[styles.th, { marginLeft: 8 }]}>SR</Text>
+      {loading ? (
+        <ActivityIndicator size="large" color={COLORS.gold} style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+          {tab === 'batting' ? (
+            <View style={styles.tableCard}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.th, { flex: 3 }]}>Batsman</Text>
+                <Text style={styles.th}>R</Text>
+                <Text style={styles.th}>B</Text>
+                <Text style={styles.th}>4s</Text>
+                <Text style={styles.th}>6s</Text>
+                <Text style={[styles.th, { marginLeft: 8 }]}>SR</Text>
+              </View>
+              {batting.length === 0 ? (
+                <Text style={styles.emptyText}>No batting data available</Text>
+              ) : (
+                batting.map((b, i) => {
+                  const bf    = b.balls_faced || 0;
+                  const rs    = b.runs_scored || 0;
+                  const srVal = bf > 0 ? ((rs / bf) * 100).toFixed(1) : '0.0';
+                  return (
+                    <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
+                      <View style={{ flex: 3 }}>
+                        <Text style={styles.playerName}>{b.full_name}</Text>
+                        <Text style={styles.dismissal}>{b.is_out ? b.dismissal_type : 'not out'}</Text>
+                      </View>
+                      <Text style={[styles.td, rs >= 50 && styles.tdHighlight]}>{rs}</Text>
+                      <Text style={styles.td}>{bf}</Text>
+                      <Text style={styles.td}>{b.fours}</Text>
+                      <Text style={styles.td}>{b.sixes}</Text>
+                      <Text style={[styles.td, { marginLeft: 8 }]}>{srVal}</Text>
+                    </View>
+                  );
+                })
+              )}
             </View>
-            {batting.map((b, i) => {
-              const bf = b.balls_faced || 0;
-              const rs = b.runs_scored || 0;
-              const srVal = bf > 0 ? ((rs / bf) * 100).toFixed(1) : '0.0';
-              return (
-                <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
-                  <View style={{ flex: 3 }}>
-                    <Text style={styles.playerName}>{b.full_name}</Text>
-                    <Text style={styles.dismissal}>{b.is_out ? b.dismissal_type : 'not out'}</Text>
-                  </View>
-                  <Text style={[styles.td, rs >= 50 && styles.tdHighlight]}>{rs}</Text>
-                  <Text style={styles.td}>{bf}</Text>
-                  <Text style={styles.td}>{b.fours}</Text>
-                  <Text style={styles.td}>{b.sixes}</Text>
-                  <Text style={[styles.td, { marginLeft: 8 }]}>{srVal}</Text>
-                </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.tableCard}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 3 }]}>Bowler</Text>
-              <Text style={styles.th}>O</Text>
-              <Text style={styles.th}>M</Text>
-              <Text style={styles.th}>R</Text>
-              <Text style={styles.th}>W</Text>
-              <Text style={[styles.th, { marginLeft: 8 }]}>Eco</Text>
+          ) : (
+            <View style={styles.tableCard}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.th, { flex: 3 }]}>Bowler</Text>
+                <Text style={styles.th}>O</Text>
+                <Text style={styles.th}>M</Text>
+                <Text style={styles.th}>R</Text>
+                <Text style={styles.th}>W</Text>
+                <Text style={[styles.th, { marginLeft: 8 }]}>Eco</Text>
+              </View>
+              {bowling.length === 0 ? (
+                <Text style={styles.emptyText}>No bowling data available</Text>
+              ) : (
+                bowling.map((b, i) => {
+                  const bb    = b.balls_bowled || 0;
+                  const rc    = b.runs_conceded || 0;
+                  const oStr  = `${Math.floor(bb / 6)}.${bb % 6}`;
+                  const ecoVal = bb > 0 ? ((rc / bb) * 6).toFixed(2) : '0.00';
+                  return (
+                    <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
+                      <Text style={[styles.playerName, { flex: 3 }]}>{b.full_name}</Text>
+                      <Text style={styles.td}>{oStr}</Text>
+                      <Text style={styles.td}>{b.maidens}</Text>
+                      <Text style={styles.td}>{rc}</Text>
+                      <Text style={[styles.td, b.wickets >= 3 && styles.tdHighlight]}>{b.wickets}</Text>
+                      <Text style={[styles.td, { marginLeft: 8 }]}>{ecoVal}</Text>
+                    </View>
+                  );
+                })
+              )}
             </View>
-            {bowling.map((b, i) => {
-              const bb = b.balls_bowled || 0;
-              const rc = b.runs_conceded || 0;
-              const oStr = `${Math.floor(bb / 6)}.${bb % 6}`;
-              const ecoVal = bb > 0 ? ((rc / bb) * 6).toFixed(2) : '0.00';
-              return (
-                <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
-                  <Text style={[styles.playerName, { flex: 3 }]}>{b.full_name}</Text>
-                  <Text style={styles.td}>{oStr}</Text>
-                  <Text style={styles.td}>{b.maidens}</Text>
-                  <Text style={styles.td}>{rc}</Text>
-                  <Text style={[styles.td, b.wickets >= 3 && styles.tdHighlight]}>{b.wickets}</Text>
-                  <Text style={[styles.td, { marginLeft: 8 }]}>{ecoVal}</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      )}
     </LinearGradient>
   );
 };
@@ -154,6 +219,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   dismissal:     { color: COLORS.gray, fontSize: 11, marginTop: 2 },
   td:            { color: COLORS.lightGray, fontSize: 13, width: 36, textAlign: 'center' },
   tdHighlight:   { color: COLORS.gold, fontWeight: '800' },
+  emptyText:     { color: COLORS.gray, textAlign: 'center', paddingVertical: 24, fontSize: 13 },
 });
 
 export default ScorecardScreen;
