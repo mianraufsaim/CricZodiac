@@ -1,52 +1,147 @@
 <?php
 // GET /api/v1/players/stats.php?player_id=X
+// Returns a single player's full profile + batting + bowling + wicket breakdown.
+// Club-scoped (matches must belong to the authenticated user's club).
+// Super admin may pass ?club_id=Y to override.
 require_once __DIR__ . '/../../../includes/cors.php';
 require_once __DIR__ . '/../../../includes/response.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
 
-requireAuth();
-$playerId = $_GET['player_id'] ?? null;
-if (!$playerId) sendError('player_id required.');
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') sendError('Method not allowed.', 405);
 
-$pdo = getDB();
+$authUser = requireAuth();
+$pdo      = getDB();
 
-$batting = $pdo->prepare("
-    SELECT
-        COUNT(DISTINCT m.id) as total_matches,
-        COALESCE(SUM(bs.runs_scored),0) as total_runs,
-        COALESCE(MAX(bs.runs_scored),0) as highest_score,
-        COALESCE(SUM(bs.balls_faced),0) as total_balls_faced,
-        COALESCE(SUM(bs.fours),0) as total_fours,
-        COALESCE(SUM(bs.sixes),0) as total_sixes,
-        COALESCE(SUM(CASE WHEN bs.is_out=1 THEN 1 ELSE 0 END),0) as total_outs
-    FROM batting_scorecards bs
-    JOIN innings i ON bs.innings_id = i.id
-    JOIN matches m ON i.match_id = m.id
-    WHERE bs.player_id = (SELECT id FROM players WHERE local_id=? LIMIT 1) AND m.status='completed'
+$pid = isset($_GET['player_id']) ? (int) $_GET['player_id'] : null;
+if (!$pid) sendError('player_id is required.', 422);
+
+// Resolve club_id
+if ($authUser['role'] === 'super_admin' && isset($_GET['club_id'])) {
+    $clubId = (int) $_GET['club_id'];
+} else {
+    $clubId = $authUser['club_id'] ? (int) $authUser['club_id'] : null;
+}
+if (!$clubId) sendError('No club associated with your account.', 400);
+
+// ── Profile ───────────────────────────────────────────────
+$stmt = $pdo->prepare("
+    SELECT p.id, p.local_id, COALESCE(u.name, 'Unknown') AS full_name,
+           p.profile_pic, p.player_type, p.batting_hand, p.bowling_style,
+           p.jersey_number, p.date_of_birth, p.club_id
+    FROM players p
+    LEFT JOIN users u ON u.id = p.user_id
+    WHERE p.id = ? AND p.club_id = ?
+    LIMIT 1
 ");
-$batting->execute([$playerId]);
-$bat = $batting->fetch();
+$stmt->execute([$pid, $clubId]);
+$player = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$player) sendError('Player not found in this club.', 404);
 
-$outs = max(1, $bat['total_outs']);
-$bat['batting_average'] = number_format($bat['total_runs'] / $outs, 2);
-$bat['strike_rate']     = $bat['total_balls_faced'] > 0
-    ? number_format(($bat['total_runs'] / $bat['total_balls_faced']) * 100, 2) : '0.00';
-
-$bowling = $pdo->prepare("
+// ── Batting stats (completed matches in this club) ────────
+$stmt = $pdo->prepare("
     SELECT
-        COALESCE(SUM(bwl.overs_bowled),0) as total_overs,
-        COALESCE(SUM(bwl.wickets),0) as total_wickets,
-        COALESCE(SUM(bwl.runs_conceded),0) as total_runs_conceded,
-        COALESCE(SUM(bwl.maidens),0) as total_maidens
+        COUNT(DISTINCT i.match_id)                                              AS total_matches,
+        COUNT(bs.id)                                                            AS batting_innings,
+        COALESCE(SUM(bs.runs_scored), 0)                                        AS total_runs,
+        COALESCE(MAX(bs.runs_scored), 0)                                        AS highest_score,
+        COALESCE(SUM(bs.balls_faced), 0)                                        AS total_balls,
+        COALESCE(SUM(bs.fours), 0)                                              AS total_fours,
+        COALESCE(SUM(bs.sixes), 0)                                              AS total_sixes,
+        COALESCE(SUM(CASE WHEN bs.is_out = 1 THEN 1 ELSE 0 END), 0)            AS total_outs,
+        COALESCE(SUM(CASE WHEN bs.is_out = 0 THEN 1 ELSE 0 END), 0)            AS not_outs,
+        COALESCE(SUM(CASE WHEN bs.runs_scored = 0 AND bs.is_out = 1 THEN 1 ELSE 0 END), 0) AS ducks,
+        COALESCE(SUM(CASE WHEN bs.runs_scored >= 50 AND bs.runs_scored < 100 THEN 1 ELSE 0 END), 0) AS fifties,
+        COALESCE(SUM(CASE WHEN bs.runs_scored >= 100 THEN 1 ELSE 0 END), 0)    AS hundreds
+    FROM batting_scorecards bs
+    JOIN innings i  ON bs.innings_id = i.id
+    JOIN matches  m ON i.match_id = m.id
+    WHERE bs.player_id = ? AND m.club_id = ? AND m.status = 'completed'
+");
+$stmt->execute([$pid, $clubId]);
+$bat = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Computed
+$runs  = (int) $bat['total_runs'];
+$balls = (int) $bat['total_balls'];
+$outs  = (int) $bat['total_outs'];
+$bat['batting_average'] = $outs > 0 ? round($runs / $outs, 1) : $runs;
+$bat['strike_rate']     = $balls > 0 ? round(($runs / $balls) * 100, 1) : 0;
+
+// ── Bowling stats ─────────────────────────────────────────
+$stmt = $pdo->prepare("
+    SELECT
+        COUNT(bwl.id)                           AS bowling_innings,
+        COALESCE(SUM(bwl.overs_bowled), 0)      AS total_overs,
+        COALESCE(SUM(bwl.wickets), 0)           AS total_wickets,
+        COALESCE(SUM(bwl.runs_conceded), 0)     AS total_runs_conceded,
+        COALESCE(SUM(bwl.maidens), 0)           AS total_maidens
     FROM bowling_scorecards bwl
     JOIN innings i ON bwl.innings_id = i.id
-    JOIN matches m ON i.match_id = m.id
-    WHERE bwl.player_id = (SELECT id FROM players WHERE local_id=? LIMIT 1) AND m.status='completed'
+    JOIN matches  m ON i.match_id = m.id
+    WHERE bwl.player_id = ? AND m.club_id = ? AND m.status = 'completed'
 ");
-$bowling->execute([$playerId]);
-$bowl = $bowling->fetch();
-$bowl['economy_rate'] = $bowl['total_overs'] > 0
-    ? number_format($bowl['total_runs_conceded'] / $bowl['total_overs'], 2) : '0.00';
+$stmt->execute([$pid, $clubId]);
+$bowl = $stmt->fetch(PDO::FETCH_ASSOC);
 
-sendSuccess(['batting' => $bat, 'bowling' => $bowl]);
+$overs = (float) $bowl['total_overs'];
+$bowl['economy_rate'] = $overs > 0
+    ? round($bowl['total_runs_conceded'] / $overs, 2) : 0;
+
+// Best bowling figure in one innings
+$stmt = $pdo->prepare("
+    SELECT bwl.wickets, bwl.runs_conceded
+    FROM bowling_scorecards bwl
+    JOIN innings i ON bwl.innings_id = i.id
+    JOIN matches  m ON i.match_id = m.id
+    WHERE bwl.player_id = ? AND m.club_id = ? AND m.status = 'completed'
+    ORDER BY bwl.wickets DESC, bwl.runs_conceded ASC
+    LIMIT 1
+");
+$stmt->execute([$pid, $clubId]);
+$bb = $stmt->fetch(PDO::FETCH_ASSOC);
+$bowl['best_bowling'] = $bb ? $bb['wickets'] . '/' . $bb['runs_conceded'] : '0/0';
+
+// ── Wicket breakdown (as bowler) ──────────────────────────
+$stmt = $pdo->prepare("
+    SELECT
+        COUNT(CASE WHEN w.wicket_type = 'bowled'   THEN 1 END) AS bowled,
+        COUNT(CASE WHEN w.wicket_type = 'caught'   THEN 1 END) AS caught,
+        COUNT(CASE WHEN w.wicket_type = 'stumped'  THEN 1 END) AS stumped,
+        COUNT(CASE WHEN w.wicket_type = 'run_out'  THEN 1 END) AS run_out,
+        COUNT(CASE WHEN w.wicket_type = 'lbw'      THEN 1 END) AS lbw,
+        COUNT(*) AS total_wickets
+    FROM wickets w
+    JOIN innings i ON w.innings_id = i.id
+    JOIN matches  m ON i.match_id = m.id
+    WHERE w.bowler_id = ? AND m.club_id = ? AND m.status = 'completed'
+");
+$stmt->execute([$pid, $clubId]);
+$wktBreak = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// ── Fielding ──────────────────────────────────────────────
+$stmt = $pdo->prepare("
+    SELECT
+        COUNT(CASE WHEN w.wicket_type = 'caught'  AND w.fielder_id = ? THEN 1 END) AS catches,
+        COUNT(CASE WHEN w.wicket_type = 'run_out' AND w.fielder_id = ? THEN 1 END) AS run_outs,
+        COUNT(CASE WHEN w.wicket_type = 'stumped' AND w.fielder_id = ? THEN 1 END) AS stumpings
+    FROM wickets w
+    JOIN innings i ON w.innings_id = i.id
+    JOIN matches  m ON i.match_id = m.id
+    WHERE m.club_id = ? AND m.status = 'completed'
+");
+$stmt->execute([$pid, $pid, $pid, $clubId]);
+$field = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// ── Club name ─────────────────────────────────────────────
+$cs = $pdo->prepare("SELECT name FROM clubs WHERE id = ? LIMIT 1");
+$cs->execute([$clubId]);
+$cr = $cs->fetch(PDO::FETCH_ASSOC);
+
+sendSuccess([
+    'profile'       => array_merge($player, ['club_name' => $cr['name'] ?? null]),
+    'batting'       => $bat,
+    'bowling'       => $bowl,
+    'wicket_break'  => $wktBreak,
+    'fielding'      => $field,
+]);
