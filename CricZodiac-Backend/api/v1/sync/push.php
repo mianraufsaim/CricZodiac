@@ -1139,149 +1139,83 @@ function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
 
 function syncBall(PDO $pdo, string $action, array $d): bool {
     if ($action === 'delete') {
-        // Fetch ball before deleting so we can reverse innings + overs totals.
+        // Fetch ball before deleting so we can reverse all dependent tables.
         $st = $pdo->prepare("SELECT * FROM balls WHERE local_id = ? LIMIT 1");
         $st->execute([$d['id']]);
         $ball = $st->fetch(PDO::FETCH_ASSOC);
-        $inningsId = null;
 
-        // Delete first — so the subsequent subqueries that COUNT balls exclude it.
+        // Delete ball first — so COUNT subqueries that follow exclude it.
         $pdo->prepare("DELETE FROM balls WHERE local_id = ?")->execute([$d['id']]);
+
+        // Delete any wicket recorded for this ball.
+        $pdo->prepare("DELETE FROM wickets WHERE ball_local_id = ?")->execute([$d['id']]);
+
         if (!$ball) {
             return true;
         }
 
-        if ($ball) {
-            $isValid    = (int)$ball['is_valid_ball'];
-            $isWicket   = (int)$ball['is_wicket'];
-            $runs       = (int)$ball['runs_scored'];
-            $extraRuns  = (int)$ball['extra_runs'];
-            $totalRuns  = $runs + $extraRuns;
-            $inningsId  = $ball['innings_id'] ?? null;
-            $overId     = $ball['over_id']    ?? null;
+        $isValid   = (int)$ball['is_valid_ball'];
+        $isWicket  = (int)$ball['is_wicket'];
+        $runs      = (int)$ball['runs_scored'];
+        $extraRuns = (int)$ball['extra_runs'];
+        $totalRuns = $runs + $extraRuns;
+        $inningsId = $ball['innings_id'] ?? null;
+        $overId    = $ball['over_id']    ?? null;
 
-            // ── Reverse innings totals ─────────────────────────────────────
-            if ($inningsId) {
-                $pdo->prepare("
-                    UPDATE innings
-                    SET total_runs    = GREATEST(0, total_runs    - ?),
-                        total_wickets = GREATEST(0, total_wickets - ?),
-                        extras        = GREATEST(0, extras        - ?),
-                        total_overs   = (
-                            SELECT FLOOR(COUNT(*) / 6) + (COUNT(*) % 6) * 0.1
-                            FROM balls
-                            WHERE innings_id = ? AND is_valid_ball = 1
-                        )
-                    WHERE id = ?
-                ")->execute([
-                    $totalRuns, $isWicket, $extraRuns,
-                    $inningsId,   // subquery param — ball already deleted, count is correct
-                    $inningsId,
-                ]);
-            }
-
-            // ── Reverse overs totals ───────────────────────────────────────
-            if ($overId) {
-                $pdo->prepare("
-                    UPDATE overs
-                    SET runs_conceded = GREATEST(0, runs_conceded - ?),
-                        wickets       = GREATEST(0, wickets       - ?),
-                        balls_bowled  = GREATEST(0, balls_bowled  - ?),
-                        is_completed  = CASE WHEN GREATEST(0, balls_bowled - ?) < 6
-                                        THEN 0 ELSE is_completed END,
-                        is_maiden     = CASE WHEN GREATEST(0, balls_bowled - ?) < 6
-                                        THEN 0
-                                        WHEN GREATEST(0, balls_bowled - ?) >= 6
-                                             AND GREATEST(0, runs_conceded - ?) = 0 THEN 1
-                                        ELSE 0 END
-                    WHERE id = ?
-                ")->execute([
-                    $totalRuns,   // runs_conceded delta
-                    $isWicket,    // wickets delta
-                    $isValid,     // balls_bowled delta
-                    $isValid,     // is_completed: new balls_bowled
-                    $isValid,     // is_maiden incomplete check: new balls_bowled
-                    $isValid,     // is_maiden complete check: new balls_bowled
-                    $totalRuns,   // is_maiden complete check: new runs_conceded
-                    $overId,
-                ]);
-            }
-        }
-
-        // ── Reverse batting scorecard ──────────────────────────────────────
-        // balls table stores integer player IDs in striker_id/bowler_id columns.
-        $ballStrikerId = (int)($ball['striker_id'] ?? 0) ?: null;
-        $ballBowlerId  = (int)($ball['bowler_id']  ?? 0) ?: null;
-        $ballIsWide    = ($ball['extra_type'] === 'wide');
-        $ballBallsFacedDelta = (int)($ball['is_valid_ball'] ?? 1);
-        $ballRuns  = (int)$ball['runs_scored'];
-        $ballFours = (int)($ball['is_four'] ?? 0);
-        $ballSixes = (int)($ball['is_six']  ?? 0);
-
-        if ($ballStrikerId && $inningsId) {
-            $pdo->prepare("
-                UPDATE batting_scorecards
-                SET runs_scored = GREATEST(0, runs_scored - ?),
-                    balls_faced = GREATEST(0, balls_faced - ?),
-                    fours       = GREATEST(0, fours       - ?),
-                    sixes       = GREATEST(0, sixes       - ?),
-                    strike_rate = CASE
-                        WHEN GREATEST(0, balls_faced - ?) > 0
-                        THEN ROUND(CAST(GREATEST(0, runs_scored - ?) AS DECIMAL(10,2))
-                                   / GREATEST(0, balls_faced - ?) * 100, 2)
-                        ELSE 0.00 END
-                WHERE innings_id = ? AND player_id = ?
-            ")->execute([
-                $ballRuns,
-                $ballBallsFacedDelta,
-                $ballFours,
-                $ballSixes,
-                $ballBallsFacedDelta,  // strike_rate new balls_faced
-                $ballRuns,             // strike_rate new runs_scored
-                $ballBallsFacedDelta,  // strike_rate new balls_faced (denominator)
-                $inningsId,
-                $ballStrikerId,
-            ]);
-        }
-
-        // ── Reverse bowling scorecard ──────────────────────────────────────
-        $ballIsNoBall = ($ball['extra_type'] === 'no_ball');
-        $ballTotalRuns = (int)$ball['runs_scored'] + (int)$ball['extra_runs'];
-        $ballIsValid   = (int)($ball['is_valid_ball'] ?? 1);
-
-        if ($ballBowlerId && $inningsId) {
-            $pdo->prepare("
-                UPDATE bowling_scorecards
-                SET runs_conceded = GREATEST(0, runs_conceded - ?),
-                    balls_bowled  = GREATEST(0, balls_bowled  - ?),
-                    wides         = GREATEST(0, wides         - ?),
-                    no_balls      = GREATEST(0, no_balls      - ?),
-                    overs_bowled  = FLOOR(GREATEST(0, balls_bowled - ?) / 6)
-                                    + (GREATEST(0, balls_bowled - ?) % 6) * 0.1,
-                    economy_rate  = CASE
-                        WHEN GREATEST(0, balls_bowled - ?) > 0
-                        THEN ROUND(CAST(GREATEST(0, runs_conceded - ?) AS DECIMAL(10,2))
-                                   / (GREATEST(0, balls_bowled - ?) / 6.0), 2)
-                        ELSE 0.00 END
-                WHERE innings_id = ? AND player_id = ?
-            ")->execute([
-                $ballTotalRuns,
-                $ballIsValid,
-                $ballIsWide   ? 1 : 0,
-                $ballIsNoBall ? 1 : 0,
-                $ballIsValid,  // overs_bowled new balls_bowled
-                $ballIsValid,
-                $ballIsValid,  // economy_rate new balls_bowled
-                $ballTotalRuns,
-                $ballIsValid,
-                $inningsId,
-                $ballBowlerId,
-            ]);
-        }
-
+        // ── Reverse innings totals ─────────────────────────────────────────
+        // CAST(col AS SIGNED) prevents UNSIGNED underflow before GREATEST clamps it.
         if ($inningsId) {
-            recomputeScorecardsForInnings($pdo, (int)$inningsId);
+            $pdo->prepare("
+                UPDATE innings
+                SET total_runs    = GREATEST(0, CAST(total_runs    AS SIGNED) - ?),
+                    total_wickets = GREATEST(0, CAST(total_wickets AS SIGNED) - ?),
+                    extras        = GREATEST(0, CAST(extras        AS SIGNED) - ?),
+                    total_overs   = (
+                        SELECT FLOOR(COUNT(*) / 6) + (COUNT(*) % 6) * 0.1
+                        FROM balls
+                        WHERE innings_id = ? AND is_valid_ball = 1
+                    )
+                WHERE id = ?
+            ")->execute([
+                $totalRuns, $isWicket, $extraRuns,
+                $inningsId,  // subquery — ball already deleted, count is correct
+                $inningsId,
+            ]);
         }
+
+        // ── Reverse overs totals ───────────────────────────────────────────
+        // CAST(col AS SIGNED) prevents UNSIGNED underflow before GREATEST clamps it.
+        if ($overId) {
+            $pdo->prepare("
+                UPDATE overs
+                SET runs_conceded = GREATEST(0, CAST(runs_conceded AS SIGNED) - ?),
+                    wickets       = GREATEST(0, CAST(wickets       AS SIGNED) - ?),
+                    balls_bowled  = GREATEST(0, CAST(balls_bowled  AS SIGNED) - ?),
+                    is_completed  = CASE
+                        WHEN GREATEST(0, CAST(balls_bowled AS SIGNED) - ?) < 6 THEN 0
+                        ELSE is_completed END,
+                    is_maiden     = CASE
+                        WHEN GREATEST(0, CAST(balls_bowled AS SIGNED) - ?) < 6 THEN 0
+                        WHEN GREATEST(0, CAST(balls_bowled AS SIGNED) - ?) >= 6
+                             AND GREATEST(0, CAST(runs_conceded AS SIGNED) - ?) = 0 THEN 1
+                        ELSE 0 END
+                WHERE id = ?
+            ")->execute([
+                $totalRuns,  // runs_conceded
+                $isWicket,   // wickets
+                $isValid,    // balls_bowled
+                $isValid,    // is_completed check
+                $isValid,    // is_maiden < 6 check
+                $isValid,    // is_maiden >= 6 check
+                $totalRuns,  // is_maiden runs check
+                $overId,
+            ]);
+        }
+
+        // ── Rebuild batting + bowling scorecards from remaining balls ──────
+        // Using recompute (aggregate from balls table) avoids all UNSIGNED
+        // underflow issues and guarantees correct totals regardless of ordering.
+        recomputeScorecardsForInnings($pdo, $inningsId ? (int)$inningsId : null);
 
         return true;
     }
