@@ -1,5 +1,6 @@
 // ============================================================
 // CricZodiac — Match Summary / Result Screen
+// All data fetched live from MySQL via API — no local DB reads.
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -10,30 +11,29 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import {
-  getMatch, getMatchInnings, saveMatchResult, getMatchTeams, getMatchResult,
-  upsertInningsFromServer, upsertTeamsFromServer, upsertMatchResultFromServer,
-  upsertTeamPlayersFromServer,
-} from '../../database/queries/matchQueries';
-import { queryFirstRow } from '../../database/DatabaseHelper';
+import { saveMatchResult } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
-// ── Pure winner-determination helper (no state refs) ─────
+// ── Pure winner helper ────────────────────────────────────
 const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
   if (!sortedInnings || sortedInnings.length < 2) return null;
   const [inn1, inn2] = sortedInnings;
   if (!inn1 || !inn2) return null;
-  const team1 = teamsArr.find(t => t.id === inn1.batting_team_id) || { team_name: 'Team A', id: inn1.batting_team_id };
-  const team2 = teamsArr.find(t => t.id === inn2.batting_team_id) || { team_name: 'Team B', id: inn2.batting_team_id };
+  const team1 = teamsArr.find(t => t.id === inn1.batting_team_id) ||
+                teamsArr.find(t => t.local_id === inn1.batting_team_local) ||
+                { team_name: 'Team A', id: inn1.batting_team_id };
+  const team2 = teamsArr.find(t => t.id === inn2.batting_team_id) ||
+                teamsArr.find(t => t.local_id === inn2.batting_team_local) ||
+                { team_name: 'Team B', id: inn2.batting_team_id };
   const r1 = inn1.total_runs || 0;
   const r2 = inn2.total_runs || 0;
   if (r1 > r2) {
-    const margin = r1 - r2;
-    return { winner: team1, loser: team2, margin: `${margin} run${margin !== 1 ? 's' : ''}`, type: 'runs' };
+    const m = r1 - r2;
+    return { winner: team1, loser: team2, margin: `${m} run${m !== 1 ? 's' : ''}`, type: 'runs' };
   } else if (r2 > r1) {
-    const wktsLeft = Math.max(0, (ppt - 1) - (inn2.total_wickets || 0));
-    return { winner: team2, loser: team1, margin: `${wktsLeft} wicket${wktsLeft !== 1 ? 's' : ''}`, type: 'wickets' };
+    const w = Math.max(0, (ppt - 1) - (inn2.total_wickets || 0));
+    return { winner: team2, loser: team1, margin: `${w} wicket${w !== 1 ? 's' : ''}`, type: 'wickets' };
   }
   return { winner: null, loser: null, margin: 'Tied', type: 'tie' };
 };
@@ -44,11 +44,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
   const { match: matchParam } = route.params || {};
 
-  const [match,    setMatch]    = useState(null);
   const [innings,  setInnings]  = useState([]);
   const [teams,    setTeams]    = useState([]);
-  const [result,   setResult]   = useState(null);   // saved match_results row
-  const [potmName, setPotmName] = useState(null);   // POTM player name (if any)
+  const [result,   setResult]   = useState(null);
+  const [potmName, setPotmName] = useState(null);
+  const [matchObj, setMatchObj] = useState(matchParam || null);
   const [loadErr,  setLoadErr]  = useState(null);
   const [loading,  setLoading]  = useState(true);
 
@@ -56,185 +56,97 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
   const load = async () => {
     setLoading(true);
+    setLoadErr(null);
     try {
       const matchId = matchParam?.id;
       if (!matchId) {
-        setLoadErr('Match data missing — please go back and try again.');
+        setLoadErr('Match data missing.');
         setLoading(false);
         return;
       }
 
-      // ── 1. Load everything from local SQLite ───────────────────────────
-      let [m, inns, tms, existingResult] = await Promise.all([
-        getMatch(matchId),
-        getMatchInnings(matchId),
-        getMatchTeams(matchId),
-        getMatchResult(matchId),
+      // ── Fetch all data from API in parallel ──────────────────────────
+      const [innsRes, teamsRes, resultRes] = await Promise.all([
+        ApiService.get(`${API_ENDPOINTS.MATCHES_SCORE}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
+        ApiService.get(`${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
+        ApiService.get(`${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`).catch(() => null),
       ]);
 
-      // ── 2. API fallback: Teams ─────────────────────────────────────────
-      if (!tms?.length) {
-        try {
-          const res = await ApiService.get(
-            `${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(matchId)}`
-          );
-          const serverTeams = res?.teams || res?.data?.teams || [];
-          if (serverTeams.length) {
-            await upsertTeamsFromServer(serverTeams, matchId);
-            tms = await getMatchTeams(matchId);
-          }
-        } catch (e) {
-          console.warn('[MatchSummary] teams API fallback:', e.message);
-        }
-      }
-
-      // ── 3. API fallback: Innings ───────────────────────────────────────
-      if (!inns?.length) {
-        try {
-          const res = await ApiService.get(
-            `${API_ENDPOINTS.MATCHES_SCORE}?match_id=${encodeURIComponent(matchId)}`
-          );
-          const serverInnings = res?.innings || res?.data?.innings || [];
-          if (serverInnings.length) {
-            await upsertInningsFromServer(serverInnings, matchId);
-            inns = await getMatchInnings(matchId);
-          }
-        } catch (e) {
-          console.warn('[MatchSummary] innings API fallback:', e.message);
-        }
-      }
-
-      // ── 4. API fallback: Match result ──────────────────────────────────
-      if (!existingResult) {
-        try {
-          const res = await ApiService.get(
-            `${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`
-          );
-          const sr = res?.result || res?.data?.result || res?.data || null;
-          if (sr && (sr.result_text || sr.winner_team_id != null)) {
-            await upsertMatchResultFromServer(sr, matchId);
-            existingResult = await getMatchResult(matchId);
-          }
-        } catch (e) {
-          console.warn('[MatchSummary] result API fallback:', e.message);
-        }
-      }
-
-      // ── 5. Background: fetch team players so names resolve ─────────────
-      if (tms?.length) {
-        Promise.all(
-          (tms || []).map(team => {
-            const q = [`team_id=${encodeURIComponent(team.id)}`];
-            if (team.match_id) q.push(`match_id=${encodeURIComponent(team.match_id)}`);
-            return ApiService.get(`${API_ENDPOINTS.TEAMS_PLAYERS}?${q.join('&')}`)
-              .then(res => {
-                const sp = res?.players || res?.data?.players || [];
-                if (sp.length) return upsertTeamPlayersFromServer(sp, team.id);
-              })
-              .catch(() => {});
-          })
-        ).catch(() => {});
-      }
-
-      // ── 6. De-duplicate innings ────────────────────────────────────────
+      // ── Parse innings ────────────────────────────────────────────────
+      const rawInnings = innsRes?.innings || innsRes?.data?.innings || [];
+      // De-duplicate by innings_number, keep highest score
       const dedup = new Map();
-      for (const inn of (inns || [])) {
-        const n      = inn.innings_number;
-        const score  = (inn.total_runs || 0) + (inn.total_overs || 0) + (inn.total_wickets || 0);
-        const prev   = dedup.get(n);
+      for (const inn of rawInnings) {
+        const n     = inn.innings_number;
+        const score = (inn.total_runs || 0) + (inn.total_overs || 0) + (inn.total_wickets || 0);
+        const prev  = dedup.get(n);
         const pScore = prev
           ? (prev.total_runs || 0) + (prev.total_overs || 0) + (prev.total_wickets || 0)
           : -1;
         if (score > pScore) dedup.set(n, inn);
       }
       const validInnings = [...dedup.values()]
-        .filter(inn => (inn.total_overs || 0) > 0 || (inn.total_runs || 0) > 0 || (inn.total_wickets || 0) > 0)
         .sort((a, b) => a.innings_number - b.innings_number);
 
-      // ── 7. Auto-pick POTM: top scorer across all innings ──────────────
-      let autoPotmId   = null;
-      let autoPotmName = null;
-      try {
-        const topScorer = await queryFirstRow(
-          `SELECT bs.player_id,
-                  bs.runs_scored,
-                  COALESCE(u.name, p.full_name) AS display_name
-             FROM batting_scorecards bs
-             JOIN innings  i ON i.id  = bs.innings_id
-             JOIN players  p ON p.id  = bs.player_id
-             LEFT JOIN users u ON u.id = p.user_id
-            WHERE i.match_id = ?
-            ORDER BY bs.runs_scored DESC, bs.balls_faced ASC
-            LIMIT 1`,
-          [matchId]
-        );
-        if (topScorer?.player_id && topScorer?.display_name) {
-          autoPotmId   = topScorer.player_id;
-          autoPotmName = topScorer.display_name.trim();
-        }
-      } catch (_) {}
+      // ── Parse teams ──────────────────────────────────────────────────
+      const rawTeams = teamsRes?.teams || teamsRes?.data?.teams || [];
+      // Normalize: use local_id as id if available
+      const normalizedTeams = rawTeams.map(t => ({
+        ...t,
+        id:       t.local_id || String(t.id),
+        local_id: t.local_id || String(t.id),
+      }));
 
-      // ── 8. Auto-finalize: save result if complete innings but no result ─
-      let finalResult = existingResult;
-      if (!existingResult && validInnings.length >= 2 && (tms || []).length >= 2) {
+      // ── Parse result ─────────────────────────────────────────────────
+      const sr = resultRes?.result || resultRes?.data?.result || null;
+      let apiResult = sr && (sr.result_text || sr.winner_team_id != null) ? sr : null;
+
+      // ── Auto-finalize if no result saved yet ─────────────────────────
+      if (!apiResult && validInnings.length >= 2 && normalizedTeams.length >= 2) {
         try {
-          const ppt    = m?.players_per_team || matchParam?.players_per_team || 6;
-          const winner = computeWinner(validInnings, tms, ppt);
+          const ppt    = matchParam?.players_per_team || 6;
+          const winner = computeWinner(validInnings, normalizedTeams, ppt);
           if (winner) {
             const [inn1, inn2] = validInnings;
+            // Resolve local UUIDs for winner/loser teams
+            const winnerTeam = normalizedTeams.find(t =>
+              t.id === winner.winner?.id || t.local_id === winner.winner?.local_id
+            );
+            const loserTeam = normalizedTeams.find(t =>
+              t.id === winner.loser?.id || t.local_id === winner.loser?.local_id
+            );
             await saveMatchResult({
               match_id:        matchId,
-              winner_team_id:  winner.winner?.id  || null,
-              loser_team_id:   winner.loser?.id   || null,
+              winner_team_id:  winnerTeam?.local_id || winnerTeam?.id || null,
+              loser_team_id:   loserTeam?.local_id  || loserTeam?.id  || null,
               result_type:     winner.type === 'tie' ? 'tie' : 'win',
               margin:          0,
               margin_type:     winner.type === 'runs' ? 'runs' : 'wickets',
               team_a_score:    `${inn1.total_runs ?? 0}/${inn1.total_wickets ?? 0}`,
               team_b_score:    inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
-              player_of_match: autoPotmId,
+              player_of_match: null,
               result_text:     winner.type === 'tie'
                 ? 'Match Tied!'
                 : `${winner.winner.team_name} won by ${winner.margin}`,
             });
-            finalResult = await getMatchResult(matchId);
+            // Re-fetch result from API after saving
+            const newRes = await ApiService.get(
+              `${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`
+            ).catch(() => null);
+            apiResult = newRes?.result || newRes?.data?.result || null;
           }
         } catch (e) {
-          console.warn('[MatchSummary] auto-finalize failed:', e.message);
+          console.warn('[MatchSummary] auto-finalize:', e.message);
         }
       }
 
-      // ── 9. Resolve POTM name — always try API first ───────────────────
-      // result.php returns player_of_match_name directly from MySQL JOIN.
-      // Use that; fall back to the auto top-scorer name we picked above.
-      let resolvedPotmName = autoPotmName;
-      try {
-        const rRes = await ApiService.get(
-          `${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`
-        );
-        const sr = rRes?.result || rRes?.data?.result || null;
-        if (sr?.player_of_match_name) {
-          resolvedPotmName = sr.player_of_match_name.trim();
-        } else if (finalResult?.player_of_match) {
-          // API result exists but no POTM name there — look up locally
-          const potmRow = await queryFirstRow(
-            `SELECT COALESCE(u.name, p.full_name) AS display_name
-               FROM players p LEFT JOIN users u ON u.id = p.user_id
-              WHERE p.id = ?`,
-            [finalResult.player_of_match]
-          );
-          const fromDb = (potmRow?.display_name || '').trim();
-          if (fromDb) resolvedPotmName = fromDb;
-        }
-      } catch (_) {
-        // API unavailable — keep autoPotmName already set
-      }
-
-      // ── 9. Commit to state ─────────────────────────────────────────────
-      setMatch(m || matchParam);
-      setTeams(tms || []);
+      // ── Commit to state ──────────────────────────────────────────────
       setInnings(validInnings);
-      setResult(finalResult || null);
-      setPotmName(resolvedPotmName);
+      setTeams(normalizedTeams);
+      setResult(apiResult || null);
+      setPotmName(
+        (apiResult?.player_of_match_name || '').trim() || null
+      );
     } catch (err) {
       setLoadErr(err.message);
     } finally {
@@ -242,10 +154,9 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     }
   };
 
-  // ── Render helpers ─────────────────────────────────────────
   const getTeamScore = (inn) => `${inn?.total_runs ?? 0}/${inn?.total_wickets ?? 0}`;
 
-  // ── Loading ────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
       <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.center}>
@@ -255,7 +166,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────
   if (loadErr) {
     return (
       <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.center}>
@@ -268,17 +179,33 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     );
   }
 
+  // ── Compute winner for display ────────────────────────────
   const sortedInnings = [...innings].sort((a, b) => a.innings_number - b.innings_number);
-  const ppt           = match?.players_per_team || matchParam?.players_per_team || 6;
-  const winner        = result
-    ? {
-        winner: teams.find(t => t.id === result.winner_team_id) || null,
-        loser:  teams.find(t => t.id === result.loser_team_id)  || null,
-        type:   result.result_type === 'tie' ? 'tie' : (result.margin_type === 'runs' ? 'runs' : 'wickets'),
-        text:   result.result_text,
-      }
-    : computeWinner(sortedInnings, teams, ppt);
-  const matchObj = match || matchParam;
+  const ppt           = matchObj?.players_per_team || matchParam?.players_per_team || 6;
+
+  // If we have a saved result, use its text; otherwise compute from innings
+  let winner = null;
+  if (result) {
+    const winnerTeam = teams.find(t =>
+      t.id === result.winner_team_local || t.local_id === result.winner_team_local ||
+      t.id === String(result.winner_team_id)
+    );
+    const loserTeam = teams.find(t =>
+      t.id === result.loser_team_local || t.local_id === result.loser_team_local ||
+      t.id === String(result.loser_team_id)
+    );
+    if (result.result_type === 'tie') {
+      winner = { type: 'tie', winner: null, loser: null, margin: 'Tied', text: result.result_text };
+    } else if (winnerTeam) {
+      winner = { type: 'win', winner: winnerTeam, loser: loserTeam, text: result.result_text };
+    }
+  }
+  if (!winner && sortedInnings.length >= 2) {
+    winner = computeWinner(sortedInnings, teams, ppt);
+  }
+
+  const displayMatchTitle = matchObj?.title || matchParam?.title || 'Match';
+  const displayVenue      = matchObj?.venue || matchParam?.venue || null;
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
@@ -301,8 +228,8 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
         {/* ── Match Identity ── */}
         <View style={styles.matchIdentity}>
-          <Text style={styles.matchTitle}>{matchObj?.title || 'Match'}</Text>
-          {matchObj?.venue ? <Text style={styles.matchVenue}>📍 {matchObj.venue}</Text> : null}
+          <Text style={styles.matchTitle}>{displayMatchTitle}</Text>
+          {displayVenue ? <Text style={styles.matchVenue}>📍 {displayVenue}</Text> : null}
         </View>
 
         {/* ── Result Banner ── */}
@@ -321,7 +248,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               <Text style={styles.resultWinnerName}>{winner.winner?.team_name}</Text>
               <View style={styles.resultMarginRow}>
                 <Text style={styles.resultMarginLabel}>WON BY</Text>
-                <Text style={styles.resultMarginValue}>{winner.margin}</Text>
+                <Text style={styles.resultMarginValue}>
+                  {result?.result_text
+                    ? result.result_text.replace(`${winner.winner?.team_name} won by `, '')
+                    : winner.margin}
+                </Text>
               </View>
             </LinearGradient>
           )
@@ -332,10 +263,15 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           <>
             <Text style={styles.sectionLabel}>INNINGS SUMMARY</Text>
             {sortedInnings.map((inn, i) => {
-              const team     = teams.find(t => t.id === inn.batting_team_id);
-              const isWinner = winner?.winner?.id === inn.batting_team_id;
+              const team = teams.find(t =>
+                t.id === inn.batting_team_local ||
+                t.local_id === inn.batting_team_local ||
+                t.id === String(inn.batting_team_id)
+              );
+              const isWinner = winner?.winner &&
+                (winner.winner.id === (team?.id) || winner.winner.local_id === (team?.local_id));
               return (
-                <View key={inn.id} style={[styles.inningsCard, isWinner && styles.inningsCardWinner]}>
+                <View key={`${inn.id || inn.innings_number}`} style={[styles.inningsCard, isWinner && styles.inningsCardWinner]}>
                   <View style={styles.inningsTop}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.inningsNum}>INNINGS {i + 1}</Text>
@@ -358,7 +294,10 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
                   <TouchableOpacity
                     style={styles.viewScorecardBtn}
-                    onPress={() => navigation.navigate('Scorecard', { inningsId: inn.id, match: matchParam })}
+                    onPress={() => navigation.navigate('Scorecard', {
+                      inningsId: inn.local_id || String(inn.id),
+                      match:     matchParam,
+                    })}
                   >
                     <Icon name="view-list" size={13} color={COLORS.cyan} />
                     <Text style={styles.viewScorecardText}>View Full Scorecard</Text>
@@ -386,12 +325,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
                 <Text style={styles.potmName}>{potmName}</Text>
                 <Text style={styles.potmSub}>Outstanding Performance</Text>
               </View>
-              <Icon name="star-circle" size={28} color={COLORS.gold} />
+              <Icon name="star-circle" size={28} color="#D4AF37" />
             </View>
           </>
         )}
 
-        {/* ── Return ── */}
         <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.navigate('SeriesList')}>
           <Icon name="arrow-left-circle-outline" size={17} color={COLORS.gray} style={{ marginRight: 7 }} />
           <Text style={styles.homeBtnText}>Return to Dashboard</Text>
@@ -421,7 +359,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   matchTitle:        { color: COLORS.white, fontSize: 20, fontWeight: '800', textAlign: 'center' },
   matchVenue:        { color: COLORS.gray, fontSize: 13, marginTop: 4 },
 
-  resultBanner:      { borderRadius: 20, paddingVertical: 28, paddingHorizontal: 24, alignItems: 'center', marginBottom: 22, borderWidth: 1.5, borderColor: COLORS.gold + '50' },
+  resultBanner:      { borderRadius: 20, paddingVertical: 28, paddingHorizontal: 24, alignItems: 'center', marginBottom: 22, borderWidth: 1.5, borderColor: '#D4AF3750' },
   resultWinnerName:  { color: '#FFFFFF', fontSize: 26, fontWeight: '900', textAlign: 'center' },
   resultMarginRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   resultMarginLabel: { color: '#A0A0A0', fontSize: 11, fontWeight: '700', letterSpacing: 2 },
@@ -446,7 +384,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   noDataCard:        { backgroundColor: COLORS.card, borderRadius: 16, padding: 28, alignItems: 'center', gap: 10, marginBottom: 16, borderWidth: 1, borderColor: COLORS.cardBorder },
   noDataText:        { color: COLORS.gray, fontSize: 14 },
 
-  potmCard:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: COLORS.gold + '60', gap: 14 },
+  potmCard:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: '#D4AF3760', gap: 14 },
   potmAvatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: '#2C4BB5', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#D4AF37' },
   potmAvatarText:    { color: '#FFFFFF', fontWeight: '900', fontSize: 22 },
   potmName:          { color: COLORS.white, fontWeight: '800', fontSize: 16 },

@@ -37,13 +37,17 @@ if ($isUuid) {
 }
 $inningsRow = $st->fetch(PDO::FETCH_ASSOC);
 
-// Fallback: try match_id to find innings by innings_number
+// Fallback: resolve via match_id + innings_number
 if (!$inningsRow && isset($_GET['match_id']) && isset($_GET['innings_number'])) {
     $matchParam  = trim($_GET['match_id']);
     $inningsNum  = (int) $_GET['innings_number'];
     $isMatchUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $matchParam);
     if ($isMatchUuid) {
-        $st = $pdo->prepare("SELECT i.* FROM innings i JOIN matches m ON m.id = i.match_id WHERE m.local_id = ? AND i.innings_number = ? LIMIT 1");
+        $st = $pdo->prepare("
+            SELECT i.* FROM innings i
+            JOIN matches m ON m.id = i.match_id
+            WHERE m.local_id = ? AND i.innings_number = ? LIMIT 1
+        ");
         $st->execute([$matchParam, $inningsNum]);
     } else {
         $st = $pdo->prepare("SELECT * FROM innings WHERE match_id = ? AND innings_number = ? LIMIT 1");
@@ -64,6 +68,7 @@ $inningsRow['total_overs']  = isset($inningsRow['total_overs'])  ? (float) $inni
 $inningsRow['is_completed'] = isset($inningsRow['is_completed']) ? (int)   $inningsRow['is_completed'] : 0;
 
 // ── Batting Scorecard ─────────────────────────────────────
+// MySQL players table has NO full_name column — names come from users.name only
 $bat = $pdo->prepare("
     SELECT
         bs.player_id,
@@ -76,24 +81,24 @@ $bat = $pdo->prepare("
         bs.is_out,
         bs.dismissal_type,
         bs.batting_order,
-        COALESCE(u.name, p.full_name) AS full_name
+        COALESCE(u.name, 'Unknown') AS full_name
     FROM batting_scorecards bs
-    JOIN    players p ON p.id  = bs.player_id
-    LEFT JOIN users u  ON u.id  = p.user_id
+    JOIN    players p ON p.id = bs.player_id
+    LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
     ORDER BY bs.batting_order ASC, bs.runs_scored DESC
 ");
 $bat->execute([$inningsId]);
 $batting = $bat->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($batting as &$b) {
+foreach ($batting as &$row) {
     foreach (['player_id', 'runs_scored', 'balls_faced', 'fours', 'sixes', 'batting_order'] as $k) {
-        $b[$k] = isset($b[$k]) ? (int) $b[$k] : 0;
+        $row[$k] = isset($row[$k]) ? (int) $row[$k] : 0;
     }
-    $b['strike_rate'] = isset($b['strike_rate']) ? (float) $b['strike_rate'] : 0.0;
-    $b['is_out']      = isset($b['is_out'])       ? (int)   $b['is_out']      : 0;
+    $row['strike_rate'] = isset($row['strike_rate']) ? (float) $row['strike_rate'] : 0.0;
+    $row['is_out']      = isset($row['is_out'])       ? (int)   $row['is_out']      : 0;
 }
-unset($b);
+unset($row);
 
 // ── Bowling Scorecard ─────────────────────────────────────
 $bowl = $pdo->prepare("
@@ -108,24 +113,24 @@ $bowl = $pdo->prepare("
         bs.economy_rate,
         bs.no_balls,
         bs.wides,
-        COALESCE(u.name, p.full_name) AS full_name
+        COALESCE(u.name, 'Unknown') AS full_name
     FROM bowling_scorecards bs
-    JOIN    players p ON p.id  = bs.player_id
-    LEFT JOIN users u  ON u.id  = p.user_id
+    JOIN    players p ON p.id = bs.player_id
+    LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
 ");
 $bowl->execute([$inningsId]);
 $bowling = $bowl->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($bowling as &$b) {
+foreach ($bowling as &$row) {
     foreach (['player_id', 'balls_bowled', 'maidens', 'runs_conceded', 'wickets', 'no_balls', 'wides'] as $k) {
-        $b[$k] = isset($b[$k]) ? (int) $b[$k] : 0;
+        $row[$k] = isset($row[$k]) ? (int) $row[$k] : 0;
     }
-    $b['overs_bowled']  = isset($b['overs_bowled'])  ? (float) $b['overs_bowled']  : 0.0;
-    $b['economy_rate']  = isset($b['economy_rate'])  ? (float) $b['economy_rate']  : 0.0;
+    $row['overs_bowled'] = isset($row['overs_bowled']) ? (float) $row['overs_bowled'] : 0.0;
+    $row['economy_rate'] = isset($row['economy_rate']) ? (float) $row['economy_rate'] : 0.0;
 }
-unset($b);
+unset($row);
 
 sendSuccess([
     'innings' => $inningsRow,
