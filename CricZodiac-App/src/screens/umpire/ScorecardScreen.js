@@ -18,7 +18,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getBattingScorecard, getBowlingScorecard, getInnings, getInningsExtras } from '../../database/queries/matchQueries';
+import { getBattingScorecard, getBowlingScorecard, getInnings } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -185,7 +185,7 @@ const ScorecardScreen = ({ navigation, route }) => {
   const [innings,     setInnings]     = useState(null);
   const [matchInfo,   setMatchInfo]   = useState(null);
 
-  const [extras,     setExtras]      = useState(null); // umpire flow extras
+  const [extras,     setExtras]      = useState(null); // always from API (both flows)
   const [inningsTab,  setInningsTab]  = useState(0);   // 0 = 1st, 1 = 2nd
   const [scoreTab,    setScoreTab]    = useState('batting');
   const [loading,     setLoading]     = useState(true);
@@ -205,39 +205,26 @@ const ScorecardScreen = ({ navigation, route }) => {
           setMatchInfo(res.match || null);
         }
       } else {
-        // ── Umpire: single innings (SQLite first) ────
-        const [bat, bowl, inn, ext] = await Promise.all([
+        // ── Umpire: SQLite for batting/bowling, API for extras ────
+        const [bat, bowl, inn] = await Promise.all([
           getBattingScorecard(inningsId),
           getBowlingScorecard(inningsId),
           getInnings(inningsId),
-          getInningsExtras(inningsId),
         ]);
 
-        if (bat?.length || bowl?.length) {
-          setBatting(bat || []);
-          setBowling(bowl || []);
-          setInnings(inn || null);
-          setExtras(ext || null);
-          // Background API refresh (no extras refresh — SQLite is source of truth here)
-          fetchSingleFromApi(inningsId, match?.id).then(api => {
-            if (api) {
-              if (api.batting?.length) setBatting(api.batting);
-              if (api.bowling?.length) setBowling(api.bowling);
-              if (api.innings)         setInnings(api.innings);
-            }
-          }).catch(() => {});
-          return;
-        }
+        setBatting(bat || []);
+        setBowling(bowl || []);
+        setInnings(inn || null);
 
-        const api = await fetchSingleFromApi(inningsId, match?.id);
-        if (api) {
-          setBatting(api.batting || []);
-          setBowling(api.bowling || []);
-          setInnings(api.innings || inn || null);
-        } else {
-          setInnings(inn || null);
-        }
-        setExtras(ext || null);
+        // Always fetch extras + refresh batting/bowling from API
+        fetchSingleFromApi(inningsId, match?.id).then(api => {
+          if (api) {
+            if (api.batting?.length)  setBatting(api.batting);
+            if (api.bowling?.length)  setBowling(api.bowling);
+            if (api.innings)          setInnings(api.innings);
+            if (api.extras)           setExtras(api.extras);
+          }
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn('[Scorecard] load error:', e?.message);
@@ -254,7 +241,8 @@ const ScorecardScreen = ({ navigation, route }) => {
       const inn = res?.innings || null;
       const bat = res?.batting || [];
       const bwl = res?.bowling || [];
-      if (inn || bat.length || bwl.length) return { innings: inn, batting: bat, bowling: bwl };
+      const ext = res?.extras  || null;
+      if (inn || bat.length || bwl.length) return { innings: inn, batting: bat, bowling: bwl, extras: ext };
     } catch (e) {
       console.warn('[Scorecard] API fetch:', e.message);
     }

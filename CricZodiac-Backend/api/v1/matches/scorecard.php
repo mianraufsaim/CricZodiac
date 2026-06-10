@@ -58,7 +58,31 @@ if (!$inningsRow && isset($_GET['match_id']) && isset($_GET['innings_number'])) 
 
 if (!$inningsRow) sendError('Innings not found.', 404);
 
-$inningsId = (int) $inningsRow['id'];
+// Verify innings belongs to this club via its match
+$inningsMatchId = (int) ($inningsRow['match_id'] ?? 0);
+if ($inningsMatchId) {
+    $chkSt = $pdo->prepare("
+        SELECT COALESCE(m.club_id, s.club_id) AS club_id,
+               COALESCE(m.series_id, s.id)    AS series_id,
+               m.id AS match_server_id
+        FROM matches m
+        LEFT JOIN series s ON s.id = m.series_id OR s.local_id = m.series_local_id
+        WHERE m.id = ? LIMIT 1
+    ");
+    $chkSt->execute([$inningsMatchId]);
+    $matchMeta = $chkSt->fetch(PDO::FETCH_ASSOC);
+    if (!$matchMeta || (int) ($matchMeta['club_id'] ?? 0) !== $clubId) {
+        sendError('Innings not found.', 404);
+    }
+    $scMatchId  = (int) $matchMeta['match_server_id'];
+    $scSeriesId = (int) ($matchMeta['series_id'] ?? 0);
+} else {
+    $scMatchId  = 0;
+    $scSeriesId = 0;
+}
+
+$inningsId      = (int)    $inningsRow['id'];
+$inningsLocalId = (string) ($inningsRow['local_id'] ?? '');
 
 // Cast innings fields
 foreach (['id', 'match_id', 'batting_team_id', 'bowling_team_id', 'total_runs', 'total_wickets', 'innings_number'] as $k) {
@@ -132,8 +156,37 @@ foreach ($bowling as &$row) {
 }
 unset($row);
 
+// ── Extras breakdown from balls
+// Match on BOTH innings_id (server int) AND innings_local_id (UUID fallback)
+// club_id + match_id mandatory; series_id added when available
+$extWhereClause = 'club_id = ? AND match_id = ? AND (innings_id = ? OR innings_local_id = ?)';
+$extParams      = [$clubId, $scMatchId, $inningsId, $inningsLocalId];
+if ($scSeriesId > 0) {
+    $extWhereClause .= ' AND series_id = ?';
+    $extParams[]     = $scSeriesId;
+}
+$extSt = $pdo->prepare("
+    SELECT
+        COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END), 0) AS wides,
+        COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END), 0) AS no_balls,
+        COALESCE(SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END), 0) AS byes,
+        COALESCE(SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END), 0) AS leg_byes,
+        COALESCE(SUM(extra_runs), 0)                                                   AS total_extras
+    FROM balls WHERE {$extWhereClause}
+");
+$extSt->execute($extParams);
+$extRow = $extSt->fetch(PDO::FETCH_ASSOC) ?: [];
+$extras = [
+    'wides'        => (int) ($extRow['wides']        ?? 0),
+    'no_balls'     => (int) ($extRow['no_balls']     ?? 0),
+    'byes'         => (int) ($extRow['byes']         ?? 0),
+    'leg_byes'     => (int) ($extRow['leg_byes']     ?? 0),
+    'total_extras' => (int) ($extRow['total_extras'] ?? 0),
+];
+
 sendSuccess([
     'innings' => $inningsRow,
     'batting' => $batting,
     'bowling' => $bowling,
+    'extras'  => $extras,
 ], 'Scorecard fetched.');

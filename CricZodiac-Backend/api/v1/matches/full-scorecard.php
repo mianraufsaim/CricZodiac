@@ -31,7 +31,8 @@ $matchSql = "
     SELECT
         m.id, m.local_id, m.status, m.venue, m.match_date, m.overs,
         m.players_per_team, m.result_text, m.winner_team_id,
-        COALESCE(m.club_id, s.club_id) AS club_id,
+        COALESCE(m.club_id,    s.club_id) AS club_id,
+        COALESCE(m.series_id,  s.id)      AS series_id,
         ta.team_name AS team_a_name,
         tb.team_name AS team_b_name,
         tw.team_name AS winner_team_name,
@@ -55,28 +56,35 @@ $matchRow = $st->fetch(PDO::FETCH_ASSOC);
 
 if (!$matchRow) sendError('Match not found.', 404);
 
-$matchId = (int) $matchRow['id'];
+$matchId  = (int) $matchRow['id'];
+$seriesId = (int) ($matchRow['series_id'] ?? 0);
 
 // ── All innings for this match ────────────────────────────
+// Explicit column list avoids PDO key-collision from team JOINs
 $ist = $pdo->prepare("
-    SELECT i.*,
-           bt.team_name AS batting_team_name,
-           bwt.team_name AS bowling_team_name
+    SELECT
+        i.id, i.local_id, i.match_id, i.innings_number,
+        i.batting_team_id, i.bowling_team_id,
+        i.total_runs, i.total_wickets, i.total_overs,
+        i.extras, i.is_completed, i.created_at, i.updated_at,
+        bt.team_name  AS batting_team_name,
+        bwt.team_name AS bowling_team_name
     FROM innings i
     LEFT JOIN teams bt  ON bt.id  = i.batting_team_id
     LEFT JOIN teams bwt ON bwt.id = i.bowling_team_id
-    WHERE i.match_id = ?
+    WHERE i.match_id = ? AND i.club_id = ?
     ORDER BY i.innings_number ASC
 ");
-$ist->execute([$matchId]);
+$ist->execute([$matchId, $clubId]);
 $allInnings = $ist->fetchAll(PDO::FETCH_ASSOC);
 
 // ── Build scorecard for each innings ─────────────────────
 $scorecards = [];
 foreach ($allInnings as $inn) {
-    $iid = (int) $inn['id'];
+    $iid      = (int)    $inn['id'];
+    $iLocalId = (string) ($inn['local_id'] ?? '');
 
-    // Cast innings numbers
+    // Cast innings fields
     foreach (['id','match_id','batting_team_id','bowling_team_id',
               'total_runs','total_wickets','innings_number'] as $k) {
         $inn[$k] = isset($inn[$k]) ? (int) $inn[$k] : null;
@@ -93,10 +101,12 @@ foreach ($allInnings as $inn) {
             COALESCE(u.name, 'Unknown') AS full_name,
             COALESCE(bu.name, '') AS bowler_name,
             (SELECT COUNT(*) FROM balls b2
-              WHERE b2.innings_id = bs.innings_id
+              WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+                AND b2.match_id   = ?
+                AND b2.club_id    = ?
                 AND b2.striker_id = bs.player_id
                 AND b2.is_valid_ball = 1
-                AND b2.runs_scored = 0) AS dots
+                AND b2.runs_scored  = 0) AS dots
         FROM batting_scorecards bs
         JOIN    players p  ON p.id  = bs.player_id
         LEFT JOIN users u  ON u.id  = p.user_id
@@ -105,7 +115,7 @@ foreach ($allInnings as $inn) {
         WHERE bs.innings_id = ?
         ORDER BY bs.batting_order ASC, bs.runs_scored DESC
     ");
-    $bat->execute([$iid]);
+    $bat->execute([$iid, $iLocalId, $matchId, $clubId, $iid]);
     $batting = $bat->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($batting as &$r) {
@@ -124,18 +134,20 @@ foreach ($allInnings as $inn) {
             bs.economy_rate, bs.no_balls, bs.wides,
             COALESCE(u.name, 'Unknown') AS full_name,
             (SELECT COUNT(*) FROM balls b2
-              WHERE b2.innings_id = bs.innings_id
-                AND b2.bowler_id = bs.player_id
+              WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+                AND b2.match_id   = ?
+                AND b2.club_id    = ?
+                AND b2.bowler_id  = bs.player_id
                 AND b2.is_valid_ball = 1
-                AND b2.runs_scored = 0
-                AND b2.extra_runs = 0) AS dots
+                AND b2.runs_scored  = 0
+                AND b2.extra_runs   = 0) AS dots
         FROM bowling_scorecards bs
         JOIN    players p ON p.id = bs.player_id
         LEFT JOIN users u ON u.id = p.user_id
         WHERE bs.innings_id = ?
         ORDER BY bs.wickets DESC, bs.economy_rate ASC
     ");
-    $bwl->execute([$iid]);
+    $bwl->execute([$iid, $iLocalId, $matchId, $clubId, $iid]);
     $bowling = $bwl->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($bowling as &$r) {
@@ -146,17 +158,21 @@ foreach ($allInnings as $inn) {
     }
     unset($r);
 
-    // Extras breakdown from balls table
+    // ── Extras — match on BOTH innings_id (server int) AND innings_local_id (UUID)
+    //    club_id + series_id + match_id mandatory per user requirement
     $extSt = $pdo->prepare("
         SELECT
-            SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END) AS wides,
-            SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END) AS no_balls,
-            SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END) AS byes,
-            SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END) AS leg_byes,
-            SUM(COALESCE(extra_runs, 0))                                      AS total_extras
-        FROM balls WHERE innings_id = ?
+            COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END), 0) AS wides,
+            COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END), 0) AS no_balls,
+            COALESCE(SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END), 0) AS byes,
+            COALESCE(SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END), 0) AS leg_byes,
+            COALESCE(SUM(extra_runs), 0)                                                   AS total_extras
+        FROM balls
+        WHERE club_id  = ?
+          AND match_id = ?
+          AND (innings_id = ? OR innings_local_id = ?)
     ");
-    $extSt->execute([$iid]);
+    $extSt->execute([$clubId, $matchId, $iid, $iLocalId]);
     $extRow = $extSt->fetch(PDO::FETCH_ASSOC) ?: [];
     $extras = [
         'wides'        => (int) ($extRow['wides']        ?? 0),
