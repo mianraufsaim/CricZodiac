@@ -1193,7 +1193,7 @@ function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
     if (!$inningsId) return;
 
     // Rebuild batting stats from balls. This keeps MySQL aligned with the app:
-    // wides/no-balls do not add to balls_faced because only valid balls count.
+    // wides do NOT add to balls_faced; no-balls DO (batsman faces the delivery).
     $pdo->prepare("
         INSERT INTO batting_scorecards (
             club_id, series_id, match_id,
@@ -1223,7 +1223,7 @@ function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
                 b.striker_id AS player_id,
                 MAX(b.striker_local_id) AS player_local_id,
                 SUM(COALESCE(b.runs_scored, 0)) AS runs_scored,
-                SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS balls_faced,
+                SUM(CASE WHEN b.extra_type = 'wide' THEN 0 ELSE 1 END) AS balls_faced,
                 SUM(CASE WHEN b.is_four = 1 THEN 1 ELSE 0 END) AS fours,
                 SUM(CASE WHEN b.is_six = 1 THEN 1 ELSE 0 END) AS sixes
             FROM balls b
@@ -1564,8 +1564,10 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
                 $inningsId, $strikerId,
             ]);
 
-            // Only legal balls count as a ball faced by the batsman.
-            $ballsFacedDelta = $isValid;
+            // Wides are excluded from balls_faced — no-balls still count because
+            // the batsman IS facing the delivery (unlike a wide which is bowled
+            // outside reach). Matches app-side saveBall logic.
+            $ballsFacedDelta = $isWide ? 0 : 1;
             $pdo->prepare("
                 UPDATE batting_scorecards
                 SET runs_scored = runs_scored + ?,

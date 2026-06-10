@@ -25,7 +25,7 @@ import {
   saveBall, getCurrentOver, getMatchInnings, getMatch, getMatchTeams,
   getTeamPlayers, getAllTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
-  getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket,
+  getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket, retireBatsman,
   upsertTeamPlayersFromServer, upsertMatchesFromServer,
 } from '../../database/queries/matchQueries';
 import { queryFirstRow, executeQuery } from '../../database/DatabaseHelper';
@@ -1471,6 +1471,39 @@ const LiveScoringScreen = ({ navigation, route }) => {
     if (isFreeHitRef.current) setIsFreeHit(false);
 
     const outBatsman = dismissed === 'nonStriker' ? ns : str;
+
+    // ── RETIRED: no ball bowled, no wicket, no over progress ──────────────
+    // Per cricket rules, a retired batsman (retired hurt) simply walks off.
+    // The delivery is not counted, balls_faced is unchanged, and the wicket
+    // tally does not increase. We only mark their scorecard row as retired.
+    if (dismissalType === 'retired') {
+      try {
+        await retireBatsman(inn.id, outBatsman.id);
+        setPartnership({ runs: 0, balls: 0 });
+
+        if (dismissed === 'nonStriker') {
+          setNonStriker(null);
+          setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+          navigation.navigate('SelectBatsman', {
+            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+            returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
+            mode: 'new_batsman', existingStrikerId: str?.id,
+          });
+        } else {
+          setStriker(null);
+          setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+          navigation.navigate('SelectBatsman', {
+            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+            returnScreen: 'LiveScoring', selectionType: 'new_batsman',
+            mode: 'new_batsman', existingNonStrikerId: ns?.id,
+          });
+        }
+      } catch (err) {
+        showAlert('Retire Error', err.message);
+      }
+      return;
+    }
+
     const newLegal   = legal + 1;
     const newWkts    = totWkts + 1;
 

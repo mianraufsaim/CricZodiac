@@ -787,6 +787,42 @@ export const saveWicket = async (wicketData) => {
   return id;
 };
 
+// ── Retired Batsman ───────────────────────────────────────
+// Retired is NOT a wicket: no ball is saved, over doesn't advance,
+// bowling/innings wicket counts are untouched. We only mark the
+// batsman's batting_scorecards row as retired.
+export const retireBatsman = async (inningsId, batsmanId) => {
+  const eventId = uuid.v4();
+  await executeTransaction([
+    // Ensure batting scorecard row exists (batsman may not have faced a ball yet)
+    {
+      sql: `INSERT INTO batting_scorecards (id, innings_id, player_id, sync_status)
+            SELECT ?, ?, ?, ?
+            WHERE NOT EXISTS (
+              SELECT 1 FROM batting_scorecards WHERE innings_id = ? AND player_id = ?
+            )`,
+      params: [uuid.v4(), inningsId, batsmanId, SYNC_STATUS.PENDING, inningsId, batsmanId],
+    },
+    {
+      sql: `UPDATE batting_scorecards
+            SET is_out = 1, dismissal_type = 'retired',
+                sync_status = ?, updated_at = datetime('now')
+            WHERE innings_id = ? AND player_id = ?`,
+      params: [SYNC_STATUS.PENDING, inningsId, batsmanId],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        eventId, 'batting_scorecards', 'update',
+        `${inningsId}:${batsmanId}`,
+        JSON.stringify({ innings_id: inningsId, player_id: batsmanId, is_out: 1, dismissal_type: 'retired' }),
+        SYNC_STATUS.PENDING,
+      ],
+    },
+  ]);
+};
+
 // ── Match Result ──────────────────────────────────────────
 
 export const saveMatchResult = async (resultData) => {
