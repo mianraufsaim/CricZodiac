@@ -401,7 +401,7 @@ const BallByBallTab = ({ allBalls, COLORS, bb }) => {
 // ── Scoring Pad ───────────────────────────────────────────
 const RUN_BTNS = [0, 1, 2, 3, 4, 6];
 
-const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, COLORS, pad, extraBtns }) => (
+const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, COLORS, pad, extraBtns }) => (
   <View style={pad.wrap}>
     {/* Run row */}
     <View style={pad.runRow}>
@@ -425,8 +425,12 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, COLORS, pad, ext
         )}>
         <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
       </TouchableOpacity>
-      {/* Undo */}
-      <TouchableOpacity style={pad.undoBtn} onPress={onUndo}>
+      {/* Undo — disabled when the current over has no balls yet */}
+      <TouchableOpacity
+        style={[pad.undoBtn, !canUndo && { opacity: 0.3 }]}
+        onPress={onUndo}
+        disabled={!canUndo}
+      >
         <Icon name="undo" size={22} color={COLORS.white} />
       </TouchableOpacity>
     </View>
@@ -449,7 +453,12 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, COLORS, pad, ext
       <TouchableOpacity style={pad.wicketBtn} onPress={onWicket}>
         <Text style={pad.wicketTxt}>WICKET</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={pad.swapBtn} onPress={() => onSwap()}>
+      {/* Swap — disabled when the current over has no balls yet */}
+      <TouchableOpacity
+        style={[pad.swapBtn, !canUndo && { opacity: 0.3 }]}
+        onPress={() => onSwap()}
+        disabled={!canUndo}
+      >
         <Icon name="swap-horizontal" size={18} color={COLORS.gray} />
         <Text style={pad.swapTxt}>SWAP</Text>
       </TouchableOpacity>
@@ -1548,6 +1557,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
           if (!last) { showAlert('Nothing to undo'); return; }
           await deleteBall(last, inn.id);
 
+          // ── Restore striker / non-striker ────────────────
+          // Each ball stores who was at the crease when it was bowled, so
+          // restoring last.striker_id / last.non_striker_id always reverses
+          // any swap that happened (odd runs, end-of-over, etc.).
+          if (last.striker_id) {
+            const restoredStriker = { id: last.striker_id, full_name: last.striker_name || 'Unknown' };
+            strikerRef.current = restoredStriker;
+            setStriker(restoredStriker);
+          }
+          if (last.non_striker_id) {
+            const restoredNS = { id: last.non_striker_id, full_name: last.non_striker_name || 'Unknown' };
+            nonStrikerRef.current = restoredNS;
+            setNonStriker(restoredNS);
+          }
+
           // ── Reload ball history ──────────────────────────
           const refreshed = await getBallsWithPlayers(inn.id);
           setAllBalls(refreshed);
@@ -1572,6 +1596,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           }
 
           // ── Refresh batting stats from DB ────────────────
+          // Use updated refs (set above) so correct player stats are loaded.
           const str = strikerRef.current;
           const ns  = nonStrikerRef.current;
           if (str) {
@@ -1976,6 +2001,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
             onWicket={handleWicket}
             onUndo={handleUndo}
             onSwap={_swap}
+            canUndo={legalBalls > 0}
             COLORS={COLORS}
             pad={pad}
             extraBtns={extraBtns}

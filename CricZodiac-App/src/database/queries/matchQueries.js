@@ -1037,7 +1037,12 @@ export const upsertMatchResultFromServer = async (serverResult, matchLocalId) =>
 
 export const getBattingScorecard = (inningsId) =>
   queryRows(`
-    SELECT bs.*, u.name AS full_name, p.player_type
+    SELECT bs.*, u.name AS full_name, p.player_type,
+      (SELECT COUNT(*) FROM balls b
+        WHERE b.innings_id = bs.innings_id
+          AND b.striker_id = bs.player_id
+          AND b.is_valid_ball = 1
+          AND b.runs_scored = 0) AS dots
     FROM batting_scorecards bs
     JOIN players p ON bs.player_id = p.id
     LEFT JOIN users u ON p.user_id = u.id
@@ -1047,12 +1052,29 @@ export const getBattingScorecard = (inningsId) =>
 
 export const getBowlingScorecard = (inningsId) =>
   queryRows(`
-    SELECT bs.*, u.name AS full_name
+    SELECT bs.*, u.name AS full_name,
+      (SELECT COUNT(*) FROM balls b
+        WHERE b.innings_id = bs.innings_id
+          AND b.bowler_id = bs.player_id
+          AND b.is_valid_ball = 1
+          AND b.runs_scored = 0
+          AND b.extra_runs = 0) AS dots
     FROM bowling_scorecards bs
     JOIN players p ON bs.player_id = p.id
     LEFT JOIN users u ON p.user_id = u.id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
+  `, [inningsId]);
+
+export const getInningsExtras = (inningsId) =>
+  queryFirstRow(`
+    SELECT
+      SUM(CASE WHEN extra_type = 'wide'    THEN 1            ELSE 0 END) AS wides,
+      SUM(CASE WHEN extra_type = 'no_ball' THEN 1            ELSE 0 END) AS no_balls,
+      SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs   ELSE 0 END) AS byes,
+      SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs   ELSE 0 END) AS leg_byes,
+      SUM(COALESCE(extra_runs, 0))                                        AS total_extras
+    FROM balls WHERE innings_id = ?
   `, [inningsId]);
 
 export const getInningsBalls = (inningsId) =>
@@ -1078,7 +1100,22 @@ export const getBallsWithPlayers = (inningsId) =>
 
 // ── Undo last ball ────────────────────────────────────────
 export const getLastBall = (inningsId) =>
-  queryFirstRow('SELECT * FROM balls WHERE innings_id = ? ORDER BY created_at DESC LIMIT 1', [inningsId]);
+  queryFirstRow(`
+    SELECT b.*,
+           us.name  AS striker_name,
+           uns.name AS non_striker_name,
+           ubw.name AS bowler_name
+    FROM balls b
+    LEFT JOIN players s   ON b.striker_id     = s.id
+    LEFT JOIN players ns  ON b.non_striker_id = ns.id
+    LEFT JOIN players bw  ON b.bowler_id      = bw.id
+    LEFT JOIN users us    ON s.user_id        = us.id
+    LEFT JOIN users uns   ON ns.user_id       = uns.id
+    LEFT JOIN users ubw   ON bw.user_id       = ubw.id
+    WHERE b.innings_id = ?
+    ORDER BY b.created_at DESC
+    LIMIT 1
+  `, [inningsId]);
 
 export const deleteBall = async (ball, inningsId) => {
   const totalDelta  = (ball.runs_scored || 0) + (ball.extra_runs || 0);
