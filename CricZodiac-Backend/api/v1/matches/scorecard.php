@@ -105,18 +105,25 @@ $bat = $pdo->prepare("
         bs.is_out,
         bs.dismissal_type,
         bs.batting_order,
-        COALESCE(u.name, 'Unknown') AS full_name
+        COALESCE(u.name, 'Unknown') AS full_name,
+        (SELECT COUNT(*) FROM balls b2
+          WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+            AND b2.match_id      = ?
+            AND b2.club_id       = ?
+            AND b2.striker_id    = bs.player_id
+            AND b2.is_valid_ball = 1
+            AND b2.runs_scored   = 0) AS dots
     FROM batting_scorecards bs
     JOIN    players p ON p.id = bs.player_id
     LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
     ORDER BY bs.batting_order ASC, bs.runs_scored DESC
 ");
-$bat->execute([$inningsId]);
+$bat->execute([$inningsId, $inningsLocalId, $scMatchId, $clubId, $inningsId]);
 $batting = $bat->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($batting as &$row) {
-    foreach (['player_id', 'runs_scored', 'balls_faced', 'fours', 'sixes', 'batting_order'] as $k) {
+    foreach (['player_id', 'runs_scored', 'balls_faced', 'fours', 'sixes', 'batting_order', 'dots'] as $k) {
         $row[$k] = isset($row[$k]) ? (int) $row[$k] : 0;
     }
     $row['strike_rate'] = isset($row['strike_rate']) ? (float) $row['strike_rate'] : 0.0;
@@ -137,18 +144,26 @@ $bowl = $pdo->prepare("
         bs.economy_rate,
         bs.no_balls,
         bs.wides,
-        COALESCE(u.name, 'Unknown') AS full_name
+        COALESCE(u.name, 'Unknown') AS full_name,
+        (SELECT COUNT(*) FROM balls b2
+          WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+            AND b2.match_id      = ?
+            AND b2.club_id       = ?
+            AND b2.bowler_id     = bs.player_id
+            AND b2.is_valid_ball = 1
+            AND b2.runs_scored   = 0
+            AND b2.extra_runs    = 0) AS dots
     FROM bowling_scorecards bs
     JOIN    players p ON p.id = bs.player_id
     LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
 ");
-$bowl->execute([$inningsId]);
+$bowl->execute([$inningsId, $inningsLocalId, $scMatchId, $clubId, $inningsId]);
 $bowling = $bowl->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($bowling as &$row) {
-    foreach (['player_id', 'balls_bowled', 'maidens', 'runs_conceded', 'wickets', 'no_balls', 'wides'] as $k) {
+    foreach (['player_id', 'balls_bowled', 'maidens', 'runs_conceded', 'wickets', 'no_balls', 'wides', 'dots'] as $k) {
         $row[$k] = isset($row[$k]) ? (int) $row[$k] : 0;
     }
     $row['overs_bowled'] = isset($row['overs_bowled']) ? (float) $row['overs_bowled'] : 0.0;

@@ -93,7 +93,7 @@ export const stopSyncService = () => {
 };
 
 // ── Main sync processor ────────────────────────────────────
-export const processSyncQueue = async () => {
+export const processSyncQueue = async ({ silent = false } = {}) => {
   if (isSyncing) return;
 
   // Skip sync when no authenticated user
@@ -174,8 +174,11 @@ export const processSyncQueue = async () => {
     const stats = await getSyncStats();
     onSyncStatusChange?.(stats.pending > 0 ? 'pending' : 'synced', stats);
 
-    // ── Toast notification — visible on ANY screen ──────
-    if (totalSynced > 0 && totalFailed === 0) {
+    // ── Toast notification ────────────────────────────────
+    // silent=true suppresses success/partial toasts (e.g. LiveScoringScreen
+    // fires sync on every ball — flooding the screen with "Sync Complete" is
+    // noise). Errors always show so the umpire knows if data is at risk.
+    if (!silent && totalSynced > 0 && totalFailed === 0) {
       Toast.show({
         type: 'success',
         text1: 'Sync Complete',
@@ -183,7 +186,7 @@ export const processSyncQueue = async () => {
         visibilityTime: 3000,
         position: 'top',
       });
-    } else if (totalSynced > 0 && totalFailed > 0) {
+    } else if (!silent && totalSynced > 0 && totalFailed > 0) {
       Toast.show({
         type: 'info',
         text1: 'Sync Partial',
@@ -192,6 +195,7 @@ export const processSyncQueue = async () => {
         position: 'top',
       });
     } else if (totalFailed > 0 && totalSynced === 0) {
+      // errors always shown regardless of silent flag
       Toast.show({
         type: 'error',
         text1: 'Sync Failed',

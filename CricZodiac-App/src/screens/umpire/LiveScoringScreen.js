@@ -68,13 +68,28 @@ const getExtraBtns = (COLORS) => [
 
 // ── Sub-components ────────────────────────────────────────
 
-const BatterRow = ({ batter, isStriker, COLORS, sc }) => {
+const BatterRow = ({ batter, isStriker, COLORS, sc, onChangeBatsman }) => {
   if (!batter) return null;
+  // Show CHANGE button only for a mid-innings new batsman who hasn't yet
+  // faced any deliveries (balls === 0). Opening-pair change is handled by
+  // the section-header "Change" button when allBalls.length === 0.
+  const canChange = !!onChangeBatsman && (batter.balls ?? 0) === 0;
   return (
     <View style={sc.bRow}>
-      <Text style={[sc.bName, isStriker && { color: COLORS.gold }]} numberOfLines={1}>
-        {isStriker ? '* ' : '  '}{batter.full_name || '—'}
-      </Text>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text
+          style={[sc.bName, isStriker && { color: COLORS.gold }, canChange && { flex: 0, flexShrink: 1 }]}
+          numberOfLines={1}
+        >
+          {isStriker ? '* ' : '  '}{batter.full_name || '—'}
+        </Text>
+        {canChange && (
+          <TouchableOpacity onPress={onChangeBatsman} style={sc.changeBtn}>
+            <Icon name="pencil" size={10} color={COLORS.gold} />
+            <Text style={sc.changeBtnText}>CHANGE</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <Text style={sc.bCell}>{batter.runs ?? 0}</Text>
       <Text style={sc.bCell}>{batter.balls ?? 0}</Text>
       <Text style={sc.bCell}>{batter.fours ?? 0}</Text>
@@ -1059,7 +1074,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         await enqueueInningsSync(active, rMatch);
       }
 
-      processSyncQueue().catch(() => {});
+      processSyncQueue({ silent: true }).catch(() => {});
 
       // Set state + refs immediately so async code below reads correct values
       inningsRef.current = active;
@@ -1086,7 +1101,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         const ob = balls.filter(b => b.over_id === existingOver.id);
         setOverBalls(ob);
         await enqueueOverSync(existingOver, active, rMatch);
-        processSyncQueue().catch(() => {});
+        processSyncQueue({ silent: true }).catch(() => {});
       }
 
       setLoading(false);
@@ -1214,7 +1229,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       bowler_id:      bwl.id,
     });
     // Immediately push over to MySQL
-    processSyncQueue().catch(() => {});
+    processSyncQueue({ silent: true }).catch(() => {});
     const newOver = { id: overId, over_number: newOverNum, bowler_id: bwl.id, balls_bowled: 0, runs_conceded: 0 };
     // Update refs IMMEDIATELY so recordBall reads correct values this same tick
     overRef.current    = newOver;
@@ -2010,12 +2025,36 @@ const LiveScoringScreen = ({ navigation, route }) => {
               isStriker
               COLORS={COLORS}
               sc={sc}
+              onChangeBatsman={allBalls.length > 0 ? () => {
+                if (!inningsRef.current) return;
+                navigation.navigate('SelectBatsman', {
+                  inningsId: inningsRef.current.id,
+                  team: battingTeam,
+                  requestId: uuid.v4(),
+                  returnScreen: 'LiveScoring',
+                  selectionType: 'new_batsman',
+                  mode: 'new_batsman',
+                  existingNonStrikerId: nonStrikerRef.current?.id,
+                });
+              } : null}
             />
             <BatterRow
               batter={nonStriker ? { ...nonStriker, ...nonStrikerStats } : null}
               isStriker={false}
               COLORS={COLORS}
               sc={sc}
+              onChangeBatsman={allBalls.length > 0 ? () => {
+                if (!inningsRef.current) return;
+                navigation.navigate('SelectBatsman', {
+                  inningsId: inningsRef.current.id,
+                  team: battingTeam,
+                  requestId: uuid.v4(),
+                  returnScreen: 'LiveScoring',
+                  selectionType: 'new_non_striker',
+                  mode: 'new_batsman',
+                  existingStrikerId: strikerRef.current?.id,
+                });
+              } : null}
             />
             {/* Partnership */}
             {striker && nonStriker && (
