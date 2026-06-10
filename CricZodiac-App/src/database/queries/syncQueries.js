@@ -8,11 +8,10 @@ import { SYNC_STATUS, MAX_RETRY_COUNT } from '../../config/constants';
 export const getPendingSyncItems = (limit = 50) =>
   queryRows(`
     SELECT * FROM sync_queue
-    WHERE sync_status IN ('pending', 'failed')
-    AND retry_count < ?
+    WHERE sync_status = 'pending'
     ORDER BY created_at ASC, id ASC
     LIMIT ?
-  `, [MAX_RETRY_COUNT, limit]);
+  `, [limit]);
 
 export const markSyncItemSynced = (id) =>
   executeQuery(`

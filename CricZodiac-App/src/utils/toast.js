@@ -1,6 +1,6 @@
 // ============================================================
 // CricZodiac — Toast Utility
-// Replaces Alert.alert everywhere with top-right Toast.
+// Replaces Alert.alert everywhere with top-center Toast.
 //
 // showAlert(title, msg?, buttons?)
 //   • 0-1 buttons (or no buttons)  → Toast (top-right)
@@ -38,16 +38,15 @@ const inferType = (title = '') => {
   return 'info';
 };
 
-// ── Custom toast box (top-right aligned) ─────────────────
+// ── Custom toast box (top-center aligned) ────────────────
 const ToastBox = ({ text1, text2, hide, type = 'info' }) => {
   const meta = TYPE_META[type] || TYPE_META.info;
   return (
     <View
       style={{
         width: W,
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        paddingRight: 12,
+        alignItems: 'center',
+        paddingHorizontal: 16,
       }}
       pointerEvents="box-none"
     >
@@ -56,12 +55,12 @@ const ToastBox = ({ text1, text2, hide, type = 'info' }) => {
         style={{
           backgroundColor: meta.bg,
           borderRadius: 14,
-          maxWidth: 290,
-          minWidth: 160,
+          width: '100%',
+          maxWidth: 420,
           flexDirection: 'row',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           gap: 10,
-          paddingVertical: 13,
+          paddingVertical: 12,
           paddingHorizontal: 15,
           borderLeftWidth: 4,
           borderLeftColor: meta.color,
@@ -74,18 +73,18 @@ const ToastBox = ({ text1, text2, hide, type = 'info' }) => {
           elevation: 12,
         }}
       >
-        <Icon name={meta.icon} size={20} color={meta.color} style={{ marginTop: 1 }} />
+        <Icon name={meta.icon} size={20} color={meta.color} style={{ flexShrink: 0 }} />
         <View style={{ flex: 1 }}>
           <Text
             style={{ color: '#f1f5f9', fontWeight: '700', fontSize: 13, lineHeight: 18 }}
-            numberOfLines={2}
+            numberOfLines={1}
           >
             {text1}
           </Text>
           {text2 ? (
             <Text
-              style={{ color: '#94a3b8', fontSize: 12, marginTop: 4, lineHeight: 16 }}
-              numberOfLines={4}
+              style={{ color: '#94a3b8', fontSize: 12, marginTop: 2, lineHeight: 16 }}
+              numberOfLines={2}
             >
               {text2}
             </Text>

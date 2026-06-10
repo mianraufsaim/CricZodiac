@@ -51,33 +51,28 @@ let onSyncStatusChange    = null;
 let appStateSubscription  = null;
 let netInfoUnsubscribe    = null;
 
-// ── Trigger a reset-then-sync cycle ──────────────────────
-const _resetAndSync = async () => {
-  await resetFailedSync();
-  await processSyncQueue();
-};
-
 // ── Start background sync service ────────────────────────
 // Runs in three situations so sync always happens regardless of which
 // screen is visible or whether the app was backgrounded:
 //   1. Every SYNC_INTERVAL (10 s) via timer
 //   2. Immediately when the app comes back to the foreground (AppState)
 //   3. Immediately when the internet becomes reachable (NetInfo)
+// NOTE: Failed items are never auto-retried — use manualRetrySync() for that.
 export const startSyncService = (statusCallback) => {
   onSyncStatusChange = statusCallback;
   console.log('[Sync] Service started');
 
-  // 1. Run immediately on start (reset failed first in case items were stuck)
-  _resetAndSync();
+  // 1. Run immediately on start (pending items only)
+  processSyncQueue();
 
-  // 2. Timer: reset failed + process every 10 s
-  syncTimer = setInterval(_resetAndSync, SYNC_INTERVAL);
+  // 2. Timer: process pending items every 10 s
+  syncTimer = setInterval(processSyncQueue, SYNC_INTERVAL);
 
   // 3. App foreground: retry as soon as user opens the app again
   appStateSubscription = AppState.addEventListener('change', (nextState) => {
     if (nextState === 'active') {
       console.log('[Sync] App foregrounded — triggering sync');
-      _resetAndSync();
+      processSyncQueue();
     }
   });
 
@@ -186,23 +181,23 @@ export const processSyncQueue = async () => {
         text1: 'Sync Complete',
         text2: `${totalSynced} item${totalSynced !== 1 ? 's' : ''} pushed to server`,
         visibilityTime: 3000,
-        position: 'bottom',
+        position: 'top',
       });
     } else if (totalSynced > 0 && totalFailed > 0) {
       Toast.show({
         type: 'info',
         text1: 'Sync Partial',
-        text2: `${totalSynced} synced · ${totalFailed} failed — will retry`,
+        text2: `${totalSynced} synced · ${totalFailed} failed — retry manually`,
         visibilityTime: 3000,
-        position: 'bottom',
+        position: 'top',
       });
     } else if (totalFailed > 0 && totalSynced === 0) {
       Toast.show({
         type: 'error',
         text1: 'Sync Failed',
-        text2: `${totalFailed} item${totalFailed !== 1 ? 's' : ''} failed — retrying in 10s`,
+        text2: `${totalFailed} item${totalFailed !== 1 ? 's' : ''} failed — retry manually`,
         visibilityTime: 3000,
-        position: 'bottom',
+        position: 'top',
       });
     }
   } catch (error) {
