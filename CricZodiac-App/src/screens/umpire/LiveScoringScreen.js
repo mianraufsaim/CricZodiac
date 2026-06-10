@@ -785,7 +785,26 @@ const LiveScoringScreen = ({ navigation, route }) => {
     processedBowlerSelectionRef.current = selection.requestId;
     if (selection.bowler) {
       setBowler(selection.bowler);
-      setBowlerStats({ runs: 0, wickets: 0, maidens: 0, overs: 0 });
+      // Restore accumulated stats if this bowler has already bowled this innings
+      const bowlerId = selection.bowler.id;
+      const pastBalls = allBalls.filter(b => b.bowler_id === bowlerId);
+      if (pastBalls.length > 0) {
+        const pastOverIds = [...new Set(pastBalls.map(b => b.over_id))];
+        const accRuns = pastBalls.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+        const accWickets = pastBalls.filter(b => b.is_wicket === 1).length;
+        let accMaidens = 0;
+        for (const ovId of pastOverIds) {
+          const ovBalls = pastBalls.filter(b => b.over_id === ovId);
+          const legalCount = ovBalls.filter(b => b.is_valid_ball === 1).length;
+          if (legalCount >= 6) {
+            const ovRuns = ovBalls.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+            if (ovRuns === 0) accMaidens++;
+          }
+        }
+        setBowlerStats({ overs: pastOverIds.length, runs: accRuns, wickets: accWickets, maidens: accMaidens });
+      } else {
+        setBowlerStats({ overs: 0, runs: 0, wickets: 0, maidens: 0 });
+      }
     }
     if (selection.resetOver) {
       setOverBalls([]);
@@ -793,7 +812,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       legalRef.current = 0;
     }
     navigation.setParams({ bowlerSelection: null });
-  }, [navigation, route.params?.bowlerSelection]);
+  }, [navigation, route.params?.bowlerSelection, allBalls]);
 
   useEffect(() => {
     const dismissed = route.params?.wicketDismissed;
