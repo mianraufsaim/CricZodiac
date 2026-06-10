@@ -650,6 +650,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const processedBatsmanSelectionRef = useRef(null);
   const processedBowlerSelectionRef  = useRef(null);
   const processedWicketDismissedRef  = useRef(null);
+  // Tracks the bowler who completed the most recent over — used to enforce the
+  // "cannot bowl consecutive overs" rule when handleChangeBowler opens SelectBowler.
+  const lastOverBowlerIdRef = useRef(null);
   // Stats refs — needed so _swap and recordBall always read current values
   // even when called inside async functions after awaits.
   const strikerStatsRef    = useRef({ runs: 0, balls: 0, fours: 0, sixes: 0 });
@@ -1051,6 +1054,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
         if (restoredNS)      { nonStrikerRef.current = restoredNS;       setNonStriker(restoredNS); }
         if (restoredBowler)  { bowlerRef.current = restoredBowler;       setBowler(restoredBowler); }
 
+        // Restore last-completed-over bowler so handleChangeBowler can correctly
+        // restrict the consecutive-over rule after a crash-recovery resume.
+        // The last completed over's bowler is the last ball NOT in the current over.
+        const prevOverBalls = existingOver
+          ? balls.filter(b => b.over_id !== existingOver.id)
+          : balls;
+        if (prevOverBalls.length > 0) {
+          lastOverBowlerIdRef.current = prevOverBalls[prevOverBalls.length - 1].bowler_id;
+        }
+
         // Restore batting stats from DB
         if (restoredStriker) {
           const ss = await getPlayerBattingStats(active.id, restoredStriker.id);
@@ -1337,6 +1350,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         setOverNumber(ovNum + 1);
         _swap(); // swap at end of over
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
+        lastOverBowlerIdRef.current = bwl.id; // track for consecutive-over restriction
 
         if (ovNum >= match.overs) {
           _endInnings(newTotal, totWkts, inn.id);
@@ -1684,12 +1698,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
     });
   };
 
-  // ── Change Bowler (only before first ball of an over) ──
+  // ── Change Bowler ──────────────────────────────────────
   const handleChangeBowler = () => {
     if (!inningsRef.current) return;
+    // currentBowlerId = whoever completed the last over (cannot bowl consecutive overs).
+    // If called mid-over, also block the bowler currently bowling this over.
+    const lastOverBowler = lastOverBowlerIdRef.current;
+    const midOverBowler  = overRef.current && legalRef.current > 0 ? bowlerRef.current?.id : null;
+    // Pass the most-recently-completed-over bowler as the restriction.
+    // If mid-over change, that's the current bowler (they are in the middle of an over
+    // so effectively they are also the "last over" restriction until the next over completes).
+    const restrictedBowlerId = midOverBowler || lastOverBowler || null;
     navigation.navigate('SelectBowler', {
       inningsId:         inningsRef.current.id,
       team:              bowlingTeam,
+      currentBowlerId:   restrictedBowlerId,
       requestId:         uuid.v4(),
       returnScreen:      'LiveScoring',
       maxOversPerBowler: match.max_overs_per_bowler || 0,
