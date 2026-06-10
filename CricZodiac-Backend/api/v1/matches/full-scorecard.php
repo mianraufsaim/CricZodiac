@@ -91,7 +91,12 @@ foreach ($allInnings as $inn) {
             bs.fours, bs.sixes, bs.strike_rate,
             bs.is_out, bs.dismissal_type, bs.batting_order,
             COALESCE(u.name, 'Unknown') AS full_name,
-            COALESCE(bu.name, '') AS bowler_name
+            COALESCE(bu.name, '') AS bowler_name,
+            (SELECT COUNT(*) FROM balls b2
+              WHERE b2.innings_id = bs.innings_id
+                AND b2.striker_id = bs.player_id
+                AND b2.is_valid_ball = 1
+                AND b2.runs_scored = 0) AS dots
         FROM batting_scorecards bs
         JOIN    players p  ON p.id  = bs.player_id
         LEFT JOIN users u  ON u.id  = p.user_id
@@ -104,7 +109,7 @@ foreach ($allInnings as $inn) {
     $batting = $bat->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($batting as &$r) {
-        foreach (['player_id','runs_scored','balls_faced','fours','sixes','batting_order'] as $k)
+        foreach (['player_id','runs_scored','balls_faced','fours','sixes','batting_order','dots'] as $k)
             $r[$k] = isset($r[$k]) ? (int) $r[$k] : 0;
         $r['strike_rate'] = isset($r['strike_rate']) ? (float) $r['strike_rate'] : 0.0;
         $r['is_out']      = isset($r['is_out'])      ? (int)   $r['is_out']      : 0;
@@ -117,7 +122,13 @@ foreach ($allInnings as $inn) {
             bs.player_id, bs.balls_bowled, bs.overs_bowled,
             bs.maidens, bs.runs_conceded, bs.wickets,
             bs.economy_rate, bs.no_balls, bs.wides,
-            COALESCE(u.name, 'Unknown') AS full_name
+            COALESCE(u.name, 'Unknown') AS full_name,
+            (SELECT COUNT(*) FROM balls b2
+              WHERE b2.innings_id = bs.innings_id
+                AND b2.bowler_id = bs.player_id
+                AND b2.is_valid_ball = 1
+                AND b2.runs_scored = 0
+                AND b2.extra_runs = 0) AS dots
         FROM bowling_scorecards bs
         JOIN    players p ON p.id = bs.player_id
         LEFT JOIN users u ON u.id = p.user_id
@@ -128,17 +139,38 @@ foreach ($allInnings as $inn) {
     $bowling = $bwl->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($bowling as &$r) {
-        foreach (['player_id','balls_bowled','maidens','runs_conceded','wickets','no_balls','wides'] as $k)
+        foreach (['player_id','balls_bowled','maidens','runs_conceded','wickets','no_balls','wides','dots'] as $k)
             $r[$k] = isset($r[$k]) ? (int) $r[$k] : 0;
         $r['overs_bowled'] = isset($r['overs_bowled']) ? (float) $r['overs_bowled'] : 0.0;
         $r['economy_rate'] = isset($r['economy_rate']) ? (float) $r['economy_rate'] : 0.0;
     }
     unset($r);
 
+    // Extras breakdown from balls table
+    $extSt = $pdo->prepare("
+        SELECT
+            SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END) AS wides,
+            SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END) AS no_balls,
+            SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END) AS byes,
+            SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END) AS leg_byes,
+            SUM(COALESCE(extra_runs, 0))                                      AS total_extras
+        FROM balls WHERE innings_id = ?
+    ");
+    $extSt->execute([$iid]);
+    $extRow = $extSt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $extras = [
+        'wides'        => (int) ($extRow['wides']        ?? 0),
+        'no_balls'     => (int) ($extRow['no_balls']     ?? 0),
+        'byes'         => (int) ($extRow['byes']         ?? 0),
+        'leg_byes'     => (int) ($extRow['leg_byes']     ?? 0),
+        'total_extras' => (int) ($extRow['total_extras'] ?? 0),
+    ];
+
     $scorecards[] = [
         'innings' => $inn,
         'batting' => $batting,
         'bowling' => $bowling,
+        'extras'  => $extras,
     ];
 }
 
