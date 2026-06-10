@@ -671,12 +671,12 @@ export const saveBall = async (ballData) => {
             WHERE innings_id = ? AND player_id = ?`,
       params: [
         ballData.runs_scored || 0,                       // runs_scored delta
-        ballData.is_valid_ball !== false ? 1 : 0,        // balls_faced delta
+        ballData.extra_type !== 'wide' ? 1 : 0,          // balls_faced delta (no-ball=+1, wide=+0)
         ballData.is_four ? 1 : 0,
         ballData.is_six ? 1 : 0,
-        ballData.is_valid_ball !== false ? 1 : 0,        // SR: new balls_faced
+        ballData.extra_type !== 'wide' ? 1 : 0,          // SR: new balls_faced
         ballData.runs_scored || 0,                       // SR: new runs_scored
-        ballData.is_valid_ball !== false ? 1 : 0,        // SR: new balls_faced (divisor)
+        ballData.extra_type !== 'wide' ? 1 : 0,          // SR: new balls_faced (divisor)
         SYNC_STATUS.PENDING,
         ballData.innings_id, ballData.striker_id,
       ],

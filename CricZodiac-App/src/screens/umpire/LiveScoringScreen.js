@@ -401,70 +401,119 @@ const BallByBallTab = ({ allBalls, COLORS, bb }) => {
 // ── Scoring Pad ───────────────────────────────────────────
 const RUN_BTNS = [0, 1, 2, 3, 4, 6];
 
-const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, COLORS, pad, extraBtns }) => (
-  <View style={pad.wrap}>
-    {/* Run row */}
-    <View style={pad.runRow}>
-      {RUN_BTNS.map(r => (
-        <TouchableOpacity
-          key={r}
-          style={[pad.runBtn,
-            r === 4 ? { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue } :
-            r === 6 ? { backgroundColor: COLORS.purple,    borderColor: COLORS.purple }    : {}
-          ]}
-          onPress={() => onRun(r)}
-        >
-          <Text style={[pad.runTxt, (r === 4 || r === 6) && { color: '#FFFFFF' }]}>{r}</Text>
-        </TouchableOpacity>
-      ))}
-      {/* 5+ button */}
-      <TouchableOpacity style={[pad.runBtn, { backgroundColor: COLORS.orange, borderColor: COLORS.orange }]}
-        onPress={() => Alert.prompt(
-          'Custom Runs', 'Enter runs scored:',
-          (txt) => { const n = parseInt(txt); if (!isNaN(n) && n >= 0) onRun(n); }
-        )}>
-        <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
-      </TouchableOpacity>
-      {/* Undo — disabled when the current over has no balls yet */}
-      <TouchableOpacity
-        style={[pad.undoBtn, !canUndo && { opacity: 0.3 }]}
-        onPress={onUndo}
-        disabled={!canUndo}
-      >
-        <Icon name="undo" size={22} color={COLORS.white} />
-      </TouchableOpacity>
-    </View>
+const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, COLORS, pad, extraBtns }) => {
+  const [customModal, setCustomModal] = useState({ visible: false, value: '' });
 
-    {/* Extras row */}
-    <View style={pad.extraRow}>
-      {extraBtns.map(e => (
-        <TouchableOpacity
-          key={e.id}
-          style={[pad.extraBtn, { borderColor: e.color }]}
-          onPress={() => onExtra(e.id)}
-        >
-          <Text style={[pad.extraTxt, { color: e.color }]}>{e.label}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+  const submitCustomRuns = () => {
+    const n = parseInt(customModal.value, 10);
+    if (!isNaN(n) && n >= 0) onRun(n);
+    setCustomModal({ visible: false, value: '' });
+  };
 
-    {/* Wicket + Swap row */}
-    <View style={pad.actionRow}>
-      <TouchableOpacity style={pad.wicketBtn} onPress={onWicket}>
-        <Text style={pad.wicketTxt}>WICKET</Text>
-      </TouchableOpacity>
-      {/* Swap — disabled when the current over has no balls yet */}
-      <TouchableOpacity
-        style={[pad.swapBtn, !canUndo && { opacity: 0.3 }]}
-        onPress={() => onSwap()}
-        disabled={!canUndo}
+  return (
+    <View style={pad.wrap}>
+      {/* Run row */}
+      <View style={pad.runRow}>
+        {RUN_BTNS.map(r => (
+          <TouchableOpacity
+            key={r}
+            style={[pad.runBtn,
+              r === 4 ? { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue } :
+              r === 6 ? { backgroundColor: COLORS.purple,    borderColor: COLORS.purple }    : {}
+            ]}
+            onPress={() => onRun(r)}
+          >
+            <Text style={[pad.runTxt, (r === 4 || r === 6) && { color: '#FFFFFF' }]}>{r}</Text>
+          </TouchableOpacity>
+        ))}
+        {/* 5+ button — opens cross-platform TextInput modal (Alert.prompt is iOS only) */}
+        <TouchableOpacity
+          style={[pad.runBtn, { backgroundColor: COLORS.orange, borderColor: COLORS.orange }]}
+          onPress={() => setCustomModal({ visible: true, value: '' })}
+        >
+          <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
+        </TouchableOpacity>
+        {/* Undo — disabled when the current over has no balls yet */}
+        <TouchableOpacity
+          style={[pad.undoBtn, !canUndo && { opacity: 0.3 }]}
+          onPress={onUndo}
+          disabled={!canUndo}
+        >
+          <Icon name="undo" size={22} color={COLORS.white} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Extras row */}
+      <View style={pad.extraRow}>
+        {extraBtns.map(e => (
+          <TouchableOpacity
+            key={e.id}
+            style={[pad.extraBtn, { borderColor: e.color }]}
+            onPress={() => onExtra(e.id)}
+          >
+            <Text style={[pad.extraTxt, { color: e.color }]}>{e.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Wicket + Swap row */}
+      <View style={pad.actionRow}>
+        <TouchableOpacity style={pad.wicketBtn} onPress={onWicket}>
+          <Text style={pad.wicketTxt}>WICKET</Text>
+        </TouchableOpacity>
+        {/* Swap — disabled when the current over has no balls yet */}
+        <TouchableOpacity
+          style={[pad.swapBtn, !canUndo && { opacity: 0.3 }]}
+          onPress={() => onSwap()}
+          disabled={!canUndo}
+        >
+          <Icon name="swap-horizontal" size={18} color={COLORS.gray} />
+          <Text style={pad.swapTxt}>SWAP</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Custom Runs Modal (replaces Alert.prompt — works on Android + iOS) */}
+      <Modal
+        transparent
+        visible={customModal.visible}
+        animationType="fade"
+        onRequestClose={() => setCustomModal({ visible: false, value: '' })}
       >
-        <Icon name="swap-horizontal" size={18} color={COLORS.gray} />
-        <Text style={pad.swapTxt}>SWAP</Text>
-      </TouchableOpacity>
+        <View style={{ flex: 1, backgroundColor: '#000000CC', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ width: '100%', maxWidth: 300, backgroundColor: COLORS.navy, borderRadius: 16, padding: 20, borderWidth: 1.5, borderColor: COLORS.cardBorder }}>
+            <Text style={{ color: COLORS.white, fontSize: 16, fontWeight: '800', marginBottom: 4 }}>Custom Runs</Text>
+            <Text style={{ color: COLORS.gray, fontSize: 12, marginBottom: 14 }}>Enter runs scored off the bat</Text>
+            <TextInput
+              style={{ height: 48, borderRadius: 10, borderWidth: 1.5, borderColor: COLORS.cardBorder, paddingHorizontal: 14, color: COLORS.white, fontSize: 22, fontWeight: '800', backgroundColor: COLORS.inputBg, marginBottom: 16, textAlign: 'center' }}
+              keyboardType="number-pad"
+              placeholder="0"
+              placeholderTextColor={COLORS.gray}
+              value={customModal.value}
+              onChangeText={val => setCustomModal(prev => ({ ...prev, value: val.replace(/[^0-9]/g, '') }))}
+              autoFocus
+              maxLength={2}
+              onSubmitEditing={submitCustomRuns}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setCustomModal({ visible: false, value: '' })}
+                style={{ flex: 1, height: 44, borderRadius: 10, borderWidth: 1.5, borderColor: COLORS.cardBorder, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ color: COLORS.gray, fontWeight: '700', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitCustomRuns}
+                style={{ flex: 1, height: 44, borderRadius: 10, backgroundColor: COLORS.orange, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Add Runs</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
-  </View>
-);
+  );
+};
 
 // ── Extra Runs Modal ─────────────────────────────────────
 const EXTRA_RUN_OPTS = [0, 1, 2, 3, 4, 5, 6];
@@ -1231,6 +1280,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
       const isBye      = extraType === 'bye';
       const isLegBye   = extraType === 'leg_bye';
       const isValidBall = !isExtra || isBye || isLegBye;
+      // A no-ball IS faced by the batsman (only wides are not faced).
+      // countsBallFaced drives balls_faced; isValidBall drives over/ball counting.
+      const countsBallFaced = !isWide;
       // 4/6 is credited to batsman on normal balls AND on no-balls
       const isFour     = runsScored === 4 && (!isExtra || isNoBall);
       const isSix      = runsScored === 6 && (!isExtra || isNoBall);
@@ -1281,7 +1333,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (!isWide && !isBye && !isLegBye) {
         newStrikerStats = {
           runs:  curStrikerStats.runs  + runsScored,
-          balls: curStrikerStats.balls + (isValidBall ? 1 : 0),
+          balls: curStrikerStats.balls + (countsBallFaced ? 1 : 0),
           fours: curStrikerStats.fours + (isFour ? 1 : 0),
           sixes: curStrikerStats.sixes + (isSix  ? 1 : 0),
         };
@@ -1338,8 +1390,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setAllBalls(prev => [...prev, ballDisplay]);
       setOverBalls(prev => [...prev, ballDisplay]);
 
-      // Auto-swap on odd runs (valid delivery) — pass updated stats to avoid stale closure
-      if (isValidBall && runsScored % 2 !== 0) _swap(newStrikerStats);
+      // Auto-swap when batsmen physically cross (odd runs scored off the bat).
+      // No-ball is not a valid delivery for over counting, but batsmen still
+      // cross if they run odd numbers — so swap on !isWide (wide has no physical run).
+      if (!isWide && runsScored % 2 !== 0) _swap(newStrikerStats);
 
       // Target chased? End innings immediately (2nd innings only)
       if (resolvedTarget && newTotal >= resolvedTarget) {
