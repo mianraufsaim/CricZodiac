@@ -43,15 +43,10 @@ export const API_ENDPOINTS = {
   ADMIN_CLUB:     `${API_BASE_URL}/users/club.php`,
   USERS_LIST:     `${API_BASE_URL}/users/list.php`,
   USERS_CHECK:    `${API_BASE_URL}/users/check.php`,
-  USERS_APPROVE:  `${API_BASE_URL}/users/approve.php`,
-  USERS_UPDATE:   `${API_BASE_URL}/users/update.php`,
-  USERS_DELETE:   `${API_BASE_URL}/users/delete.php`,
 
   // Players
-  PLAYERS_CREATE: `${API_BASE_URL}/players/create.php`,
   PLAYERS_UPDATE: `${API_BASE_URL}/players/update.php`,
   PLAYERS_LIST:   `${API_BASE_URL}/players/list.php`,
-  PLAYERS_DELETE: `${API_BASE_URL}/players/delete.php`,
   PLAYERS_STATS:       `${API_BASE_URL}/players/stats.php`,
   PLAYERS_LEADERBOARD: `${API_BASE_URL}/players/leaderboard.php`,
   PLAYERS_COMPARE:     `${API_BASE_URL}/players/compare.php`,
@@ -62,15 +57,11 @@ export const API_ENDPOINTS = {
   SERIES_LIST:    `${API_BASE_URL}/series/list.php`,
 
   // Teams
-  TEAMS_CREATE:   `${API_BASE_URL}/teams/create.php`,
-  TEAMS_UPDATE:   `${API_BASE_URL}/teams/update.php`,
   TEAMS_LIST:     `${API_BASE_URL}/teams/list.php`,
   TEAMS_PLAYERS:  `${API_BASE_URL}/teams/players.php`,
 
   // Matches
-  MATCHES_CREATE: `${API_BASE_URL}/matches/create.php`,
   MATCHES_LIST:   `${API_BASE_URL}/matches/list.php`,
-  MATCHES_TOSS:   `${API_BASE_URL}/matches/toss.php`,
   MATCHES_SCORE:      `${API_BASE_URL}/matches/score.php`,
   MATCHES_RESULT:     `${API_BASE_URL}/matches/result.php`,
   MATCHES_SCORECARD:       `${API_BASE_URL}/matches/scorecard.php`,

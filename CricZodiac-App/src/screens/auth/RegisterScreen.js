@@ -154,7 +154,7 @@ const RegisterScreen = ({ navigation }) => {
             <Icon name="shield-account" size={16} color={COLORS.cyan} />
             <Text style={styles.infoText}>
               This form is for <Text style={{ color: COLORS.gold, fontWeight: '700' }}>Club Admins</Text> only.
-              Umpires and players are added by the admin inside the app.
+              Players are added by the admin inside the app.
             </Text>
           </View>
 
