@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -140,11 +140,11 @@ const RegisterScreen = ({ navigation }) => {
 
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoBg}>
-              <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={styles.logoGrad}>
-                <Text style={styles.logoZ}>Z</Text>
-              </LinearGradient>
-            </View>
+            <Image
+              source={require('../../assets/images/round_logo.png')}
+              style={styles.logoImg}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Club Admin</Text>
             <Text style={styles.subtitle}>Register your cricket club</Text>
           </View>
@@ -301,10 +301,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   loadingRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   header:       { alignItems: 'center', marginBottom: 20 },
-  logoBg:       { marginBottom: 12 },
-  logoGrad:     { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  logoZ:        { fontSize: 32, fontWeight: '900', color: COLORS.white, fontStyle: 'italic' },
-  title:        { fontSize: 26, fontWeight: '900', color: COLORS.white, letterSpacing: 2 },
+  logoImg:      { width: 130, height: 130, marginBottom: 14 },
+  title:        { fontSize: 18, fontWeight: '900', color: COLORS.white, letterSpacing: 1.5 },
   subtitle:     { color: COLORS.gold, fontSize: 13, marginTop: 4 },
 
   infoChip:     {

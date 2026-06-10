@@ -1,0 +1,143 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.criczodiac"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:3:5-67
+11-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:3:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:7:5-79
+12-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:7:22-76
+13    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+13-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:8:5-76
+13-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:8:22-73
+14    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+14-->[:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-fs/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:7:5-81
+14-->[:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-fs/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:7:22-78
+15    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+16
+17    <permission
+17-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+18        android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+18-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+19        android:protectionLevel="signature" />
+19-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+20
+21    <uses-permission android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+21-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+21-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+22
+23    <application
+23-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:5:5-24:19
+24        android:name="com.criczodiac.MainApplication"
+24-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:6:7-38
+25        android:allowBackup="false"
+25-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:10:7-34
+26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+26-->[androidx.core:core:1.12.0] /Users/mian-rauf/.gradle/caches/transforms-3/37090c8cbd1dedc6ee2ba619cf52b6bb/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+27        android:extractNativeLibs="true"
+28        android:icon="@mipmap/ic_launcher"
+28-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:8:7-41
+29        android:label="@string/app_name"
+29-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:7:7-39
+30        android:roundIcon="@mipmap/ic_launcher_round"
+30-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:9:7-52
+31        android:theme="@style/AppTheme" >
+31-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:11:7-38
+32        <activity
+32-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:12:7-23:18
+33            android:name="com.criczodiac.MainActivity"
+33-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:13:9-37
+34            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+34-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:15:9-118
+35            android:exported="true"
+35-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:18:9-32
+36            android:label="@string/app_name"
+36-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:14:9-41
+37            android:launchMode="singleTask"
+37-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:16:9-40
+38            android:windowSoftInputMode="adjustResize" >
+38-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:17:9-51
+39            <intent-filter>
+39-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:19:9-22:25
+40                <action android:name="android.intent.action.MAIN" />
+40-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:20:13-65
+40-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:20:21-62
+41
+42                <category android:name="android.intent.category.LAUNCHER" />
+42-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:21:13-73
+42-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/src/main/AndroidManifest.xml:21:23-70
+43            </intent-filter>
+44        </activity>
+45
+46        <provider
+46-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:8:9-16:20
+47            android:name="com.imagepicker.ImagePickerProvider"
+47-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:9:13-63
+48            android:authorities="com.criczodiac.imagepickerprovider"
+48-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:10:13-71
+49            android:exported="false"
+49-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:11:13-37
+50            android:grantUriPermissions="true" >
+50-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:12:13-47
+51            <meta-data
+51-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:13:13-15:70
+52                android:name="android.support.FILE_PROVIDER_PATHS"
+52-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:14:17-67
+53                android:resource="@xml/imagepicker_provider_paths" />
+53-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:15:17-67
+54        </provider>
+55        <provider
+55-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:8:9-16:20
+56            android:name="cl.json.RNShareFileProvider"
+56-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:9:13-55
+57            android:authorities="com.criczodiac.rnshare.fileprovider"
+57-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:10:13-72
+58            android:exported="false"
+58-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:11:13-37
+59            android:grantUriPermissions="true" >
+59-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:12:13-47
+60            <meta-data
+60-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:13:13-15:70
+61                android:name="android.support.FILE_PROVIDER_PATHS"
+61-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:14:17-67
+62                android:resource="@xml/share_download_paths" />
+62-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/AndroidManifest.xml:15:17-67
+63        </provider>
+64        <provider
+64-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+65            android:name="androidx.startup.InitializationProvider"
+65-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+66            android:authorities="com.criczodiac.androidx-startup"
+66-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+67            android:exported="false" >
+67-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+68            <meta-data
+68-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+69                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+69-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+70                android:value="androidx.startup" />
+70-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-3/faa3592d2fc203d6c74b9a5f601058a1/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+71            <meta-data
+71-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-3/71b91ea8216105cda74b0317da307340/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
+72                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+72-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-3/71b91ea8216105cda74b0317da307340/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
+73                android:value="androidx.startup" />
+73-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-3/71b91ea8216105cda74b0317da307340/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
+74        </provider>
+75
+76        <meta-data
+76-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-3/03d018e18e7118763cc731de8f689ba0/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:12:9-14:37
+77            android:name="com.facebook.soloader.enabled"
+77-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-3/03d018e18e7118763cc731de8f689ba0/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:13:13-57
+78            android:value="false" />
+78-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-3/03d018e18e7118763cc731de8f689ba0/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:14:13-34
+79    </application>
+80
+81</manifest>

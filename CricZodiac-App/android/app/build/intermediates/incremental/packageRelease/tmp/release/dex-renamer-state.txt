@@ -1,0 +1,7 @@
+#Wed Jun 10 12:12:02 PKT 2026
+base.1=/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/build/intermediates/dex/release/mergeDexRelease/classes2.dex
+path.1=classes2.dex
+base.0=/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac-App/android/app/build/intermediates/dex/release/mergeDexRelease/classes.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=classes.dex

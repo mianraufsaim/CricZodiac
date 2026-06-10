@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -64,11 +64,11 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoMini}>
-              <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={styles.logoBg}>
-                <Text style={styles.logoZ}>Z</Text>
-              </LinearGradient>
-            </View>
+            <Image
+              source={require('../../assets/images/round_logo.png')}
+              style={styles.logoMini}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>CRICZODIAC</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
           </View>
@@ -151,10 +151,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   netLabel:         { fontSize: 11, fontWeight: '600' },
 
   header:           { alignItems: 'center', marginBottom: 32 },
-  logoMini:         { marginBottom: 12 },
-  logoBg:           { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  logoZ:            { fontSize: 36, fontWeight: '900', color: COLORS.white, fontStyle: 'italic' },
-  title:            { fontSize: 24, fontWeight: '900', color: COLORS.white, letterSpacing: 6 },
+  logoMini:         { width: 130, height: 130, marginBottom: 14 },
+  title:            { fontSize: 18, fontWeight: '900', color: COLORS.white, letterSpacing: 1.5 },
   subtitle:         { color: COLORS.gray, fontSize: 14, marginTop: 4 },
 
   card:             { backgroundColor: COLORS.card, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.cardBorder },

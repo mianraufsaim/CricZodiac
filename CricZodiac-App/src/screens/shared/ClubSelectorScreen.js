@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl, Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -85,11 +85,11 @@ const ClubSelectorScreen = () => {
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.logo}>
-          <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={styles.logoBg}>
-            <Text style={styles.logoZ}>Z</Text>
-          </LinearGradient>
-        </View>
+        <Image
+          source={require('../../assets/images/round_logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.title}>Select Club</Text>
         <Text style={styles.subtitle}>Welcome, {user?.name} — pick a club to manage</Text>
       </View>
@@ -128,9 +128,7 @@ const ClubSelectorScreen = () => {
 const getStyles = (COLORS) => StyleSheet.create({
   container:  { flex: 1 },
   header:     { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24, paddingBottom: 32 },
-  logo:       { marginBottom: 16 },
-  logoBg:     { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  logoZ:      { fontSize: 38, fontWeight: '900', color: COLORS.white, fontStyle: 'italic' },
+  logo:       { width: 84, height: 84, marginBottom: 16 },
   title:      { fontSize: 26, fontWeight: '900', color: COLORS.white, letterSpacing: 4, marginBottom: 6 },
   subtitle:   { color: COLORS.gray, fontSize: 14, textAlign: 'center' },
 
