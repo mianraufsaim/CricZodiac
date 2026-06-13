@@ -97,6 +97,9 @@ function syncClub(PDO $pdo, string $action, array $d): bool {
 }
 
 function syncSeries(PDO $pdo, string $action, array $d): bool {
+    $startDate = !empty($d['start_date']) ? $d['start_date'] : null;
+    $endDate   = !empty($d['end_date'])   ? $d['end_date']   : null;
+
     if ($action === 'insert' || $action === 'create') {
         $pdo->prepare("
             INSERT INTO series (local_id, club_id, name, description, format, start_date, end_date, status, team_a_wins, team_b_wins, team_a_local, team_b_local, created_at)
@@ -107,7 +110,7 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
             $d['club_id'] ?? null,
             $d['name'], $d['description'] ?? null,
             $d['format'] ?? 'bestOf1',
-            $d['start_date'] ?? null, $d['end_date'] ?? null,
+            $startDate, $endDate,
             $d['team_a_wins'] ?? 0, $d['team_b_wins'] ?? 0,
             $d['team_a_id'] ?? null, $d['team_b_id'] ?? null,
         ]);
@@ -119,7 +122,16 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
             $allowed = ['name', 'description', 'format', 'start_date', 'end_date', 'status', 'team_a_wins', 'team_b_wins'];
             $sets = []; $params = [];
             foreach ($allowed as $col) {
-                if (array_key_exists($col, $d)) { $sets[] = "$col = ?"; $params[] = $d[$col]; }
+                if (array_key_exists($col, $d)) {
+                    $sets[] = "$col = ?";
+                    if ($col === 'start_date') {
+                        $params[] = $startDate;
+                    } elseif ($col === 'end_date') {
+                        $params[] = $endDate;
+                    } else {
+                        $params[] = $d[$col];
+                    }
+                }
             }
             if ($sets) {
                 $params[] = $seriesId;

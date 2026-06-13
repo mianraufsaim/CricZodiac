@@ -8,6 +8,11 @@ import uuid from 'react-native-uuid';
 
 export const createSeries = async (data, userId) => {
   const id = uuid.v4();
+  const seriesData = {
+    ...data,
+    start_date: data.start_date || null,
+    end_date: data.end_date || null,
+  };
   await executeTransaction([
     {
       sql: `INSERT INTO series
@@ -15,21 +20,21 @@ export const createSeries = async (data, userId) => {
             VALUES (?,?,?,?,?,?,?,?,?,?)`,
       params: [
         id,
-        data.name,
-        data.description || null,
-        data.start_date  || null,
-        data.end_date    || null,
-        data.format      || 'bestOf1',
+        seriesData.name,
+        seriesData.description || null,
+        seriesData.start_date,
+        seriesData.end_date,
+        seriesData.format      || 'bestOf1',
         'active',
         userId || null,
-        data.club_id     || null,
+        seriesData.club_id     || null,
         SYNC_STATUS.PENDING,
       ],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'series', 'create', id, JSON.stringify({ id, ...data }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'series', 'create', id, JSON.stringify({ id, ...seriesData }), SYNC_STATUS.PENDING],
     },
   ]);
   return id;

@@ -1497,19 +1497,47 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const over = await ensureOver();
     if (!over) return;
 
+    const liveStr = strikerRef.current;
+    const liveNs  = nonStrikerRef.current;
+    const liveBwl = bowlerRef.current;
+
     // Store context for confirmWicket — nothing saved yet
-    setWicketModal({ visible: true, inn, str, bwl, ns, ovNum, legal, totRuns, totWkts, over, isFreeHit: isFreeHitRef.current });
+    setWicketModal({
+      visible: true,
+      inn,
+      str: liveStr || str,
+      bwl: liveBwl || bwl,
+      ns: liveNs || ns,
+      ovNum: overNumRef.current || ovNum,
+      legal: legalRef.current ?? legal,
+      totRuns: totalRunsRef.current ?? totRuns,
+      totWkts: totalWktsRef.current ?? totWkts,
+      over,
+      isFreeHit: isFreeHitRef.current,
+    });
   };
 
   // ── Confirm Wicket (called from modal) ────────────────
   // dismissed: 'striker' | 'nonStriker'
   const confirmWicket = async (dismissalType, fielder, dismissed = 'striker') => {
-    const { inn, str, bwl, ns, ovNum, legal, totRuns, totWkts, over } = wicketModal;
+    const inn     = inningsRef.current    || wicketModal.inn;
+    const str     = strikerRef.current    || wicketModal.str;
+    const bwl     = bowlerRef.current     || wicketModal.bwl;
+    const ns      = nonStrikerRef.current || wicketModal.ns;
+    const ovNum   = overNumRef.current;
+    const legal   = legalRef.current;
+    const totRuns = totalRunsRef.current;
+    const totWkts = totalWktsRef.current;
+    const over    = overRef.current || wicketModal.over;
     setWicketModal({ visible: false });
     // A wicket (even run out on free hit) is a legal delivery — free hit ends
     if (isFreeHitRef.current) setIsFreeHit(false);
 
     const outBatsman = dismissed === 'nonStriker' ? ns : str;
+    if (!inn || !str || !bwl || !outBatsman || !over) {
+      showAlert('Wicket Error', 'Could not resolve the current striker. Please try again.');
+      return;
+    }
 
     // ── RETIRED: no ball bowled, no wicket, no over progress ──────────────
     // Per cricket rules, a retired batsman (retired hurt) simply walks off.
@@ -1545,6 +1573,25 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     const newLegal   = legal + 1;
     const newWkts    = totWkts + 1;
+    const strikerStatsAfterWicket = {
+      ...strikerStatsRef.current,
+      balls: (strikerStatsRef.current.balls || 0) + 1,
+    };
+    const emptyBattingStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+    let overCompletedOnWicket = false;
+
+    const applyStrikerEnd = (player, stats = emptyBattingStats) => {
+      strikerRef.current = player;
+      strikerStatsRef.current = stats;
+      setStriker(player);
+      setStrikerStats(stats);
+    };
+    const applyNonStrikerEnd = (player, stats = emptyBattingStats) => {
+      nonStrikerRef.current = player;
+      nonStrikerStatsRef.current = stats;
+      setNonStriker(player);
+      setNonStrikerStats(stats);
+    };
 
     try {
       // 1. Save the ball
@@ -1601,10 +1648,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (newLegal >= 6) {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         setCurrentOver(null);
+        overRef.current = null;
         overNumRef.current = ovNum + 1;
         setOverNumber(ovNum + 1);
-        _swap();
+        overCompletedOnWicket = true;
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
+        lastOverBowlerIdRef.current = bwl.id;
         if (ovNum >= match.overs) {
           _endInnings(totRuns, newWkts, inn.id);
           return;
@@ -1614,8 +1663,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
       // 6. Navigate to replace the dismissed batsman
       if (dismissed === 'nonStriker') {
-        setNonStriker(null);
-        setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+        if (overCompletedOnWicket) {
+          applyNonStrikerEnd(str, strikerStatsAfterWicket);
+          applyStrikerEnd(null);
+          navigation.navigate('SelectBatsman', {
+            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+            returnScreen: 'LiveScoring', selectionType: 'new_batsman',
+            mode: 'new_batsman',
+            existingNonStrikerId: str?.id,
+          });
+          return;
+        }
+
+        setStrikerStats(strikerStatsAfterWicket);
+        strikerStatsRef.current = strikerStatsAfterWicket;
+        applyNonStrikerEnd(null);
         navigation.navigate('SelectBatsman', {
           inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
           returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
@@ -1623,8 +1685,19 @@ const LiveScoringScreen = ({ navigation, route }) => {
           existingStrikerId: str?.id,    // current striker stays, exclude from list
         });
       } else {
-        setStriker(null);
-        setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+        if (overCompletedOnWicket) {
+          applyStrikerEnd(ns, nonStrikerStatsRef.current);
+          applyNonStrikerEnd(null);
+          navigation.navigate('SelectBatsman', {
+            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
+            returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
+            mode: 'new_batsman',
+            existingStrikerId: ns?.id,
+          });
+          return;
+        }
+
+        applyStrikerEnd(null);
         navigation.navigate('SelectBatsman', {
           inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
           returnScreen: 'LiveScoring', selectionType: 'new_batsman',
