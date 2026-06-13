@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.packages.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["lib/**/*"],
+  "exclude": ["node_modules", "dist", "__tests__", "**/*.test.ts"]
+}
