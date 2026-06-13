@@ -30,7 +30,7 @@ $isUuid = (bool) preg_match(
 $matchSql = "
     SELECT
         m.id, m.local_id, m.status, m.venue, m.match_date, m.overs,
-        m.players_per_team, m.result_text, m.winner_team_id,
+        m.players_per_team, m.allow_last_batsman, m.result_text, m.winner_team_id,
         COALESCE(m.club_id,    s.club_id) AS club_id,
         COALESCE(m.series_id,  s.id)      AS series_id,
         ta.team_name AS team_a_name,

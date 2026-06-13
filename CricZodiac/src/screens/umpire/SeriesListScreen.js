@@ -28,6 +28,7 @@ const normalizeSeriesRow = (row) => ({
   completed_count: Number(row.completed_count || 0),
   team_a_wins: Number(row.team_a_wins || 0),
   team_b_wins: Number(row.team_b_wins || 0),
+  allow_last_batsman: row.allow_last_batsman ? 1 : 0,
 });
 
 const seriesStatusRank = (status) => {

@@ -11,6 +11,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { createMatch, getMatchTeams, updateMatch } from '../../database/queries/matchQueries';
+import { getSeriesById } from '../../database/queries/seriesQueries';
 import { useAuth } from '../../context/AuthContext';
 import { showAlert } from '../../utils/toast';
 
@@ -95,6 +96,8 @@ const toNumber = (value, fallback) => {
   return Number.isFinite(next) ? next : fallback;
 };
 
+const toBool = (value) => value === true || value === 1 || value === '1';
+
 const minPlayersForOvers = (overs) => {
   if (overs >= 20) return 11;
   if (overs >= 10) return 6;
@@ -124,6 +127,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
     matchNumber = 1,
     match: existingMatch = null,
     lockedTeamNames = null,
+    series: routeSeries = null,
   } = route.params || {};
   const isEditingSetup = !!existingMatch?.id;
   const seriesId = routeSeriesId || existingMatch?.series_id || null;
@@ -141,6 +145,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
       max_overs_per_bowler: Math.min(toNumber(existingMatch?.max_overs_per_bowler, 0), overs),
       wide_value:         toNumber(existingMatch?.wide_value, 1),
       no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
+      allow_last_batsman: toBool(existingMatch?.allow_last_batsman ?? routeSeries?.allow_last_batsman),
       team_a_name:        firstText(lockedTeamNames?.teamAName, teamNameFromMatch(existingMatch, 'A')),
       team_b_name:        firstText(lockedTeamNames?.teamBName, teamNameFromMatch(existingMatch, 'B')),
     };
@@ -149,6 +154,25 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const playerMinimum = minPlayersForOvers(form.overs);
+
+  useEffect(() => {
+    if (!seriesId || existingMatch?.allow_last_batsman !== undefined || routeSeries?.allow_last_batsman !== undefined) return;
+
+    let mounted = true;
+    const loadSeriesRules = async () => {
+      try {
+        const row = await getSeriesById(seriesId);
+        if (mounted && row) {
+          setForm(f => ({ ...f, allow_last_batsman: toBool(row.allow_last_batsman) }));
+        }
+      } catch (err) {
+        console.warn('MatchSetup series rules:', err.message);
+      }
+    };
+
+    loadSeriesRules();
+    return () => { mounted = false; };
+  }, [existingMatch?.allow_last_batsman, routeSeries?.allow_last_batsman, seriesId]);
 
   useEffect(() => {
     if (!teamNamesLocked) return;
@@ -216,6 +240,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
         ...form,
         overs:            form.overs,
         players_per_team: form.players_per_team,
+        allow_last_batsman: form.allow_last_batsman ? 1 : 0,
         series_id:        seriesId,
         club_id:          existingMatch?.club_id || activeClub?.server_id || user?.club_id || null,
       };
@@ -231,6 +256,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
           match_date:           matchData.match_date,
           overs:                matchData.overs,
           players_per_team:     matchData.players_per_team,
+          allow_last_batsman:   matchData.allow_last_batsman,
           series_id:            matchData.series_id,
           wide_value:           matchData.wide_value,
           no_ball_value:        matchData.no_ball_value,
@@ -376,6 +402,26 @@ const MatchSetupScreen = ({ navigation, route }) => {
             />
           </View>
 
+          <TouchableOpacity
+            style={[styles.ruleRow, form.allow_last_batsman && styles.ruleRowActive]}
+            onPress={() => set('allow_last_batsman', !form.allow_last_batsman)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.ruleIcon, form.allow_last_batsman && { backgroundColor: COLORS.gold + '24' }]}>
+              <Icon
+                name={form.allow_last_batsman ? 'toggle-switch' : 'toggle-switch-off-outline'}
+                size={26}
+                color={form.allow_last_batsman ? COLORS.gold : COLORS.gray}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ruleTitle, form.allow_last_batsman && { color: COLORS.gold }]}>
+                Last batter option
+              </Text>
+              <Text style={styles.ruleDesc}>Let the final batter continue when no partner remains.</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Summary chip */}
           <View style={styles.summaryChip}>
             <Icon name="cricket" size={16} color={COLORS.gold} />
@@ -426,6 +472,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   stepValue:        { alignItems: 'center', minWidth: 48 },
   stepNum:          { color: COLORS.white, fontSize: 28, fontWeight: '800' },
   stepUnit:         { color: COLORS.gray, fontSize: 11, marginTop: -4 },
+  ruleRow:          { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.darkGray, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.cardBorder },
+  ruleRowActive:    { borderColor: COLORS.gold, backgroundColor: 'rgba(212,175,55,0.08)' },
+  ruleIcon:         { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card },
+  ruleTitle:        { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  ruleDesc:         { color: COLORS.gray, fontSize: 11, marginTop: 3, lineHeight: 15 },
 
   // Section divider
   sectionRow:       { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

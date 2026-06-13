@@ -6,6 +6,8 @@ import { queryRows, queryFirstRow, executeQuery, executeTransaction } from '../D
 import { SYNC_STATUS } from '../../config/constants';
 import uuid from 'react-native-uuid';
 
+const BOWLER_CREDIT_WICKET_TYPES = new Set(['bowled', 'caught', 'lbw', 'stumped', 'hit_wicket']);
+
 // ── Matches ───────────────────────────────────────────────
 
 export const createMatch = async (matchData) => {
@@ -14,14 +16,16 @@ export const createMatch = async (matchData) => {
     {
       sql: `INSERT INTO matches (
         id, club_id, title, venue, match_date, overs, players_per_team,
+        allow_last_batsman,
         team_a_id, team_b_id, series_id,
         wide_value, no_ball_value, max_overs_per_bowler,
         status, created_at, sync_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
       params: [
         id, matchData.club_id || null,
         matchData.title, matchData.venue, matchData.match_date,
         matchData.overs || 6, matchData.players_per_team || 6,
+        matchData.allow_last_batsman ? 1 : 0,
         matchData.team_a_id, matchData.team_b_id,
         matchData.series_id || null,
         matchData.wide_value || 1, matchData.no_ball_value || 1, matchData.max_overs_per_bowler || 0,
@@ -78,10 +82,10 @@ export const upsertMatchesFromServer = async (serverMatches) => {
     await executeQuery(
       `INSERT OR REPLACE INTO matches (
         id, server_id, club_id, title, venue, match_date, overs, players_per_team,
-        team_a_id, team_b_id, series_id, toss_winner_id, toss_choice, batting_first,
+        allow_last_batsman, team_a_id, team_b_id, series_id, toss_winner_id, toss_choice, batting_first,
         wide_value, no_ball_value, max_overs_per_bowler, status, result_text,
         winner_team_id, player_of_match, created_at, updated_at, sync_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         matchId,
         m.id || null,
@@ -91,6 +95,7 @@ export const upsertMatchesFromServer = async (serverMatches) => {
         m.match_date || null,
         m.overs || 6,
         m.players_per_team || 6,
+        m.allow_last_batsman ? 1 : 0,
         m.team_a_local || (m.team_a_id != null ? String(m.team_a_id) : null),
         m.team_b_local || (m.team_b_id != null ? String(m.team_b_id) : null),
         m.series_local_id || (m.series_id != null ? String(m.series_id) : null),
@@ -686,11 +691,13 @@ export const saveBall = async (ballData) => {
       sql: `UPDATE overs
             SET runs_conceded = runs_conceded + ?,
                 balls_bowled = balls_bowled + ?,
+                wickets = wickets + ?,
                 sync_status = ?
             WHERE id = ?`,
       params: [
         (ballData.runs_scored || 0) + (ballData.extra_runs || 0),
         ballData.is_valid_ball !== false ? 1 : 0,
+        ballData.is_wicket ? 1 : 0,
         SYNC_STATUS.PENDING,
         ballData.over_id,
       ],
@@ -758,7 +765,8 @@ export const saveBall = async (ballData) => {
 
 export const saveWicket = async (wicketData) => {
   const id = wicketData.id || uuid.v4();
-  await executeTransaction([
+  const creditsBowler = BOWLER_CREDIT_WICKET_TYPES.has(wicketData.wicket_type);
+  const queries = [
     {
       sql: `INSERT INTO wickets (id, ball_id, innings_id, batsman_id, bowler_id, wicket_type, fielder_id, runs_at_fall, over_at_fall, sync_status)
             VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -774,16 +782,22 @@ export const saveWicket = async (wicketData) => {
       sql: `UPDATE innings SET total_wickets = total_wickets + 1, sync_status = ? WHERE id = ?`,
       params: [SYNC_STATUS.PENDING, wicketData.innings_id],
     },
-    {
+  ];
+
+  if (creditsBowler) {
+    queries.push({
       sql: `UPDATE bowling_scorecards SET wickets = wickets + 1, sync_status = ? WHERE innings_id = ? AND player_id = ?`,
       params: [SYNC_STATUS.PENDING, wicketData.innings_id, wicketData.bowler_id],
-    },
-    {
+    });
+  }
+
+  queries.push({
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
       params: [uuid.v4(), 'wickets', 'create', id, JSON.stringify({ ...wicketData, id }), SYNC_STATUS.PENDING],
-    },
-  ]);
+    });
+
+  await executeTransaction(queries);
   return id;
 };
 
@@ -1120,10 +1134,14 @@ export const getInningsBalls = (inningsId) =>
 export const getBallsWithPlayers = (inningsId) =>
   queryRows(`
     SELECT b.*,
+           w.wicket_type,
+           w.batsman_id AS wicket_batsman_id,
+           w.fielder_id AS wicket_fielder_id,
            us.name  AS striker_name,
            uns.name AS non_striker_name,
            ubw.name AS bowler_name
     FROM balls b
+    LEFT JOIN wickets w ON w.ball_id = b.id
     LEFT JOIN players s   ON b.striker_id     = s.id
     LEFT JOIN players ns  ON b.non_striker_id = ns.id
     LEFT JOIN players bw  ON b.bowler_id      = bw.id
@@ -1138,10 +1156,14 @@ export const getBallsWithPlayers = (inningsId) =>
 export const getLastBall = (inningsId) =>
   queryFirstRow(`
     SELECT b.*,
+           w.wicket_type,
+           w.batsman_id AS wicket_batsman_id,
+           w.fielder_id AS wicket_fielder_id,
            us.name  AS striker_name,
            uns.name AS non_striker_name,
            ubw.name AS bowler_name
     FROM balls b
+    LEFT JOIN wickets w ON w.ball_id = b.id
     LEFT JOIN players s   ON b.striker_id     = s.id
     LEFT JOIN players ns  ON b.non_striker_id = ns.id
     LEFT JOIN players bw  ON b.bowler_id      = bw.id
@@ -1156,9 +1178,14 @@ export const getLastBall = (inningsId) =>
 export const deleteBall = async (ball, inningsId) => {
   const totalDelta  = (ball.runs_scored || 0) + (ball.extra_runs || 0);
   const extrasDelta = ball.extra_runs || 0;
-  const isValid     = ball.is_valid_ball === 1;
+  const isValid     = Number(ball.is_valid_ball ?? 1) === 1;
+  const isWicket    = Number(ball.is_wicket || 0) === 1;
+  const dismissedBatsmanId = ball.wicket_batsman_id || ball.batsman_id || ball.striker_id;
+  const creditsBowler = ball.wicket_type
+    ? BOWLER_CREDIT_WICKET_TYPES.has(ball.wicket_type)
+    : isWicket;
 
-  await executeTransaction([
+  const queries = [
     { sql: 'DELETE FROM balls WHERE id = ?', params: [ball.id] },
     // Undo bowling scorecard runs/balls
     {
@@ -1203,12 +1230,13 @@ export const deleteBall = async (ball, inningsId) => {
     {
       sql: `UPDATE overs
             SET runs_conceded = MAX(0, runs_conceded - ?),
-                balls_bowled  = MAX(0, balls_bowled  - ?)
+                balls_bowled  = MAX(0, balls_bowled  - ?),
+                wickets       = MAX(0, wickets       - ?)
             WHERE id = ?`,
-      params: [totalDelta, isValid ? 1 : 0, ball.over_id],
+      params: [totalDelta, isValid ? 1 : 0, isWicket ? 1 : 0, ball.over_id],
     },
     // If it was a wicket, undo
-    ...(ball.is_wicket
+    ...(isWicket
       ? [
           {
             sql: `UPDATE innings SET total_wickets = MAX(0, total_wickets - 1) WHERE id = ?`,
@@ -1216,25 +1244,30 @@ export const deleteBall = async (ball, inningsId) => {
           },
           {
             sql: `UPDATE batting_scorecards SET is_out = 0, dismissal_type = NULL, bowler_id = NULL, fielder_id = NULL WHERE innings_id = ? AND player_id = ?`,
-            params: [inningsId, ball.striker_id],
+            params: [inningsId, dismissedBatsmanId],
           },
           // Remove the wicket record
           {
             sql: `DELETE FROM wickets WHERE ball_id = ?`,
             params: [ball.id],
           },
-          // Decrement bowling_scorecards wicket count
-          {
-            sql: `UPDATE bowling_scorecards SET wickets = MAX(0, wickets - 1), sync_status = ? WHERE innings_id = ? AND player_id = ?`,
-            params: [SYNC_STATUS.PENDING, inningsId, ball.bowler_id],
-          },
         ]
       : []),
-    {
+  ];
+
+  if (isWicket && creditsBowler) {
+    queries.push({
+      sql: `UPDATE bowling_scorecards SET wickets = MAX(0, wickets - 1), sync_status = ? WHERE innings_id = ? AND player_id = ?`,
+      params: [SYNC_STATUS.PENDING, inningsId, ball.bowler_id],
+    });
+  }
+
+  queries.push({
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at) VALUES (?,?,?,?,?,?,datetime('now'))`,
       params: [uuid.v4(), 'balls', 'delete', ball.id, JSON.stringify({ id: ball.id }), SYNC_STATUS.PENDING],
-    },
-  ]);
+    });
+
+  await executeTransaction(queries);
 };
 
 // ── Per-player batting stats (live) ──────────────────────

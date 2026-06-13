@@ -67,6 +67,17 @@ const crossedRunsForDelivery = (extraType, runsScored = 0, extraRuns = 0) =>
 const shouldSwapForCrossedRuns = (extraType, crossedRuns) =>
   extraType !== 'wide' && Math.abs(Number(crossedRuns) || 0) % 2 === 1;
 
+const BOWLER_CREDIT_WICKET_TYPES = new Set(['bowled', 'caught', 'lbw', 'stumped', 'hit_wicket']);
+const isBowlerCreditWicket = (ball) => {
+  if (Number(ball?.is_wicket || 0) !== 1) return false;
+  return ball.wicket_type ? BOWLER_CREDIT_WICKET_TYPES.has(ball.wicket_type) : true;
+};
+const toBool = (value) => value === true || value === 1 || value === '1';
+const maxWicketsForMatch = (match) =>
+  Math.max(1, Number(match?.players_per_team || 6) - (toBool(match?.allow_last_batsman) ? 0 : 1));
+const isLastBatterMode = (match, wickets) =>
+  toBool(match?.allow_last_batsman) && Number(wickets || 0) >= Math.max(1, Number(match?.players_per_team || 6) - 1);
+
 const getExtraBtns = (COLORS) => [
   { id: 'wide',    label: 'WIDE',   short: 'Wd', color: COLORS.warning  },
   { id: 'no_ball', label: 'NO BALL',short: 'Nb', color: COLORS.danger   },
@@ -164,6 +175,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
   const [selFielder, setSelFielder] = useState(null);
   // 'striker' | 'nonStriker' — only relevant for run_out / retired / other
   const [dismissed,  setDismissed] = useState('striker');
+  const [runOutRuns, setRunOutRuns] = useState(0);
 
   // On free hit only run out is valid
   const availableTypes = isFreeHit
@@ -172,6 +184,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
 
   const needsFielder  = ['caught', 'run_out', 'stumped'].includes(selType);
   const needsWhoIsOut = BOTH_ENDS_TYPES.includes(selType);
+  const needsRunOutRuns = selType === 'run_out';
   const canConfirm    = !!selType && (!needsFielder || !!selFielder);
 
   // Reset each time modal opens; auto-select run_out on free hit
@@ -179,6 +192,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
     if (visible) {
       setSelFielder(null);
       setDismissed('striker');
+      setRunOutRuns(0);
       setSelType(isFreeHit ? 'run_out' : null);
     }
   }, [visible]);
@@ -212,6 +226,12 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
     fielderTxt:    { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
     fielderTxtSel: { color: '#FFFFFF' },
     fielderWarn:   { color: COLORS.warning, fontSize: 12, fontWeight: '700', marginHorizontal: 16, marginBottom: 16 },
+    runsRow:       { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginBottom: 16 },
+    runBtn:        { flex: 1, minHeight: 42, borderRadius: 12, backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.cardBorder, alignItems: 'center', justifyContent: 'center' },
+    runBtnSel:     { backgroundColor: '#D9770622', borderColor: '#D97706' },
+    runTxt:        { color: COLORS.gray, fontSize: 15, fontWeight: '800' },
+    runTxtSel:     { color: '#D97706' },
+    runHint:       { color: COLORS.gray, fontSize: 11, marginHorizontal: 16, marginTop: -10, marginBottom: 14, lineHeight: 16 },
     actions:       { flexDirection: 'row', gap: 10, marginHorizontal: 16 },
     cancelBtn:     { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
     cancelTxt:     { color: COLORS.gray, fontWeight: '700', fontSize: 15 },
@@ -262,8 +282,13 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
                   {dismissed === 'striker' && <Icon name="close-circle" size={16} color="#DC2626" />}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[wdStyles.whoBtn, dismissed === 'nonStriker' && wdStyles.whoBtnSel]}
+                  style={[
+                    wdStyles.whoBtn,
+                    !nonStriker && { opacity: 0.45 },
+                    dismissed === 'nonStriker' && wdStyles.whoBtnSel,
+                  ]}
                   onPress={() => setDismissed('nonStriker')}
+                  disabled={!nonStriker}
                 >
                   <View style={[wdStyles.strikerBadge, { backgroundColor: COLORS.cardBorder }]}>
                     <Text style={[wdStyles.strikerTxt, { color: COLORS.gray }]}>NON-STRIKE</Text>
@@ -274,6 +299,27 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
                   {dismissed === 'nonStriker' && <Icon name="close-circle" size={16} color="#DC2626" />}
                 </TouchableOpacity>
               </View>
+            </>
+          )}
+
+          {/* Runs completed before run out */}
+          {needsRunOutRuns && (
+            <>
+              <Text style={wdStyles.sectionHdr}>RUNS COMPLETED BEFORE OUT</Text>
+              <View style={wdStyles.runsRow}>
+                {[0, 1, 2, 3].map(r => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[wdStyles.runBtn, runOutRuns === r && wdStyles.runBtnSel]}
+                    onPress={() => setRunOutRuns(r)}
+                  >
+                    <Text style={[wdStyles.runTxt, runOutRuns === r && wdStyles.runTxtSel]}>{r}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={wdStyles.runHint}>
+                Example: out while taking the 2nd run means 1 run completed.
+              </Text>
             </>
           )}
 
@@ -312,7 +358,7 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
             <TouchableOpacity
               style={[wdStyles.confirmBtn, !canConfirm && wdStyles.confirmDis]}
               disabled={!canConfirm}
-              onPress={() => onConfirm(selType, selFielder, dismissed)}
+              onPress={() => onConfirm(selType, selFielder, dismissed, needsRunOutRuns ? runOutRuns : 0)}
             >
               <Text style={wdStyles.confirmTxt}>{needsFielder && !selFielder ? 'SELECT FIELDER' : 'CONFIRM WICKET'}</Text>
             </TouchableOpacity>
@@ -879,7 +925,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (pastBalls.length > 0) {
         const pastOverIds = [...new Set(pastBalls.map(b => b.over_id))];
         const accRuns = pastBalls.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
-        const accWickets = pastBalls.filter(b => b.is_wicket === 1).length;
+        const accWickets = pastBalls.filter(isBowlerCreditWicket).length;
         let accMaidens = 0;
         for (const ovId of pastOverIds) {
           const ovBalls = pastBalls.filter(b => b.over_id === ovId);
@@ -914,7 +960,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   // After both batsmen are set and there is no bowler yet → ask for bowler
   useEffect(() => {
-    if (!striker || !nonStriker) return;
+    const canScoreWithOneBatter = striker && !nonStriker && isLastBatterMode(match, totalWickets);
+    if (!striker || (!nonStriker && !canScoreWithOneBatter)) return;
     if (bowlerRef.current) return;       // bowler already picked
     if (!inningsRef.current) return;     // innings not ready yet
 
@@ -928,7 +975,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [striker, nonStriker]);
+  }, [striker, nonStriker, totalWickets, match?.allow_last_batsman, match?.players_per_team]);
 
   // ── Init ───────────────────────────────────────────────
   const initScoring = async () => {
@@ -1183,7 +1230,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         if (restoredBowler && existingOver) {
           const overBallsList = balls.filter(b => b.over_id === existingOver.id);
           const bwlRuns = overBallsList.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
-          const bwlWkts = overBallsList.filter(b => b.is_wicket === 1).length;
+          const bwlWkts = overBallsList.filter(isBowlerCreditWicket).length;
           setBowlerStats({ overs: existingOver.over_number - 1, runs: bwlRuns, wickets: bwlWkts, maidens: 0 });
         }
 
@@ -1277,7 +1324,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
     if (!inn) return;
 
     // ── Guard: batsmen must be set before we touch overs ──────────────────
-    if (!str || !ns) {
+    const canScoreWithOneBatter = str && !ns && isLastBatterMode(match, totWkts);
+    if (!str || (!ns && !canScoreWithOneBatter)) {
       // Determine which end is missing and open SelectBatsman directly
       const selType = !str && !ns ? 'opening_pair' : !str ? 'new_batsman' : 'new_non_striker';
       navigation.navigate('SelectBatsman', {
@@ -1341,7 +1389,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         match_id:        match.id,
         ball_number:     legal + 1,
         striker_id:      str.id,
-        non_striker_id:  ns.id,
+        non_striker_id:  ns?.id || '',
         bowler_id:       bwl.id,
         runs_scored:     runsScored,
         is_wicket:       false,
@@ -1421,10 +1469,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
         is_six:      isSix  ? 1 : 0,
         is_valid_ball: isValidBall ? 1 : 0,
         striker_name:     str.full_name,
-        non_striker_name: ns.full_name,
+        non_striker_name: ns?.full_name,
         bowler_name:      bwl.full_name,
         striker_id:       str.id,
-        non_striker_id:   ns.id,
+        non_striker_id:   ns?.id || '',
         bowler_id:        bwl.id,
       };
       setAllBalls(prev => [...prev, ballDisplay]);
@@ -1519,7 +1567,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   // ── Confirm Wicket (called from modal) ────────────────
   // dismissed: 'striker' | 'nonStriker'
-  const confirmWicket = async (dismissalType, fielder, dismissed = 'striker') => {
+  const confirmWicket = async (dismissalType, fielder, dismissed = 'striker', completedRuns = 0) => {
     const inn     = inningsRef.current    || wicketModal.inn;
     const str     = strikerRef.current    || wicketModal.str;
     const bwl     = bowlerRef.current     || wicketModal.bwl;
@@ -1538,6 +1586,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
       showAlert('Wicket Error', 'Could not resolve the current striker. Please try again.');
       return;
     }
+    const runOutRuns = dismissalType === 'run_out'
+      ? Math.max(0, Number(completedRuns) || 0)
+      : 0;
 
     // ── RETIRED: no ball bowled, no wicket, no over progress ──────────────
     // Per cricket rules, a retired batsman (retired hurt) simply walks off.
@@ -1573,9 +1624,18 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     const newLegal   = legal + 1;
     const newWkts    = totWkts + 1;
+    const runsCredit = runOutRuns;
+    const isFour = runsCredit === 4;
+    const isSix = runsCredit === 6;
+    const creditsBowler = BOWLER_CREDIT_WICKET_TYPES.has(dismissalType);
+    const maxWktsAllowed = maxWicketsForMatch(match);
+    const noReplacementNeeded = toBool(match?.allow_last_batsman) && newWkts === Math.max(1, Number(match?.players_per_team || 6) - 1);
     const strikerStatsAfterWicket = {
       ...strikerStatsRef.current,
+      runs: (strikerStatsRef.current.runs || 0) + runsCredit,
       balls: (strikerStatsRef.current.balls || 0) + 1,
+      fours: (strikerStatsRef.current.fours || 0) + (isFour ? 1 : 0),
+      sixes: (strikerStatsRef.current.sixes || 0) + (isSix ? 1 : 0),
     };
     const emptyBattingStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
     let overCompletedOnWicket = false;
@@ -1593,6 +1653,44 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setNonStrikerStats(stats);
     };
 
+    const routeForReplacement = (missingEnd, strikerEndPlayer, nonStrikerEndPlayer) => {
+      const selectionType = missingEnd === 'striker' ? 'new_batsman' : 'new_non_striker';
+      const params = {
+        inningsId: inn.id,
+        team: battingTeam,
+        requestId: uuid.v4(),
+        returnScreen: 'LiveScoring',
+        selectionType,
+        mode: 'new_batsman',
+      };
+      if (missingEnd === 'striker') {
+        params.existingNonStrikerId = nonStrikerEndPlayer?.id;
+      } else {
+        params.existingStrikerId = strikerEndPlayer?.id;
+      }
+      navigation.navigate('SelectBatsman', params);
+    };
+
+    const applyPostWicketEnds = (nextStriker, nextStrikerStats, nextNonStriker, nextNonStrikerStats) => {
+      applyStrikerEnd(nextStriker, nextStrikerStats);
+      applyNonStrikerEnd(nextNonStriker, nextNonStrikerStats);
+    };
+    const selectBowlerAfterSingleBatterOver = () => {
+      if (!pendingSelectBowlerRef.current) return;
+      pendingSelectBowlerRef.current = false;
+      setTimeout(() => {
+        navigation.navigate('SelectBowler', {
+          inningsId:           inningsRef.current?.id,
+          team:                bowlingTeam,
+          currentBowlerId:     bowlerRef.current?.id,
+          requestId:           uuid.v4(),
+          returnScreen:        'LiveScoring',
+          resetOver:           true,
+          maxOversPerBowler:   match.max_overs_per_bowler || 0,
+        });
+      }, 300);
+    };
+
     try {
       // 1. Save the ball
       const ballId = uuid.v4();
@@ -1604,10 +1702,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
         match_id:       match.id,
         ball_number:    newLegal,
         striker_id:     str.id,
-        non_striker_id: ns?.id,
+        non_striker_id: ns?.id || '',
         bowler_id:      bwl.id,
-        runs_scored:    0,
+        runs_scored:    runsCredit,
         is_wicket:      true,
+        is_four:        isFour,
+        is_six:         isSix,
         is_valid_ball:  true,
       });
 
@@ -1619,28 +1719,43 @@ const LiveScoringScreen = ({ navigation, route }) => {
         bowler_id:    bwl.id,
         wicket_type:  dismissalType,
         fielder_id:   fielder?.id || null,
-        runs_at_fall: totRuns,
+        runs_at_fall: totRuns + runsCredit,
         over_at_fall: fallOverLabel(ovNum, newLegal),
+        runs_completed: runOutRuns,
       });
 
       // 3. Update counts + UI
+      const newTotal = totRuns + runsCredit;
       setTotalWickets(newWkts);
+      setTotalRuns(newTotal);
       setLegalBalls(newLegal);
-      setBowlerStats(prev => ({ ...prev, wickets: prev.wickets + 1 }));
+      setBowlerStats(prev => ({ ...prev, wickets: prev.wickets + (creditsBowler ? 1 : 0) }));
       setPartnership({ runs: 0, balls: 0 });
-      await updateInnings(inn.id, { total_wickets: newWkts });
+      await updateInnings(inn.id, { total_wickets: newWkts, total_runs: newTotal });
 
       const ballDisplay = {
         id: ballId, over_id: over.id, over_number: ovNum,
-        ball_number: newLegal, runs_scored: 0, extra_runs: 0,
-        is_wicket: 1, striker_name: str.full_name, bowler_name: bwl.full_name,
+        ball_number: newLegal, runs_scored: runsCredit, extra_runs: 0,
+        is_wicket: 1,
+        is_four: isFour ? 1 : 0,
+        is_six: isSix ? 1 : 0,
+        is_valid_ball: 1,
+        striker_name: str.full_name,
+        non_striker_name: ns?.full_name,
+        bowler_name: bwl.full_name,
+        striker_id: str.id,
+        non_striker_id: ns?.id || '',
+        bowler_id: bwl.id,
+        wicket_type: dismissalType,
+        wicket_batsman_id: outBatsman.id,
+        fielder_id: fielder?.id || null,
       };
       setAllBalls(prev => [...prev, ballDisplay]);
       setOverBalls(prev => [...prev, ballDisplay]);
 
       // 4. All out → end innings
-      if (newWkts >= match.players_per_team - 1) {
-        _endInnings(totRuns, newWkts, inn.id);
+      if (newWkts >= maxWktsAllowed) {
+        _endInnings(newTotal, newWkts, inn.id);
         return;
       }
 
@@ -1655,56 +1770,54 @@ const LiveScoringScreen = ({ navigation, route }) => {
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
         lastOverBowlerIdRef.current = bwl.id;
         if (ovNum >= match.overs) {
-          _endInnings(totRuns, newWkts, inn.id);
+          _endInnings(newTotal, newWkts, inn.id);
           return;
         }
         pendingSelectBowlerRef.current = true;
       }
 
       // 6. Navigate to replace the dismissed batsman
-      if (dismissed === 'nonStriker') {
-        if (overCompletedOnWicket) {
-          applyNonStrikerEnd(str, strikerStatsAfterWicket);
-          applyStrikerEnd(null);
-          navigation.navigate('SelectBatsman', {
-            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
-            returnScreen: 'LiveScoring', selectionType: 'new_batsman',
-            mode: 'new_batsman',
-            existingNonStrikerId: str?.id,
-          });
-          return;
-        }
+      const strikerWasAtStrikerEndAfterRuns = runOutRuns % 2 === 0;
+      let strikerEndPlayer = strikerWasAtStrikerEndAfterRuns ? str : ns;
+      let strikerEndStats = strikerWasAtStrikerEndAfterRuns
+        ? strikerStatsAfterWicket
+        : nonStrikerStatsRef.current;
+      let nonStrikerEndPlayer = strikerWasAtStrikerEndAfterRuns ? ns : str;
+      let nonStrikerEndStats = strikerWasAtStrikerEndAfterRuns
+        ? nonStrikerStatsRef.current
+        : strikerStatsAfterWicket;
 
-        setStrikerStats(strikerStatsAfterWicket);
-        strikerStatsRef.current = strikerStatsAfterWicket;
-        applyNonStrikerEnd(null);
-        navigation.navigate('SelectBatsman', {
-          inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
-          returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
-          mode: 'new_batsman',           // single-player selection UI
-          existingStrikerId: str?.id,    // current striker stays, exclude from list
-        });
-      } else {
-        if (overCompletedOnWicket) {
-          applyStrikerEnd(ns, nonStrikerStatsRef.current);
-          applyNonStrikerEnd(null);
-          navigation.navigate('SelectBatsman', {
-            inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
-            returnScreen: 'LiveScoring', selectionType: 'new_non_striker',
-            mode: 'new_batsman',
-            existingStrikerId: ns?.id,
-          });
-          return;
-        }
-
-        applyStrikerEnd(null);
-        navigation.navigate('SelectBatsman', {
-          inningsId: inn.id, team: battingTeam, requestId: uuid.v4(),
-          returnScreen: 'LiveScoring', selectionType: 'new_batsman',
-          mode: 'new_batsman',             // single-player selection UI
-          existingNonStrikerId: ns?.id,    // current non-striker stays, exclude from list
-        });
+      if (overCompletedOnWicket) {
+        [strikerEndPlayer, nonStrikerEndPlayer] = [nonStrikerEndPlayer, strikerEndPlayer];
+        [strikerEndStats, nonStrikerEndStats] = [nonStrikerEndStats, strikerEndStats];
       }
+
+      const missingEnd = strikerEndPlayer?.id === outBatsman.id
+        ? 'striker'
+        : nonStrikerEndPlayer?.id === outBatsman.id
+          ? 'nonStriker'
+          : dismissed;
+
+      if (missingEnd === 'striker') {
+        if (noReplacementNeeded) {
+          applyPostWicketEnds(nonStrikerEndPlayer, nonStrikerEndStats, null, emptyBattingStats);
+          selectBowlerAfterSingleBatterOver();
+          return;
+        }
+        applyPostWicketEnds(null, emptyBattingStats, nonStrikerEndPlayer, nonStrikerEndStats);
+        routeForReplacement('striker', null, nonStrikerEndPlayer);
+        return;
+      }
+
+      if (noReplacementNeeded) {
+        applyPostWicketEnds(strikerEndPlayer, strikerEndStats, null, emptyBattingStats);
+        selectBowlerAfterSingleBatterOver();
+        return;
+      }
+
+      applyPostWicketEnds(strikerEndPlayer, strikerEndStats, null, emptyBattingStats);
+      routeForReplacement('nonStriker', strikerEndPlayer, null);
+      return;
     } catch (err) {
       showAlert('Wicket Error', err.message);
     }
@@ -1818,7 +1931,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           const bwl = bowlerRef.current;
           if (bwl) {
             const bwlRuns = ob.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
-            const bwlWkts = ob.filter(b => b.is_wicket === 1).length;
+            const bwlWkts = ob.filter(isBowlerCreditWicket).length;
             setBowlerStats(prev => ({ ...prev, runs: bwlRuns, wickets: bwlWkts }));
           }
 
@@ -1856,7 +1969,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       if (inningsNumber === 2 && resolvedTarget) {
         const finalRuns = runs  ?? totalRuns;
         const finalWkts = wkts ?? totalWickets;
-        const maxWkts   = (match.players_per_team || 6) - 1;
+        const maxWkts   = maxWicketsForMatch(match);
         let result;
         if (finalRuns >= resolvedTarget) {
           // Batting team chased down — win by remaining wickets

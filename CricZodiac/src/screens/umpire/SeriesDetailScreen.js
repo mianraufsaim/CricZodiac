@@ -41,6 +41,7 @@ const normalizeSeriesRow = (row) => ({
   completed_count: Number(row.completed_count || 0),
   team_a_wins: Number(row.team_a_wins || 0),
   team_b_wins: Number(row.team_b_wins || 0),
+  allow_last_batsman: row.allow_last_batsman ? 1 : 0,
 });
 
 const normalizeMatchRow = (row) => ({
@@ -53,6 +54,7 @@ const normalizeMatchRow = (row) => ({
   team_b_id: row.team_b_local || (row.team_b_id != null ? String(row.team_b_id) : null),
   overs: Number(row.overs || 6),
   players_per_team: Number(row.players_per_team || 6),
+  allow_last_batsman: row.allow_last_batsman ? 1 : 0,
   max_overs_per_bowler: Number(row.max_overs_per_bowler || 0),
   wide_value: Number(row.wide_value || 1),
   no_ball_value: Number(row.no_ball_value || 1),
@@ -276,6 +278,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
         match: item,
         seriesId,
         seriesName: displaySeriesName,
+        series,
         matchNumber,
         lockedTeamNames: matchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
       });
@@ -429,6 +432,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                       onPress={() => navigation.navigate('MatchSetup', {
                         seriesId,
                         seriesName: displaySeriesName,
+                        series,
                         matchNumber: nextMatchNumber,
                         lockedTeamNames: nextMatchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
                       })}

@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS series (
   format        TEXT DEFAULT 'bestOf1',     -- bestOf1 | bestOf3 | bestOf5
   start_date    TEXT,
   end_date      TEXT,
+  allow_last_batsman INTEGER DEFAULT 0,
   status        TEXT DEFAULT 'active',
   team_a_wins   INTEGER DEFAULT 0,
   team_b_wins   INTEGER DEFAULT 0,
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS matches (
   match_date       TEXT,
   overs            INTEGER DEFAULT 6,
   players_per_team INTEGER DEFAULT 6,
+  allow_last_batsman INTEGER DEFAULT 0,
   max_overs_per_bowler INTEGER DEFAULT 0,   -- 0 = no limit
   wide_value       INTEGER DEFAULT 1,
   no_ball_value    INTEGER DEFAULT 1,
@@ -192,7 +194,7 @@ CREATE TABLE IF NOT EXISTS balls (
   match_id       TEXT NOT NULL REFERENCES matches(id),
   ball_number    INTEGER NOT NULL,
   striker_id     TEXT NOT NULL REFERENCES players(id),
-  non_striker_id TEXT NOT NULL REFERENCES players(id),
+  non_striker_id TEXT REFERENCES players(id),
   bowler_id      TEXT NOT NULL REFERENCES players(id),
   runs_scored    INTEGER DEFAULT 0,
   is_wicket      INTEGER DEFAULT 0,

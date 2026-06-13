@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS series (
     format          ENUM('bestOf1','bestOf3','bestOf5') NOT NULL DEFAULT 'bestOf1',
     start_date      DATE,
     end_date        DATE,
+    allow_last_batsman TINYINT(1) NOT NULL DEFAULT 0,
     status          ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
     team_a_id       INT UNSIGNED,
     team_a_local    VARCHAR(36),
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS matches (
     match_date           DATE,
     overs                TINYINT UNSIGNED DEFAULT 6,
     players_per_team     TINYINT UNSIGNED DEFAULT 6,
+    allow_last_batsman   TINYINT(1) NOT NULL DEFAULT 0,
     max_overs_per_bowler TINYINT UNSIGNED DEFAULT 0,       -- 0 = no limit
     wide_value           TINYINT UNSIGNED DEFAULT 1,
     no_ball_value        TINYINT UNSIGNED DEFAULT 1,

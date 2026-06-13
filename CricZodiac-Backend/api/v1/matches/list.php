@@ -43,6 +43,7 @@ $stmt = $pdo->prepare("
         m.match_date,
         m.overs,
         m.players_per_team,
+        m.allow_last_batsman,
         m.max_overs_per_bowler,
         m.wide_value,
         m.no_ball_value,
@@ -83,7 +84,7 @@ foreach ($matches as &$m) {
     foreach (['id', 'club_id', 'series_id', 'team_a_id', 'team_b_id', 'toss_winner_id', 'batting_first', 'winner_team_id', 'player_of_match'] as $key) {
         $m[$key] = isset($m[$key]) ? (int) $m[$key] : null;
     }
-    foreach (['overs', 'players_per_team', 'max_overs_per_bowler', 'wide_value', 'no_ball_value'] as $key) {
+    foreach (['overs', 'players_per_team', 'allow_last_batsman', 'max_overs_per_bowler', 'wide_value', 'no_ball_value'] as $key) {
         $m[$key] = isset($m[$key]) ? (int) $m[$key] : null;
     }
 }

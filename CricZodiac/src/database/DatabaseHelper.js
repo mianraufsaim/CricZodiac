@@ -170,6 +170,7 @@ const initializeTables = async (database) => {
         match_date      TEXT,
         overs           INTEGER DEFAULT 6,
         players_per_team INTEGER DEFAULT 6,
+        allow_last_batsman INTEGER DEFAULT 0,
         team_a_id       TEXT,
         team_b_id       TEXT,
         umpire_id       TEXT,
@@ -254,7 +255,7 @@ const initializeTables = async (database) => {
         match_id        TEXT NOT NULL,
         ball_number     INTEGER NOT NULL,
         striker_id      TEXT NOT NULL,
-        non_striker_id  TEXT NOT NULL,
+        non_striker_id  TEXT,
         bowler_id       TEXT NOT NULL,
         runs_scored     INTEGER DEFAULT 0,
         is_wicket       INTEGER DEFAULT 0,
@@ -376,6 +377,7 @@ const initializeTables = async (database) => {
         description   TEXT,
         start_date    TEXT,
         end_date      TEXT,
+        allow_last_batsman INTEGER DEFAULT 0,
         status        TEXT DEFAULT 'active',
         created_by    TEXT,
         created_at    TEXT DEFAULT (datetime('now')),
@@ -426,6 +428,8 @@ const initializeTables = async (database) => {
     `ALTER TABLE series ADD COLUMN team_b_wins INTEGER DEFAULT 0;`,
     `ALTER TABLE series ADD COLUMN team_a_id TEXT;`,
     `ALTER TABLE series ADD COLUMN team_b_id TEXT;`,
+    `ALTER TABLE series ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
+    `ALTER TABLE matches ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }

@@ -29,6 +29,9 @@ import { showAlert } from '../../utils/toast';
 const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
 
 const totalMatchesForSeries = (format) => SERIES_TOTAL_MATCHES[format] || 1;
+const toBool = (value) => value === true || value === 1 || value === '1';
+const maxWicketsForMatch = (ppt = 6, allowLastBatsman = false) =>
+  Math.max(1, Number(ppt || 6) - (toBool(allowLastBatsman) ? 0 : 1));
 
 const normalizeSeries = (row) => row ? ({
   ...row,
@@ -39,6 +42,7 @@ const normalizeSeries = (row) => row ? ({
   completed_count: Number(row.completed_count || 0),
   team_a_wins: Number(row.team_a_wins || 0),
   team_b_wins: Number(row.team_b_wins || 0),
+  allow_last_batsman: row.allow_last_batsman ? 1 : 0,
 }) : null;
 
 const normalizeSeriesMatch = (row) => ({
@@ -49,13 +53,14 @@ const normalizeSeriesMatch = (row) => ({
   series_id: row.series_local_id || (row.series_id != null ? String(row.series_id) : null),
   overs: Number(row.overs || 6),
   players_per_team: Number(row.players_per_team || 6),
+  allow_last_batsman: row.allow_last_batsman ? 1 : 0,
   max_overs_per_bowler: Number(row.max_overs_per_bowler || 0),
   wide_value: Number(row.wide_value || 1),
   no_ball_value: Number(row.no_ball_value || 1),
 });
 
 // ── Pure winner helper ────────────────────────────────────
-const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
+const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = false) => {
   if (!sortedInnings || sortedInnings.length < 2) return null;
   const [inn1, inn2] = sortedInnings;
   if (!inn1 || !inn2) return null;
@@ -71,7 +76,7 @@ const computeWinner = (sortedInnings, teamsArr, ppt = 6) => {
     const m = r1 - r2;
     return { winner: team1, loser: team2, margin: `${m} run${m !== 1 ? 's' : ''}`, margin_value: m, type: 'runs' };
   } else if (r2 > r1) {
-    const w = Math.max(0, (ppt - 1) - (inn2.total_wickets || 0));
+    const w = Math.max(0, maxWicketsForMatch(ppt, allowLastBatsman) - (inn2.total_wickets || 0));
     return { winner: team2, loser: team1, margin: `${w} wicket${w !== 1 ? 's' : ''}`, margin_value: w, type: 'wickets' };
   }
   return { winner: null, loser: null, margin: 'Tied', margin_value: 0, type: 'tie' };
@@ -179,7 +184,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       if (!apiResult && validInnings.length >= 2 && normalizedTeams.length >= 2) {
         try {
           const ppt    = matchParam?.players_per_team || 6;
-          const winner = computeWinner(validInnings, normalizedTeams, ppt);
+          const winner = computeWinner(validInnings, normalizedTeams, ppt, matchParam?.allow_last_batsman);
           if (winner) {
             const [inn1, inn2] = validInnings;
             // Resolve local UUIDs for winner/loser teams
@@ -314,6 +319,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     navigation.navigate('MatchSetup', {
       seriesId,
       seriesName: seriesInfo?.name || matchParam?.series_name || null,
+      series: seriesInfo,
       matchNumber: Math.max(1, seriesMatches.length + 1),
     });
   };
@@ -351,6 +357,9 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           teamARoster.length,
           teamBRoster.length
         ),
+        allow_last_batsman: toBool(
+          matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman
+        ) ? 1 : 0,
         max_overs_per_bowler: Number(matchObj?.max_overs_per_bowler || matchParam?.max_overs_per_bowler || 0),
         wide_value: Number(matchObj?.wide_value || matchParam?.wide_value || 1),
         no_ball_value: Number(matchObj?.no_ball_value || matchParam?.no_ball_value || 1),
@@ -450,7 +459,12 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       const loserTeam = teams.find(t =>
         t.id === winner.loser?.id || t.local_id === winner.loser?.local_id
       ) || winner.loser;
-      const computedWinner = computeWinner(sorted, teams, ppt) || winner;
+      const computedWinner = computeWinner(
+        sorted,
+        teams,
+        ppt,
+        matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman
+      ) || winner;
       const savedMargin = Number(result?.margin);
       const marginValue = Number.isFinite(savedMargin) && savedMargin > 0
         ? savedMargin
@@ -524,6 +538,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   // ── Compute winner for display ────────────────────────────
   const sortedInnings = [...innings].sort((a, b) => a.innings_number - b.innings_number);
   const ppt           = matchObj?.players_per_team || matchParam?.players_per_team || 6;
+  const allowLastBatsman = matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman;
 
   // If we have a saved result, use its text; otherwise compute from innings
   let winner = null;
@@ -539,7 +554,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     if (result.result_type === 'tie') {
       winner = { type: 'tie', winner: null, loser: null, margin: 'Tied', margin_value: 0, text: result.result_text };
     } else if (winnerTeam) {
-      const computed = sortedInnings.length >= 2 ? computeWinner(sortedInnings, teams, ppt) : null;
+      const computed = sortedInnings.length >= 2 ? computeWinner(sortedInnings, teams, ppt, allowLastBatsman) : null;
       const resultMargin = Number(result.margin);
       const resultMarginType = result.margin_type || computed?.type || 'runs';
       const marginValue = Number.isFinite(resultMargin) && resultMargin > 0
@@ -558,7 +573,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     }
   }
   if (!winner && sortedInnings.length >= 2) {
-    winner = computeWinner(sortedInnings, teams, ppt);
+    winner = computeWinner(sortedInnings, teams, ppt, allowLastBatsman);
   }
 
   const displayMatchTitle = matchObj?.title || matchParam?.title || 'Match';
