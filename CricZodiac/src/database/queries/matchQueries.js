@@ -7,6 +7,12 @@ import { SYNC_STATUS } from '../../config/constants';
 import uuid from 'react-native-uuid';
 
 const BOWLER_CREDIT_WICKET_TYPES = new Set(['bowled', 'caught', 'lbw', 'stumped', 'hit_wicket']);
+const BOWLER_UNCHARGED_EXTRAS = new Set(['bye', 'leg_bye']);
+const bowlerRunsForBall = (ball) => {
+  const runs = Number(ball.runs_scored || 0);
+  const extras = Number(ball.extra_runs || 0);
+  return runs + (BOWLER_UNCHARGED_EXTRAS.has(ball.extra_type) ? 0 : extras);
+};
 
 // ── Matches ───────────────────────────────────────────────
 
@@ -629,6 +635,7 @@ export const getCurrentOver = (inningsId) =>
 
 export const saveBall = async (ballData) => {
   const id = ballData.id || uuid.v4();
+  const bowlerRuns = bowlerRunsForBall(ballData);
   // CRITICAL: use executeTransaction for atomic write + queue
   await executeTransaction([
     {
@@ -740,12 +747,12 @@ export const saveBall = async (ballData) => {
                 updated_at    = datetime('now')
             WHERE innings_id = ? AND player_id = ?`,
       params: [
-        (ballData.runs_scored || 0) + (ballData.extra_runs || 0), // runs_conceded delta
+        bowlerRuns,                                                // byes/leg-byes are not charged to bowler
         ballData.is_valid_ball !== false ? 1 : 0,                  // balls_bowled delta
         ballData.is_valid_ball !== false ? 1 : 0,                  // overs formula ?1
         ballData.is_valid_ball !== false ? 1 : 0,                  // overs formula ?2
         ballData.is_valid_ball !== false ? 1 : 0,                  // eco: new balls_bowled
-        (ballData.runs_scored || 0) + (ballData.extra_runs || 0),  // eco: new runs_conceded
+        bowlerRuns,                                                // eco: new runs_conceded
         ballData.is_valid_ball !== false ? 1 : 0,                  // eco: new balls_bowled (divisor)
         SYNC_STATUS.PENDING,
         ballData.innings_id, ballData.bowler_id,
@@ -1085,42 +1092,118 @@ export const upsertMatchResultFromServer = async (serverResult, matchLocalId) =>
 
 // ── Scorecard Queries ─────────────────────────────────────
 
+// Batting figures are always derived from the delivery ledger.  The aggregate
+// table still owns dismissal metadata and batting order, but it must never be
+// able to show stale (or incorrectly cached) runs/balls after a wicket.
 export const getBattingScorecard = (inningsId) =>
   queryRows(`
-    SELECT bs.*, u.name AS full_name, p.player_type,
-      (SELECT COUNT(*) FROM balls b
-        WHERE b.innings_id = bs.innings_id
-          AND b.striker_id = bs.player_id
-          AND b.is_valid_ball = 1
-          AND b.runs_scored = 0) AS dots
+    SELECT
+      bs.id,
+      bs.innings_id,
+      bs.player_id,
+      COALESCE(bt.runs_scored, 0) AS runs_scored,
+      COALESCE(bt.balls_faced, 0) AS balls_faced,
+      COALESCE(bt.fours, 0) AS fours,
+      COALESCE(bt.sixes, 0) AS sixes,
+      CASE WHEN COALESCE(bt.balls_faced, 0) > 0
+        THEN CAST(COALESCE(bt.runs_scored, 0) AS REAL) / bt.balls_faced * 100
+        ELSE 0.0
+      END AS strike_rate,
+      bs.dismissal_type,
+      bs.bowler_id,
+      bs.fielder_id,
+      bs.is_out,
+      bs.batting_order,
+      bs.created_at,
+      bs.updated_at,
+      bs.sync_status,
+      u.name AS full_name,
+      p.player_type,
+      COALESCE(bt.dots, 0) AS dots
     FROM batting_scorecards bs
     JOIN players p ON bs.player_id = p.id
     LEFT JOIN users u ON p.user_id = u.id
+    LEFT JOIN (
+      SELECT
+        b.innings_id,
+        b.striker_id AS player_id,
+        SUM(COALESCE(b.runs_scored, 0)) AS runs_scored,
+        SUM(CASE WHEN b.extra_type = 'wide' THEN 0 ELSE 1 END) AS balls_faced,
+        SUM(CASE WHEN b.is_four = 1 THEN 1 ELSE 0 END) AS fours,
+        SUM(CASE WHEN b.is_six = 1 THEN 1 ELSE 0 END) AS sixes,
+        SUM(CASE WHEN b.is_valid_ball = 1 AND b.runs_scored = 0 THEN 1 ELSE 0 END) AS dots
+      FROM balls b
+      WHERE b.innings_id = ?
+      GROUP BY b.innings_id, b.striker_id
+    ) bt ON bt.innings_id = bs.innings_id AND bt.player_id = bs.player_id
     WHERE bs.innings_id = ?
-    ORDER BY bs.batting_order ASC, bs.runs_scored DESC
-  `, [inningsId]);
+    ORDER BY bs.batting_order ASC, COALESCE(bt.runs_scored, 0) DESC
+  `, [inningsId, inningsId]);
 
 export const getBowlingScorecard = (inningsId) =>
-  queryRows(`
+  (async () => {
+    // Bowling figures are derived from balls. Reconcile existing local rows so
+    // old matches recorded before the bye/leg-bye fix show correct figures too.
+    await executeQuery(`
+      UPDATE bowling_scorecards
+      SET runs_conceded = COALESCE((
+            SELECT SUM(
+              COALESCE(b.runs_scored, 0) +
+              CASE WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b.extra_runs, 0) END
+            )
+            FROM balls b
+            WHERE b.innings_id = bowling_scorecards.innings_id
+              AND b.bowler_id = bowling_scorecards.player_id
+          ), 0),
+          maidens = COALESCE((
+            SELECT COUNT(*)
+            FROM overs o
+            WHERE o.innings_id = bowling_scorecards.innings_id
+              AND o.bowler_id = bowling_scorecards.player_id
+              AND o.is_completed = 1
+              AND NOT EXISTS (
+                SELECT 1
+                FROM balls b
+                WHERE b.over_id = o.id
+                  AND (
+                    COALESCE(b.runs_scored, 0) +
+                    CASE WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b.extra_runs, 0) END
+                  ) > 0
+              )
+          ), 0)
+      WHERE innings_id = ?
+    `, [inningsId]);
+
+    await executeQuery(`
+      UPDATE bowling_scorecards
+      SET economy_rate = CASE
+        WHEN balls_bowled > 0 THEN ROUND(CAST(runs_conceded AS REAL) / (balls_bowled / 6.0), 2)
+        ELSE 0.0
+      END
+      WHERE innings_id = ?
+    `, [inningsId]);
+
+    return queryRows(`
     SELECT bs.*, u.name AS full_name,
       (SELECT COUNT(*) FROM balls b
         WHERE b.innings_id = bs.innings_id
           AND b.bowler_id = bs.player_id
           AND b.is_valid_ball = 1
           AND b.runs_scored = 0
-          AND b.extra_runs = 0) AS dots
+          AND (b.extra_type IS NULL OR b.extra_type IN ('bye', 'leg_bye'))) AS dots
     FROM bowling_scorecards bs
     JOIN players p ON bs.player_id = p.id
     LEFT JOIN users u ON p.user_id = u.id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
-  `, [inningsId]);
+    `, [inningsId]);
+  })();
 
 export const getInningsExtras = (inningsId) =>
   queryFirstRow(`
     SELECT
-      SUM(CASE WHEN extra_type = 'wide'    THEN 1            ELSE 0 END) AS wides,
-      SUM(CASE WHEN extra_type = 'no_ball' THEN 1            ELSE 0 END) AS no_balls,
+      SUM(CASE WHEN extra_type = 'wide'    THEN extra_runs   ELSE 0 END) AS wides,
+      SUM(CASE WHEN extra_type = 'no_ball' THEN extra_runs   ELSE 0 END) AS no_balls,
       SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs   ELSE 0 END) AS byes,
       SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs   ELSE 0 END) AS leg_byes,
       SUM(COALESCE(extra_runs, 0))                                        AS total_extras
@@ -1195,7 +1278,7 @@ export const deleteBall = async (ball, inningsId) => {
                 overs_bowled  = (MAX(0, balls_bowled - ?) / 6) + ((MAX(0, balls_bowled - ?) % 6) * 0.1)
             WHERE innings_id = ? AND player_id = ?`,
       params: [
-        (ball.runs_scored || 0) + (ball.extra_runs || 0),
+        bowlerRunsForBall(ball),
         isValid ? 1 : 0,
         isValid ? 1 : 0,
         isValid ? 1 : 0,
@@ -1271,8 +1354,10 @@ export const deleteBall = async (ball, inningsId) => {
 };
 
 // ── Per-player batting stats (live) ──────────────────────
-export const getPlayerBattingStats = (inningsId, playerId) =>
-  queryFirstRow('SELECT * FROM batting_scorecards WHERE innings_id = ? AND player_id = ?', [inningsId, playerId]);
+export const getPlayerBattingStats = async (inningsId, playerId) => {
+  const scorecard = await getBattingScorecard(inningsId);
+  return scorecard.find(row => String(row.player_id) === String(playerId)) || null;
+};
 
 // ── Overs for innings (for maiden calc) ──────────────────
 export const getInningsOvers = (inningsId) =>

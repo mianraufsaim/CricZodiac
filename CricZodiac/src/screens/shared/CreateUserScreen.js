@@ -183,6 +183,12 @@ const CreateUserScreen = ({ navigation, route }) => {
   const today = new Date();
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const supportsBowlingStyle = ['bowler', 'allrounder'].includes(form.player_type);
+  const setPlayerType = (playerType) => setForm(f => ({
+    ...f,
+    player_type: playerType,
+    bowling_style: playerType === 'batsman' ? '' : f.bowling_style,
+  }));
 
   const regeneratePassword = () => set('password', generatePassword());
 
@@ -213,7 +219,12 @@ const CreateUserScreen = ({ navigation, route }) => {
       }
 
       const clubId = activeClub?.server_id || user?.club_id || null;
-      await createUserWithPlayer({ ...form, role, club_id: clubId });
+      await createUserWithPlayer({
+        ...form,
+        bowling_style: supportsBowlingStyle ? form.bowling_style : '',
+        role,
+        club_id: clubId,
+      });
       setCreds({ ...form, role });
       setShowCreds(true);
     } catch (e) {
@@ -235,7 +246,7 @@ const CreateUserScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={st.title}>Create Account</Text>
+        <Text style={st.title}>Create Player</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -298,7 +309,7 @@ const CreateUserScreen = ({ navigation, route }) => {
             <>
               <View style={st.card}>
                 <Text style={st.sectionLabel}>PLAYER TYPE</Text>
-                <Chips options={PLAYER_TYPES} value={form.player_type} onChange={v => set('player_type', v)} COLORS={COLORS} st={st} />
+                <Chips options={PLAYER_TYPES} value={form.player_type} onChange={setPlayerType} COLORS={COLORS} st={st} />
               </View>
 
               <View style={st.card}>
@@ -353,25 +364,27 @@ const CreateUserScreen = ({ navigation, route }) => {
                 </View>
               </View>
 
-              <View style={st.card}>
-                <Text style={st.sectionLabel}>BOWLING STYLE</Text>
-                <View style={st.styleGrid}>
-                  {BOWLING_STYLES.map(s => {
-                    const active = form.bowling_style === s.id;
-                    return (
-                      <TouchableOpacity
-                        key={s.id}
-                        style={[st.styleCard, active && { borderColor: s.color, backgroundColor: s.color + '18' }]}
-                        onPress={() => set('bowling_style', s.id)}
-                      >
-                        <Text style={[st.styleLabel, active && { color: s.color }]}>{s.label}</Text>
-                        <Text style={st.styleDesc}>{s.desc}</Text>
-                        {active && <Icon name="check-circle" size={12} color={s.color} style={{ marginTop: 3 }} />}
-                      </TouchableOpacity>
-                    );
-                  })}
+              {supportsBowlingStyle && (
+                <View style={st.card}>
+                  <Text style={st.sectionLabel}>BOWLING STYLE</Text>
+                  <View style={st.styleGrid}>
+                    {BOWLING_STYLES.map(s => {
+                      const active = form.bowling_style === s.id;
+                      return (
+                        <TouchableOpacity
+                          key={s.id}
+                          style={[st.styleCard, active && { borderColor: s.color, backgroundColor: s.color + '18' }]}
+                          onPress={() => set('bowling_style', s.id)}
+                        >
+                          <Text style={[st.styleLabel, active && { color: s.color }]}>{s.label}</Text>
+                          <Text style={st.styleDesc}>{s.desc}</Text>
+                          {active && <Icon name="check-circle" size={12} color={s.color} style={{ marginTop: 3 }} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
+              )}
             </>
           )}
 

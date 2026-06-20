@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../includes/cors.php';
 require_once __DIR__ . '/../../../includes/response.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../includes/awards.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') sendError('Method not allowed.', 405);
 
@@ -39,6 +40,9 @@ $stmt = $pdo->prepare("
         s.team_b_local,
         s.team_a_wins,
         s.team_b_wins,
+        s.player_of_series,
+        s.player_of_series_local,
+        COALESCE(MAX(mos_user.name), '') AS player_of_series_name,
         s.created_by,
         s.created_at,
         s.updated_at,
@@ -46,6 +50,8 @@ $stmt = $pdo->prepare("
         SUM(CASE WHEN m.status IN ('live', 'innings_2') THEN 1 ELSE 0 END) AS live_count,
         SUM(CASE WHEN m.status = 'completed' THEN 1 ELSE 0 END) AS completed_count
     FROM series s
+    LEFT JOIN players mos ON mos.id = s.player_of_series
+    LEFT JOIN users mos_user ON mos_user.id = mos.user_id
     LEFT JOIN matches m ON m.series_id = s.id OR m.series_local_id = s.local_id
     WHERE s.club_id = ?
     GROUP BY s.id
@@ -62,12 +68,25 @@ $stmt->execute([$clubId]);
 $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($series as &$s) {
+    if ($s['status'] === 'completed' && empty($s['player_of_series'])) {
+        $award = seriesAward($pdo, (int) $s['id']);
+        if (!empty($award['auto_player'])) {
+            $playerId = (int) $award['auto_player']['player_id'];
+            $playerLocalId = $award['auto_player']['player_local_id'] ?? null;
+            $pdo->prepare("UPDATE series SET player_of_series = ?, player_of_series_local = ?, updated_at = NOW() WHERE id = ?")
+                ->execute([$playerId, $playerLocalId, $s['id']]);
+            $s['player_of_series'] = $playerId;
+            $s['player_of_series_local'] = $playerLocalId;
+            $s['player_of_series_name'] = $award['auto_player']['full_name'];
+        }
+    }
     $s['id']              = (int) $s['id'];
     $s['club_id']         = isset($s['club_id']) ? (int) $s['club_id'] : null;
     $s['team_a_id']       = isset($s['team_a_id']) ? (int) $s['team_a_id'] : null;
     $s['team_b_id']       = isset($s['team_b_id']) ? (int) $s['team_b_id'] : null;
     $s['team_a_wins']     = (int) ($s['team_a_wins'] ?? 0);
     $s['team_b_wins']     = (int) ($s['team_b_wins'] ?? 0);
+    $s['player_of_series'] = isset($s['player_of_series']) ? (int) $s['player_of_series'] : null;
     $s['allow_last_batsman'] = (int) ($s['allow_last_batsman'] ?? 0);
     $s['created_by']      = isset($s['created_by']) ? (int) $s['created_by'] : null;
     $s['match_count']     = (int) ($s['match_count'] ?? 0);

@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS series (
     team_b_local    VARCHAR(36),
     team_a_wins     TINYINT UNSIGNED DEFAULT 0,
     team_b_wins     TINYINT UNSIGNED DEFAULT 0,
+    player_of_series INT UNSIGNED,
+    player_of_series_local VARCHAR(36),
     created_by      INT UNSIGNED,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

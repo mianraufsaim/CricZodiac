@@ -95,19 +95,33 @@ foreach ($allInnings as $inn) {
     // Batting
     $bat = $pdo->prepare("
         SELECT
-            bs.player_id, bs.runs_scored, bs.balls_faced,
-            bs.fours, bs.sixes, bs.strike_rate,
+            bs.player_id,
+            COALESCE(bt.runs_scored, 0) AS runs_scored,
+            COALESCE(bt.balls_faced, 0) AS balls_faced,
+            COALESCE(bt.fours, 0) AS fours,
+            COALESCE(bt.sixes, 0) AS sixes,
+            CASE WHEN COALESCE(bt.balls_faced, 0) > 0
+                 THEN ROUND(CAST(COALESCE(bt.runs_scored, 0) AS DECIMAL(10,2)) / bt.balls_faced * 100, 2)
+                 ELSE 0.00 END AS strike_rate,
             bs.is_out, bs.dismissal_type, bs.batting_order,
             COALESCE(u.name, 'Unknown') AS full_name,
             COALESCE(bu.name, '') AS bowler_name,
-            (SELECT COUNT(*) FROM balls b2
-              WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
-                AND b2.match_id   = ?
-                AND b2.club_id    = ?
-                AND b2.striker_id = bs.player_id
-                AND b2.is_valid_ball = 1
-                AND b2.runs_scored  = 0) AS dots
+            COALESCE(bt.dots, 0) AS dots
         FROM batting_scorecards bs
+        LEFT JOIN (
+            SELECT
+                b.striker_id,
+                SUM(COALESCE(b.runs_scored, 0)) AS runs_scored,
+                SUM(CASE WHEN b.extra_type = 'wide' THEN 0 ELSE 1 END) AS balls_faced,
+                SUM(CASE WHEN b.is_four = 1 THEN 1 ELSE 0 END) AS fours,
+                SUM(CASE WHEN b.is_six = 1 THEN 1 ELSE 0 END) AS sixes,
+                SUM(CASE WHEN b.is_valid_ball = 1 AND b.runs_scored = 0 THEN 1 ELSE 0 END) AS dots
+            FROM balls b
+            WHERE (b.innings_id = ? OR b.innings_local_id = ?)
+              AND b.match_id = ?
+              AND b.club_id = ?
+            GROUP BY b.striker_id
+        ) bt ON bt.striker_id = bs.player_id
         JOIN    players p  ON p.id  = bs.player_id
         LEFT JOIN users u  ON u.id  = p.user_id
         LEFT JOIN players bp ON bp.id = bs.bowler_id
@@ -130,7 +144,19 @@ foreach ($allInnings as $inn) {
     $bwl = $pdo->prepare("
         SELECT
             bs.player_id, bs.balls_bowled, bs.overs_bowled,
-            bs.maidens, bs.runs_conceded, bs.wickets,
+            bs.maidens,
+            COALESCE((
+              SELECT SUM(
+                COALESCE(b2.runs_scored, 0) +
+                CASE WHEN b2.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b2.extra_runs, 0) END
+              )
+              FROM balls b2
+              WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+                AND b2.match_id  = ?
+                AND b2.club_id   = ?
+                AND b2.bowler_id = bs.player_id
+            ), 0) AS runs_conceded,
+            bs.wickets,
             bs.economy_rate, bs.no_balls, bs.wides,
             COALESCE(u.name, 'Unknown') AS full_name,
             (SELECT COUNT(*) FROM balls b2
@@ -140,21 +166,27 @@ foreach ($allInnings as $inn) {
                 AND b2.bowler_id  = bs.player_id
                 AND b2.is_valid_ball = 1
                 AND b2.runs_scored  = 0
-                AND b2.extra_runs   = 0) AS dots
+                AND (b2.extra_type IS NULL OR b2.extra_type IN ('bye', 'leg_bye'))) AS dots
         FROM bowling_scorecards bs
         JOIN    players p ON p.id = bs.player_id
         LEFT JOIN users u ON u.id = p.user_id
         WHERE bs.innings_id = ?
         ORDER BY bs.wickets DESC, bs.economy_rate ASC
     ");
-    $bwl->execute([$iid, $iLocalId, $matchId, $clubId, $iid]);
+    $bwl->execute([
+        $iid, $iLocalId, $matchId, $clubId,
+        $iid, $iLocalId, $matchId, $clubId,
+        $iid,
+    ]);
     $bowling = $bwl->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($bowling as &$r) {
         foreach (['player_id','balls_bowled','maidens','runs_conceded','wickets','no_balls','wides','dots'] as $k)
             $r[$k] = isset($r[$k]) ? (int) $r[$k] : 0;
         $r['overs_bowled'] = isset($r['overs_bowled']) ? (float) $r['overs_bowled'] : 0.0;
-        $r['economy_rate'] = isset($r['economy_rate']) ? (float) $r['economy_rate'] : 0.0;
+        $r['economy_rate'] = $r['balls_bowled'] > 0
+            ? round($r['runs_conceded'] / ($r['balls_bowled'] / 6.0), 2)
+            : 0.0;
     }
     unset($r);
 
@@ -162,8 +194,8 @@ foreach ($allInnings as $inn) {
     //    club_id + series_id + match_id mandatory per user requirement
     $extSt = $pdo->prepare("
         SELECT
-            COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END), 0) AS wides,
-            COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END), 0) AS no_balls,
+            COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN extra_runs ELSE 0 END), 0) AS wides,
+            COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN extra_runs ELSE 0 END), 0) AS no_balls,
             COALESCE(SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END), 0) AS byes,
             COALESCE(SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END), 0) AS leg_byes,
             COALESCE(SUM(extra_runs), 0)                                                   AS total_extras

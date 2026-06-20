@@ -278,7 +278,6 @@ const SeriesDetailScreen = ({ navigation, route }) => {
         match: item,
         seriesId,
         seriesName: displaySeriesName,
-        series,
         matchNumber,
         lockedTeamNames: matchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
       });
@@ -393,9 +392,9 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                 <View style={styles.seriesInfo}>
                   <View style={styles.statsRow}>
                     {[
-                      { label: 'Total', value: seriesStats.total, icon: 'cricket' },
-                      { label: 'Live',  value: seriesStats.live, icon: 'circle', color: COLORS.cyan },
-                      { label: 'Done',  value: seriesStats.done, icon: 'check-circle', color: COLORS.gold },
+                      { label: 'Total Matches', value: seriesStats.total, icon: 'cricket' },
+                      { label: 'Live Match',  value: seriesStats.live, icon: 'circle', color: COLORS.cyan },
+                      { label: 'Completed Matches',  value: seriesStats.done, icon: 'check-circle', color: COLORS.gold },
                     ].map(s => (
                       <View key={s.label} style={styles.statBox}>
                         <Icon name={s.icon} size={20} color={s.color || COLORS.white} />
@@ -426,13 +425,22 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                     </View>
                   )}
 
+                  {series.player_of_series_name ? (
+                    <View style={styles.mosCard}>
+                      <Icon name="trophy" size={22} color={COLORS.gold} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.mosLabel}>MAN OF THE SERIES</Text>
+                        <Text style={styles.mosName} numberOfLines={1}>{series.player_of_series_name}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+
                   {canCreateSeriesMatch && (
                     <TouchableOpacity
                       style={styles.newMatchBtn}
                       onPress={() => navigation.navigate('MatchSetup', {
                         seriesId,
                         seriesName: displaySeriesName,
-                        series,
                         matchNumber: nextMatchNumber,
                         lockedTeamNames: nextMatchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
                       })}
@@ -491,6 +499,9 @@ const getStyles = (COLORS) => StyleSheet.create({
   winsNum:       { color: COLORS.white, fontWeight: '900', fontSize: 28 },
   winsLabel:     { color: COLORS.gray, fontSize: 10, marginTop: 2, maxWidth: 96 },
   winsNeed:      { color: COLORS.gray, fontSize: 11, textAlign: 'center', flex: 2 },
+  mosCard:       { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.gold + '66', borderRadius: 12, padding: 14, marginBottom: 12 },
+  mosLabel:      { color: COLORS.gold, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3 },
+  mosName:       { color: COLORS.white, fontSize: 16, fontWeight: '800' },
 });
 
 export default SeriesDetailScreen;

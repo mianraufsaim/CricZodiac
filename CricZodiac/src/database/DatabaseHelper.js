@@ -379,6 +379,7 @@ const initializeTables = async (database) => {
         end_date      TEXT,
         allow_last_batsman INTEGER DEFAULT 0,
         status        TEXT DEFAULT 'active',
+        player_of_series TEXT,
         created_by    TEXT,
         created_at    TEXT DEFAULT (datetime('now')),
         updated_at    TEXT DEFAULT (datetime('now')),
@@ -429,6 +430,7 @@ const initializeTables = async (database) => {
     `ALTER TABLE series ADD COLUMN team_a_id TEXT;`,
     `ALTER TABLE series ADD COLUMN team_b_id TEXT;`,
     `ALTER TABLE series ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
+    `ALTER TABLE series ADD COLUMN player_of_series TEXT;`,
     `ALTER TABLE matches ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
@@ -583,7 +585,6 @@ const initializeTables = async (database) => {
     await database.transaction(tx => {
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_users_club ON users(club_id)`);
     });
-    console.log('[DB] Migration: removed UNIQUE constraint from users.email');
   } catch (_) {
     // Already migrated or fresh install — safe to ignore
     try { await database.transaction(tx => { tx.executeSql(`DROP TABLE IF EXISTS users_v2`); }); } catch (__) {}
@@ -639,7 +640,6 @@ const initializeTables = async (database) => {
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_players_club ON players(club_id)`);
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_players_user ON players(user_id)`);
     });
-    console.log('[DB] Migration: players table simplified (removed full_name/email/phone)');
   } catch (_) {
     // Either already migrated or non-critical — safe to continue
     try { await database.transaction(tx => { tx.executeSql(`DROP TABLE IF EXISTS players_v2`); }); } catch (__) {}

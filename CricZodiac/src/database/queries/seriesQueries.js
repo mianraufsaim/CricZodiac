@@ -77,9 +77,9 @@ export const upsertSeriesFromServer = async (serverSeries) => {
     await executeQuery(
       `INSERT OR REPLACE INTO series
          (id, server_id, name, description, start_date, end_date, format, status,
-          allow_last_batsman, created_by, club_id, team_a_wins, team_b_wins, team_a_id, team_b_id,
+          allow_last_batsman, created_by, club_id, team_a_wins, team_b_wins, player_of_series, team_a_id, team_b_id,
           created_at, updated_at, sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         seriesId,
         s.id || null,
@@ -94,6 +94,7 @@ export const upsertSeriesFromServer = async (serverSeries) => {
         s.club_id != null ? String(s.club_id) : null,
         s.team_a_wins || 0,
         s.team_b_wins || 0,
+        s.player_of_series_local || (s.player_of_series != null ? String(s.player_of_series) : null),
         s.team_a_local || (s.team_a_id != null ? String(s.team_a_id) : null),
         s.team_b_local || (s.team_b_id != null ? String(s.team_b_id) : null),
         s.created_at || null,
@@ -134,6 +135,30 @@ export const updateSeriesStatus = async (id, status) => {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
       params: [uuid.v4(), 'series', 'update', id, JSON.stringify({ id, status }), SYNC_STATUS.PENDING],
+    },
+  ]);
+};
+
+export const saveSeriesAward = async ({ seriesId, playerId, playerServerId = null }) => {
+  await executeTransaction([
+    {
+      sql: `UPDATE series
+            SET player_of_series = ?, updated_at = datetime('now'), sync_status = ?
+            WHERE id = ?`,
+      params: [playerId, SYNC_STATUS.PENDING, seriesId],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        uuid.v4(), 'series', 'update', seriesId,
+        JSON.stringify({
+          id: seriesId,
+          player_of_series: playerServerId || null,
+          player_of_series_local: playerId,
+        }),
+        SYNC_STATUS.PENDING,
+      ],
     },
   ]);
 };

@@ -55,7 +55,7 @@ const AddTypeSheet = ({ visible, onClose, onSelect, COLORS, sh }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <TouchableOpacity style={sh.overlay} activeOpacity={1} onPress={onClose}>
       <View style={sh.sheet}>
-        <Text style={sh.title}>Create Account</Text>
+        <Text style={sh.title}>Add Player</Text>
         <TouchableOpacity style={sh.option} onPress={() => { onClose(); onSelect('player'); }}>
           <View style={[sh.iconBox, { backgroundColor: COLORS.gold + '22' }]}>
             <Icon name="account" size={26} color={COLORS.gold} />
@@ -423,7 +423,7 @@ const ManageUsersScreen = ({ navigation }) => {
                   {tab === 'player' ? 'No players yet.' : 'No users found.'}
                 </Text>
                 <TouchableOpacity style={st.emptyBtn} onPress={() => setAddSheet(true)}>
-                  <Text style={st.emptyBtnTxt}>+ Create Account</Text>
+                  <Text style={st.emptyBtnTxt}>+ Add Player</Text>
                 </TouchableOpacity>
               </View>
             }

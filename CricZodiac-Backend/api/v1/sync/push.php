@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../includes/cors.php';
 require_once __DIR__ . '/../../../includes/response.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../includes/awards.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError('Method not allowed.', 405);
 
@@ -143,7 +144,21 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
                     "UPDATE series SET " . implode(', ', $sets) . ", updated_at=NOW() WHERE id=?"
                 )->execute($params);
             }
+
+            if (array_key_exists('player_of_series', $d) || array_key_exists('player_of_series_local', $d)) {
+                $playerLocal = $d['player_of_series_local'] ?? null;
+                $playerId = isset($d['player_of_series']) && is_numeric($d['player_of_series'])
+                    ? (int) $d['player_of_series']
+                    : resolvePlayerId($pdo, $playerLocal ?: ($d['player_of_series'] ?? null));
+                $award = seriesAward($pdo, $seriesId);
+                if ($playerId && !awardPlayerIsLeader($award, $playerId)) {
+                    throw new Exception('Man of the Series must be one of the highest-scoring players from the winning team.');
+                }
+                $pdo->prepare("UPDATE series SET player_of_series = ?, player_of_series_local = ?, updated_at = NOW() WHERE id = ?")
+                    ->execute([$playerId, $playerLocal ?: resolvePlayerLocalId($pdo, $playerId), $seriesId]);
+            }
             recomputeSeriesWins($pdo, $seriesId);
+            if (($d['status'] ?? null) === 'completed') assignAutomaticSeriesAward($pdo, $seriesId);
         }
     }
     return true;
@@ -265,6 +280,9 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         $sets = []; $params = [];
         foreach ($allowed as $col) {
             if (array_key_exists($col, $d)) {
+                // match_results may have just auto-selected a Man of the Match.
+                // Do not let the companion match update erase it with null.
+                if ($col === 'player_of_match' && empty($d[$col])) continue;
                 $sets[] = "$col = ?";
                 $params[] = $col === 'allow_last_batsman' ? (!empty($d[$col]) ? 1 : 0) : $d[$col];
             }
@@ -415,6 +433,30 @@ function checkAndCompleteSeries(PDO $pdo, int $seriesId): void {
             WHERE id = ? AND status != 'completed'
         ")->execute([$seriesId]);
     }
+
+    $st = $pdo->prepare("SELECT status FROM series WHERE id = ? LIMIT 1");
+    $st->execute([$seriesId]);
+    if (($st->fetch(PDO::FETCH_ASSOC)['status'] ?? null) === 'completed') {
+        assignAutomaticSeriesAward($pdo, $seriesId);
+    }
+}
+
+function assignAutomaticSeriesAward(PDO $pdo, int $seriesId): void {
+    $award = seriesAward($pdo, $seriesId);
+    $auto = $award['auto_player'] ?? null;
+    if (!$auto) return;
+
+    $pdo->prepare("
+        UPDATE series
+        SET player_of_series = COALESCE(player_of_series, ?),
+            player_of_series_local = COALESCE(player_of_series_local, ?),
+            updated_at = NOW()
+        WHERE id = ?
+    ")->execute([
+        (int) $auto['player_id'],
+        $auto['player_local_id'] ?? resolvePlayerLocalId($pdo, (int) $auto['player_id']),
+        $seriesId,
+    ]);
 }
 
 // ── Recompute series.team_a_wins / team_b_wins from match_results ────────────
@@ -1312,7 +1354,18 @@ function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
                 WHERE o.innings_id = agg.innings_id
                   AND o.bowler_id = agg.player_id
                   AND o.is_completed = 1
-                  AND o.runs_conceded = 0
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM balls b2
+                      WHERE b2.over_id = o.id
+                        AND (
+                            COALESCE(b2.runs_scored, 0) +
+                            CASE
+                                WHEN b2.extra_type IN ('bye', 'leg_bye') THEN 0
+                                ELSE COALESCE(b2.extra_runs, 0)
+                            END
+                        ) > 0
+                  )
             ), 0),
             agg.runs_conceded,
             agg.wickets,
@@ -1334,7 +1387,13 @@ function recomputeScorecardsForInnings(PDO $pdo, ?int $inningsId): void {
                 b.bowler_id AS player_id,
                 MAX(b.bowler_local_id) AS player_local_id,
                 SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS legal_balls,
-                SUM(COALESCE(b.runs_scored, 0) + COALESCE(b.extra_runs, 0)) AS runs_conceded,
+                SUM(
+                    COALESCE(b.runs_scored, 0) +
+                    CASE
+                        WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0
+                        ELSE COALESCE(b.extra_runs, 0)
+                    END
+                ) AS runs_conceded,
                 SUM(CASE
                     WHEN w.wicket_type IN ('bowled', 'caught', 'lbw', 'stumped', 'hit_wicket') THEN 1
                     ELSE 0
@@ -1628,7 +1687,9 @@ function syncBall(PDO $pdo, string $action, array $d): bool {
         // Incremental update per ball. syncBowlingScorecard only writes
         // metadata and never touches stat columns.
         if ($bowlerId && $inningsId) {
-            $totalRunsForBowler = $runsScored + $extraRuns;
+            // Byes and leg-byes count for the innings but are never charged
+            // to the bowler. Wides and no-balls remain charged to the bowler.
+            $totalRunsForBowler = $runsScored + (($extraType === 'bye' || $extraType === 'leg_bye') ? 0 : $extraRuns);
             $isWideInt   = $isWide   ? 1 : 0;
             $isNoBallInt = $isNoBall ? 1 : 0;
 
@@ -2111,6 +2172,22 @@ function syncMatchResult(PDO $pdo, string $action, array $d): bool {
     }
     if (!$serverPlayerId && $playerLocal) {
         $serverPlayerId = resolvePlayerId($pdo, $playerLocal);
+    }
+
+    if ($serverWinnerId && $serverMatchId) {
+        $st = $pdo->prepare("SELECT id FROM teams WHERE id = ? AND match_id = ? LIMIT 1");
+        $st->execute([(int) $serverWinnerId, (int) $serverMatchId]);
+        if (!$st->fetch(PDO::FETCH_ASSOC)) {
+            throw new Exception('Match winner must be one of this match\'s teams.');
+        }
+        $award = matchAward($pdo, (int) $serverMatchId, (int) $serverWinnerId);
+        if (!$serverPlayerId && !empty($award['auto_player'])) {
+            $serverPlayerId = (int) $award['auto_player']['player_id'];
+            $playerLocal = $award['auto_player']['player_local_id'] ?? resolvePlayerLocalId($pdo, $serverPlayerId);
+        }
+        if ($serverPlayerId && !awardPlayerIsLeader($award, $serverPlayerId)) {
+            throw new Exception('Man of the Match must be one of the highest-scoring players from the winning team.');
+        }
     }
 
     $margin = isset($d['margin']) && is_numeric($d['margin']) ? (int) $d['margin'] : 0;

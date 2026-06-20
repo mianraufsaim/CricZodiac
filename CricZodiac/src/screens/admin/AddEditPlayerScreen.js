@@ -24,13 +24,19 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
     phone:        player?.phone        || '',
     player_type:  player?.player_type  || 'allrounder',
     batting_hand: player?.batting_hand || 'right',
-    bowling_style:player?.bowling_style|| '',
+    bowling_style:player?.player_type === 'batsman' ? '' : player?.bowling_style || '',
     jersey_number:player?.jersey_number|| '',
     date_of_birth:player?.date_of_birth|| '',
     profile_pic:  player?.profile_pic  || null,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const supportsBowlingStyle = ['bowler', 'allrounder'].includes(form.player_type);
+  const setPlayerType = (playerType) => setForm(f => ({
+    ...f,
+    player_type: playerType,
+    bowling_style: playerType === 'batsman' ? '' : f.bowling_style,
+  }));
 
   const pickImage = () => {
     showAlert('Profile Picture', 'Choose source', [
@@ -66,8 +72,9 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
     if (!form.full_name.trim()) { showAlert('Name required'); return; }
     setSaving(true);
     try {
-      if (isEdit) await updatePlayer(player.id, form);
-      else        await createPlayer(form);
+      const playerData = { ...form, bowling_style: supportsBowlingStyle ? form.bowling_style : '' };
+      if (isEdit) await updatePlayer(player.id, playerData);
+      else        await createPlayer(playerData);
       showAlert('Success', `Player ${isEdit ? 'updated' : 'added'} and queued for sync.`);
       navigation.goBack();
     } catch (err) {
@@ -136,7 +143,7 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 key={t.id}
                 style={[styles.typeBtn, form.player_type === t.id && styles.typeBtnActive]}
-                onPress={() => set('player_type', t.id)}
+                onPress={() => setPlayerType(t.id)}
               >
                 <Text style={[styles.typeBtnText, form.player_type === t.id && { color: COLORS.white }]}>
                   {t.label}
@@ -162,23 +169,26 @@ const AddEditPlayerScreen = ({ navigation, route }) => {
             ))}
           </View>
 
-          {/* ── Bowling Style ── */}
-          <Text style={[styles.label, { marginTop: 4 }]}>Bowling Style</Text>
-          <View style={styles.styleGrid}>
-            {BOWLING_STYLES.map(s => {
-              const active = form.bowling_style === s.id;
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.styleCard, active && { borderColor: s.color, backgroundColor: s.color + '18' }]}
-                  onPress={() => set('bowling_style', s.id)}
-                >
-                  <Text style={[styles.styleLabel, active && { color: s.color }]}>{s.label}</Text>
-                  <Text style={styles.styleDesc} numberOfLines={1}>{s.desc}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {supportsBowlingStyle && (
+            <>
+              <Text style={[styles.label, { marginTop: 4 }]}>Bowling Style</Text>
+              <View style={styles.styleGrid}>
+                {BOWLING_STYLES.map(s => {
+                  const active = form.bowling_style === s.id;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.styleCard, active && { borderColor: s.color, backgroundColor: s.color + '18' }]}
+                      onPress={() => set('bowling_style', s.id)}
+                    >
+                      <Text style={[styles.styleLabel, active && { color: s.color }]}>{s.label}</Text>
+                      <Text style={styles.styleDesc} numberOfLines={1}>{s.desc}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           {/* ── Save Button ── */}
           <TouchableOpacity

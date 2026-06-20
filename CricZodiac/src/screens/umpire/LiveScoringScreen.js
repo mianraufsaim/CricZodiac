@@ -43,7 +43,7 @@ const fallOverLabel = (overNumber, legalBallNumber) =>
 
 const ballLabel = (ball) => {
   if (ball.is_wicket) return 'W';
-  if (ball.extra_type === 'wide')    return 'Wd';
+  if (ball.extra_type === 'wide')    return `${ball.extra_runs || 1}-Wd`;
   if (ball.extra_type === 'no_ball') return `${ball.runs_scored || 0}-NB`;
   if (ball.extra_type === 'bye')     return `${ball.extra_runs || 0}-B`;
   if (ball.extra_type === 'leg_bye') return `${ball.extra_runs || 0}-LB`;
@@ -59,13 +59,22 @@ const ballColor = (ball, COLORS) => {
   return COLORS.royalBlue;
 };
 
-const crossedRunsForDelivery = (extraType, runsScored = 0, extraRuns = 0) =>
-  (extraType === 'bye' || extraType === 'leg_bye')
-    ? Number(extraRuns || 0)
-    : Number(runsScored || 0);
+const crossedRunsForDelivery = (extraType, runsScored = 0, extraRuns = 0, wideValue = 1) => {
+  if (extraType === 'bye' || extraType === 'leg_bye') return Number(extraRuns || 0);
+  // The automatic wide penalty is not a completed run. Only the additional
+  // runs taken by the batters can change ends.
+  if (extraType === 'wide') return Math.max(0, Number(extraRuns || 0) - Number(wideValue || 1));
+  return Number(runsScored || 0);
+};
 
-const shouldSwapForCrossedRuns = (extraType, crossedRuns) =>
-  extraType !== 'wide' && Math.abs(Number(crossedRuns) || 0) % 2 === 1;
+const bowlerRunsForDelivery = (ball) => {
+  const runs = Number(ball?.runs_scored || 0);
+  const extras = Number(ball?.extra_runs || 0);
+  return runs + (ball?.extra_type === 'bye' || ball?.extra_type === 'leg_bye' ? 0 : extras);
+};
+
+const shouldSwapForCrossedRuns = (crossedRuns) =>
+  Math.abs(Number(crossedRuns) || 0) % 2 === 1;
 
 const BOWLER_CREDIT_WICKET_TYPES = new Set(['bowled', 'caught', 'lbw', 'stumped', 'hit_wicket']);
 const isBowlerCreditWicket = (ball) => {
@@ -445,7 +454,7 @@ const BallByBallTab = ({ allBalls, COLORS, bb }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={bb.ballDesc}>
-                  {over.overNumber}.{ball.extra_type === 'wide' ? 'Wd' : ball.extra_type === 'no_ball' ? 'NB' : ball.extra_type === 'bye' ? 'B' : ball.extra_type === 'leg_bye' ? 'LB' : ball.ball_number}{'  '}{ball.striker_name || '—'}
+                  {over.overNumber}.{ball.extra_type === 'wide' ? `${ball.extra_runs || 1}Wd` : ball.extra_type === 'no_ball' ? 'NB' : ball.extra_type === 'bye' ? 'B' : ball.extra_type === 'leg_bye' ? 'LB' : ball.ball_number}{'  '}{ball.striker_name || '—'}
                   {ball.is_wicket ? '  🔴 OUT' : ''}
                 </Text>
                 <Text style={bb.ballSub}>{ball.bowler_name || '—'}</Text>
@@ -502,7 +511,7 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, canSwap
         >
           <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
         </TouchableOpacity>
-        {/* Undo — disabled when the current over has no balls yet */}
+        {/* Undo follows the delivery ledger, including wides and no-balls. */}
         <TouchableOpacity
           style={[pad.undoBtn, !canUndo && { opacity: 0.3 }]}
           onPress={onUndo}
@@ -587,6 +596,7 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, canSwap
 const EXTRA_RUN_OPTS = [0, 1, 2, 3, 4, 5, 6];
 
 const EXTRA_CONFIG = {
+  wide:    { icon: 'arrow-expand-horizontal', label: 'WIDE',     sub: 'Additional wide runs', accentKey: 'warning' },
   no_ball: { icon: 'close-circle',   label: 'NO BALL',  sub: 'Runs scored off bat', accentKey: 'danger'  },
   bye:     { icon: 'run-fast',        label: 'BYE',      sub: 'Bye runs',            accentKey: 'cyan'    },
   leg_bye: { icon: 'human-handsup',   label: 'LEG BYE',  sub: 'Leg bye runs',        accentKey: 'purple'  },
@@ -876,13 +886,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     if (selection.type === 'new_batsman') {
       // Striker was out — incoming batsman takes strike
-      setStriker(selection.striker || null);
-      setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      const nextStriker = selection.striker || null;
+      const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+      strikerRef.current = nextStriker;
+      strikerStatsRef.current = emptyStats;
+      setStriker(nextStriker);
+      setStrikerStats(emptyStats);
       triggerBowlerIfNeeded();
     } else if (selection.type === 'new_non_striker') {
       // Non-striker was out (e.g. run out at non-striker's end) — replace non-striker only
-      setNonStriker(selection.striker || null);   // SelectBatsman returns player in .striker field
-      setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      const nextNonStriker = selection.striker || null;
+      const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+      nonStrikerRef.current = nextNonStriker;
+      nonStrikerStatsRef.current = emptyStats;
+      setNonStriker(nextNonStriker);   // SelectBatsman returns player in .striker field
+      setNonStrikerStats(emptyStats);
       triggerBowlerIfNeeded();
     } else if (selection.striker && selection.nonStriker) {
       // Opening pair (or re-selection due to technical restart) — clear all
@@ -893,10 +911,15 @@ const LiveScoringScreen = ({ navigation, route }) => {
           console.warn('[LiveScoring] clearInningsProgress failed:', e)
         );
       }
+      const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+      strikerRef.current = selection.striker;
+      nonStrikerRef.current = selection.nonStriker;
+      strikerStatsRef.current = emptyStats;
+      nonStrikerStatsRef.current = emptyStats;
       setStriker(selection.striker);
       setNonStriker(selection.nonStriker);
-      setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-      setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+      setStrikerStats(emptyStats);
+      setNonStrikerStats(emptyStats);
       // Reset all live-scoring state
       setTotalRuns(0);       totalRunsRef.current = 0;
       setTotalWickets(0);    totalWktsRef.current = 0;
@@ -924,14 +947,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
       const pastBalls = allBalls.filter(b => b.bowler_id === bowlerId);
       if (pastBalls.length > 0) {
         const pastOverIds = [...new Set(pastBalls.map(b => b.over_id))];
-        const accRuns = pastBalls.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+        const accRuns = pastBalls.reduce((s, b) => s + bowlerRunsForDelivery(b), 0);
         const accWickets = pastBalls.filter(isBowlerCreditWicket).length;
         let accMaidens = 0;
         for (const ovId of pastOverIds) {
           const ovBalls = pastBalls.filter(b => b.over_id === ovId);
           const legalCount = ovBalls.filter(b => b.is_valid_ball === 1).length;
           if (legalCount >= 6) {
-            const ovRuns = ovBalls.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+            const ovRuns = ovBalls.reduce((s, b) => s + bowlerRunsForDelivery(b), 0);
             if (ovRuns === 0) accMaidens++;
           }
         }
@@ -953,6 +976,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
     if (!dismissed?.requestId || processedWicketDismissedRef.current === dismissed.requestId) return;
 
     processedWicketDismissedRef.current = dismissed.requestId;
+    strikerRef.current = null;
+    strikerStatsRef.current = { runs: 0, balls: 0, fours: 0, sixes: 0 };
     setStriker(null);
     setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
     navigation.setParams({ wicketDismissed: null });
@@ -1182,20 +1207,54 @@ const LiveScoringScreen = ({ navigation, route }) => {
           ? { id: lastBall.bowler_id, full_name: lastBall.bowler_name || 'Unknown' }
           : null;
 
-        if (!lastBall.is_wicket) {
-          const crossedRuns = crossedRunsForDelivery(lastBall.extra_type, lastBall.runs_scored, lastBall.extra_runs);
-          const overEnded = lastBall.is_valid_ball === 1 && (Number(lastBall.ball_number) || 0) >= 6;
+        // Reconstruct the two batting ends from the final delivery. A run-out
+        // can remove either player, but the run(s) still belong to the striker
+        // who faced the ball. Apply movement first, then remove the dismissed
+        // batter. The previous logic skipped this entire step for wickets and
+        // could restore an already-dismissed player after returning to scoring.
+        const isLastBallWicket = Number(lastBall.is_wicket || 0) === 1;
+        const crossedRuns = isLastBallWicket && lastBall.wicket_type !== 'run_out'
+          ? 0
+          : crossedRunsForDelivery(
+              lastBall.extra_type,
+              lastBall.runs_scored,
+              lastBall.extra_runs,
+              rMatch?.wide_value || 1,
+            );
+        const overEnded = Number(lastBall.is_valid_ball ?? 1) === 1
+          && (Number(lastBall.ball_number) || 0) >= 6;
 
-          if (shouldSwapForCrossedRuns(lastBall.extra_type, crossedRuns)) {
-            [restoredStriker, restoredNS] = [restoredNS, restoredStriker];
-          }
-          if (overEnded) {
-            [restoredStriker, restoredNS] = [restoredNS, restoredStriker];
+        if (shouldSwapForCrossedRuns(crossedRuns)) {
+          [restoredStriker, restoredNS] = [restoredNS, restoredStriker];
+        }
+        if (overEnded) {
+          [restoredStriker, restoredNS] = [restoredNS, restoredStriker];
+        }
+        if (isLastBallWicket) {
+          const dismissedId = lastBall.wicket_batsman_id || lastBall.batsman_id || lastBall.striker_id;
+          if (String(restoredStriker?.id) === String(dismissedId)) {
+            restoredStriker = null;
+          } else if (String(restoredNS?.id) === String(dismissedId)) {
+            restoredNS = null;
           }
         }
 
-        if (restoredStriker) { strikerRef.current = restoredStriker;    setStriker(restoredStriker); }
-        if (restoredNS)      { nonStrikerRef.current = restoredNS;       setNonStriker(restoredNS); }
+        strikerRef.current = restoredStriker;
+        nonStrikerRef.current = restoredNS;
+        if (restoredStriker) {
+          setStriker(restoredStriker);
+        } else {
+          setStriker(null);
+          strikerStatsRef.current = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+          setStrikerStats(strikerStatsRef.current);
+        }
+        if (restoredNS) {
+          setNonStriker(restoredNS);
+        } else {
+          setNonStriker(null);
+          nonStrikerStatsRef.current = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+          setNonStrikerStats(nonStrikerStatsRef.current);
+        }
         if (restoredBowler)  { bowlerRef.current = restoredBowler;       setBowler(restoredBowler); }
 
         // Restore last-completed-over bowler so handleChangeBowler can correctly
@@ -1229,16 +1288,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
         // Restore bowler stats from over balls
         if (restoredBowler && existingOver) {
           const overBallsList = balls.filter(b => b.over_id === existingOver.id);
-          const bwlRuns = overBallsList.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+          const bwlRuns = overBallsList.reduce((s, b) => s + bowlerRunsForDelivery(b), 0);
           const bwlWkts = overBallsList.filter(isBowlerCreditWicket).length;
           setBowlerStats({ overs: existingOver.over_number - 1, runs: bwlRuns, wickets: bwlWkts, maidens: 0 });
         }
 
-        // Restore extras from ball history
+        // Restore actual extra runs from ball history.
         const eb = { wide: 0, no_ball: 0, bye: 0, leg_bye: 0 };
         balls.forEach(b => {
           if (!b.extra_type) return;
-          const delta = (b.extra_type === 'bye' || b.extra_type === 'leg_bye') ? (b.extra_runs || 0) : 1;
+          const delta = Number(b.extra_runs || 0);
           eb[b.extra_type] = (eb[b.extra_type] || 0) + delta;
         });
         setExtras(eb);
@@ -1360,7 +1419,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
     if (isFreeHitRef.current && !isThisWideOrNoBall) setIsFreeHit(false);
 
     try {
-      const { extraType = null, byeRuns = 0 } = options;
+      const { extraType = null, byeRuns = 0, wideRuns = 0 } = options;
       const isExtra    = !!extraType;
       const isWide     = extraType === 'wide';
       const isNoBall   = extraType === 'no_ball';
@@ -1374,11 +1433,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
       const isFour     = runsScored === 4 && (!isExtra || isNoBall);
       const isSix      = runsScored === 6 && (!isExtra || isNoBall);
       // Use match-configured penalty values for wide/no-ball
-      const widePenalty   = match.wide_value    || 1;
-      const noBallPenalty = match.no_ball_value || 1;
-      const extraRuns  = isWide ? widePenalty : isNoBall ? noBallPenalty : byeRuns;
+      const widePenalty   = Math.max(1, Number(match.wide_value) || 1);
+      const noBallPenalty = Math.max(1, Number(match.no_ball_value) || 1);
+      const additionalWideRuns = Math.max(0, Number(wideRuns) || 0);
+      const byeExtraRuns = Math.max(0, Number(byeRuns) || 0);
+      const extraRuns  = isWide ? widePenalty + additionalWideRuns : isNoBall ? noBallPenalty : byeExtraRuns;
       const totalAdded = runsScored + extraRuns;
-      const crossedRuns = crossedRunsForDelivery(extraType, runsScored, extraRuns);
+      const bowlerRunsAdded = runsScored + (isBye || isLegBye ? 0 : extraRuns);
+      const crossedRuns = crossedRunsForDelivery(extraType, runsScored, extraRuns, widePenalty);
 
       const ballId = uuid.v4();
       await saveBall({
@@ -1407,12 +1469,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setTotalRuns(newTotal);
       if (isValidBall) setLegalBalls(newLegal);
 
-      // Update extras breakdown.
-      // wide/no_ball: track count (penalty applied at display time).
-      // bye/leg_bye: track actual runs (variable per delivery).
+      // Every extra type stores its actual contribution to the innings total.
       if (isExtra) {
-        const extDelta = (isBye || isLegBye) ? extraRuns : 1;
-        setExtras(prev => ({ ...prev, [extraType]: (prev[extraType] || 0) + extDelta }));
+        setExtras(prev => ({ ...prev, [extraType]: (prev[extraType] || 0) + extraRuns }));
       }
 
       // Update striker stats — read from ref so value is current even after awaits
@@ -1429,6 +1488,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
         // Bye/LB: still counts as a ball faced
         newStrikerStats = { ...curStrikerStats, balls: curStrikerStats.balls + 1 };
       }
+      // Keep the synchronous scoring path in lockstep with React state. This
+      // is especially important immediately after a run-out replacement.
+      strikerStatsRef.current = newStrikerStats;
       setStrikerStats(newStrikerStats);
 
       // Update partnership (all runs including byes/lb add to partnership)
@@ -1440,7 +1502,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       // Update bowler stats
       setBowlerStats(prev => ({
         ...prev,
-        runs:    prev.runs + totalAdded,
+        runs:    prev.runs + bowlerRunsAdded,
         wickets: prev.wickets,
       }));
 
@@ -1480,7 +1542,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
       // Auto-swap when batsmen physically cross. Byes/leg-byes store the
       // crossed runs in extra_runs, while bat/no-ball bat runs use runs_scored.
-      if (shouldSwapForCrossedRuns(extraType, crossedRuns)) _swap(newStrikerStats);
+      if (shouldSwapForCrossedRuns(crossedRuns)) _swap(newStrikerStats);
 
       // Target chased? End innings immediately (2nd innings only)
       if (resolvedTarget && newTotal >= resolvedTarget) {
@@ -1847,11 +1909,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   // ── Extra Buttons Handler ─────────────────────────────
   const handleExtra = (type) => {
-    if (type === 'wide') {
-      recordBall(0, { extraType: 'wide' });
-    } else {
-      setExtraModal({ visible: true, type });
-    }
+    setExtraModal({ visible: true, type });
   };
 
   const handleExtraModalSelect = (runs) => {
@@ -1859,6 +1917,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
     setExtraModal({ visible: false, type: null });
     if (type === 'no_ball') {
       recordBall(runs, { extraType: 'no_ball' });
+    } else if (type === 'wide') {
+      recordBall(0, { extraType: 'wide', wideRuns: runs });
     } else {
       recordBall(0, { extraType: type, byeRuns: runs });
     }
@@ -1930,7 +1990,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           // ── Refresh bowler stats from current over balls ─
           const bwl = bowlerRef.current;
           if (bwl) {
-            const bwlRuns = ob.reduce((s, b) => s + (b.runs_scored || 0) + (b.extra_runs || 0), 0);
+            const bwlRuns = ob.reduce((s, b) => s + bowlerRunsForDelivery(b), 0);
             const bwlWkts = ob.filter(isBowlerCreditWicket).length;
             setBowlerStats(prev => ({ ...prev, runs: bwlRuns, wickets: bwlWkts }));
           }
@@ -1944,13 +2004,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
           });
 
           // ── Recompute extras breakdown after undo ────────
-          // wide/no_ball → count; bye/leg_bye → actual extra_runs
           const eb = { wide: 0, no_ball: 0, bye: 0, leg_bye: 0 };
           refreshed.forEach(b => {
             if (!b.extra_type) return;
-            const delta = (b.extra_type === 'bye' || b.extra_type === 'leg_bye')
-              ? (b.extra_runs || 0)
-              : 1;
+            const delta = Number(b.extra_runs || 0);
             eb[b.extra_type] = (eb[b.extra_type] || 0) + delta;
           });
           setExtras(eb);
@@ -2293,10 +2350,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
               nb {extras.no_ball}, wd {extras.wide}, b {extras.bye}, lb {extras.leg_bye}
             </Text>
             <Text style={sc.extrasTot}>
-              {extras.no_ball * (match.no_ball_value || 1)
-               + extras.wide   * (match.wide_value    || 1)
-               + extras.bye
-               + extras.leg_bye}
+              {extras.no_ball + extras.wide + extras.bye + extras.leg_bye}
             </Text>
           </View>
 
@@ -2344,7 +2398,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
             onWicket={handleWicket}
             onUndo={handleUndo}
             onSwap={_swap}
-            canUndo={legalBalls > 0}
+            canUndo={allBalls.length > 0}
             canSwap={!!striker && !!nonStriker}
             COLORS={COLORS}
             pad={pad}

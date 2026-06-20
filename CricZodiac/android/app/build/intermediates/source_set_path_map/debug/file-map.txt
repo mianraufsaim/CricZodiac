@@ -1,0 +1,69 @@
+com.criczodiac.app-jetified-appcompat-resources-1.6.1-0 /Users/mian-rauf/.gradle/caches/transforms-3/0006eb9ece459533130e89fd75604151/transformed/jetified-appcompat-resources-1.6.1/res
+com.criczodiac.app-jetified-firebase-common-22.0.1-1 /Users/mian-rauf/.gradle/caches/transforms-3/025d3b4e7db57bcf7b4fefb722891fe7/transformed/jetified-firebase-common-22.0.1/res
+com.criczodiac.app-jetified-activity-1.6.0-2 /Users/mian-rauf/.gradle/caches/transforms-3/0d19d799f704f8fe8ecb9cfb86b6a0bc/transformed/jetified-activity-1.6.0/res
+com.criczodiac.app-jetified-ads-adservices-java-1.1.0-beta11-3 /Users/mian-rauf/.gradle/caches/transforms-3/0d64cc7146446a99185e5a9f6b66f094/transformed/jetified-ads-adservices-java-1.1.0-beta11/res
+com.criczodiac.app-jetified-lifecycle-viewmodel-savedstate-2.5.1-4 /Users/mian-rauf/.gradle/caches/transforms-3/1c5e58174ad29b7e06a8de1a60643316/transformed/jetified-lifecycle-viewmodel-savedstate-2.5.1/res
+com.criczodiac.app-core-1.9.0-5 /Users/mian-rauf/.gradle/caches/transforms-3/22fb0403fd14d54ad998bc8e1cfb173b/transformed/core-1.9.0/res
+com.criczodiac.app-jetified-annotation-experimental-1.3.0-6 /Users/mian-rauf/.gradle/caches/transforms-3/295d4f63a856319f9bd57fdb78ef12ec/transformed/jetified-annotation-experimental-1.3.0/res
+com.criczodiac.app-jetified-react-android-0.73.4-debug-7 /Users/mian-rauf/.gradle/caches/transforms-3/299eb98e90a39dc80322f9c70ff2abf4/transformed/jetified-react-android-0.73.4-debug/res
+com.criczodiac.app-fragment-1.5.7-8 /Users/mian-rauf/.gradle/caches/transforms-3/2b531a5a803eaf84c74c1a7ca2f1ed2e/transformed/fragment-1.5.7/res
+com.criczodiac.app-lifecycle-runtime-2.5.1-9 /Users/mian-rauf/.gradle/caches/transforms-3/33cacc43974da6ba77f510082fcb5608/transformed/lifecycle-runtime-2.5.1/res
+com.criczodiac.app-jetified-play-services-base-18.5.0-10 /Users/mian-rauf/.gradle/caches/transforms-3/38f8d84d9b1ac8bb87740851675f849e/transformed/jetified-play-services-base-18.5.0/res
+com.criczodiac.app-swiperefreshlayout-1.1.0-11 /Users/mian-rauf/.gradle/caches/transforms-3/3b3900caf333f443d320e4c31762c4fd/transformed/swiperefreshlayout-1.1.0/res
+com.criczodiac.app-jetified-datastore-preferences-core-release-12 /Users/mian-rauf/.gradle/caches/transforms-3/3d6fad670acab4cd2a19a264c4186450/transformed/jetified-datastore-preferences-core-release/res
+com.criczodiac.app-jetified-core-ktx-1.9.0-13 /Users/mian-rauf/.gradle/caches/transforms-3/46223baab224bef7f56314c01cce1d50/transformed/jetified-core-ktx-1.9.0/res
+com.criczodiac.app-jetified-viewpager2-1.0.0-14 /Users/mian-rauf/.gradle/caches/transforms-3/52a4620caf1003bb5c9828e980cea39a/transformed/jetified-viewpager2-1.0.0/res
+com.criczodiac.app-recyclerview-1.1.0-15 /Users/mian-rauf/.gradle/caches/transforms-3/5affa35e41c6f72601ec4ef143fd1be7/transformed/recyclerview-1.1.0/res
+com.criczodiac.app-lifecycle-livedata-core-2.5.1-16 /Users/mian-rauf/.gradle/caches/transforms-3/5d351b089c5d808c80766c68fb6a256b/transformed/lifecycle-livedata-core-2.5.1/res
+com.criczodiac.app-coordinatorlayout-1.2.0-17 /Users/mian-rauf/.gradle/caches/transforms-3/63da83935304244938c58e562dc4e967/transformed/coordinatorlayout-1.2.0/res
+com.criczodiac.app-jetified-lifecycle-process-2.4.1-18 /Users/mian-rauf/.gradle/caches/transforms-3/79185353ecb02e02dcba4cf41ae825a2/transformed/jetified-lifecycle-process-2.4.1/res
+com.criczodiac.app-jetified-emoji2-1.2.0-19 /Users/mian-rauf/.gradle/caches/transforms-3/7b701cecabefcd915dd9d5d1b868ed12/transformed/jetified-emoji2-1.2.0/res
+com.criczodiac.app-jetified-play-services-basement-18.9.0-20 /Users/mian-rauf/.gradle/caches/transforms-3/7cdfd8798320ea0014adb3218a949640/transformed/jetified-play-services-basement-18.9.0/res
+com.criczodiac.app-jetified-emoji2-views-helper-1.2.0-21 /Users/mian-rauf/.gradle/caches/transforms-3/7cf455ea6def7ec144deab84215de885/transformed/jetified-emoji2-views-helper-1.2.0/res
+com.criczodiac.app-sqlite-framework-2.2.0-22 /Users/mian-rauf/.gradle/caches/transforms-3/80ffce86ecfeaca9ef0e83d763e21de2/transformed/sqlite-framework-2.2.0/res
+com.criczodiac.app-transition-1.2.0-23 /Users/mian-rauf/.gradle/caches/transforms-3/8671993e0bc0a9bdda623710c567e315/transformed/transition-1.2.0/res
+com.criczodiac.app-lifecycle-viewmodel-2.5.1-24 /Users/mian-rauf/.gradle/caches/transforms-3/87c70a4aac7ea229ab2282dac5787e22/transformed/lifecycle-viewmodel-2.5.1/res
+com.criczodiac.app-jetified-ads-adservices-1.1.0-beta11-25 /Users/mian-rauf/.gradle/caches/transforms-3/8edc0110dc2cac39427d63380284c1de/transformed/jetified-ads-adservices-1.1.0-beta11/res
+com.criczodiac.app-jetified-tracing-1.1.0-26 /Users/mian-rauf/.gradle/caches/transforms-3/926cc83293fa6f4c500c53b7c4cde6b5/transformed/jetified-tracing-1.1.0/res
+com.criczodiac.app-jetified-datastore-core-release-27 /Users/mian-rauf/.gradle/caches/transforms-3/93c446f7e69cdbd39a405508d9335c1d/transformed/jetified-datastore-core-release/res
+com.criczodiac.app-jetified-autofill-1.1.0-28 /Users/mian-rauf/.gradle/caches/transforms-3/964f2106f1ec09235e2f0e038bd15e1a/transformed/jetified-autofill-1.1.0/res
+com.criczodiac.app-jetified-play-services-auth-21.5.0-29 /Users/mian-rauf/.gradle/caches/transforms-3/a3616079a6472f330bd29a96f34b9442/transformed/jetified-play-services-auth-21.5.0/res
+com.criczodiac.app-jetified-datastore-preferences-release-30 /Users/mian-rauf/.gradle/caches/transforms-3/a6b3ddead5e555fdfac4dc2725a487f9/transformed/jetified-datastore-preferences-release/res
+com.criczodiac.app-constraintlayout-2.0.1-31 /Users/mian-rauf/.gradle/caches/transforms-3/b40d7d07a3aae7c92e0f5c34fa5430a0/transformed/constraintlayout-2.0.1/res
+com.criczodiac.app-jetified-drawee-3.1.3-32 /Users/mian-rauf/.gradle/caches/transforms-3/c36561631694ebad69dab7ad2d660ee5/transformed/jetified-drawee-3.1.3/res
+com.criczodiac.app-material-1.9.0-33 /Users/mian-rauf/.gradle/caches/transforms-3/c942a88b432be464ca4bdbce8179d8a1/transformed/material-1.9.0/res
+com.criczodiac.app-jetified-startup-runtime-1.1.1-34 /Users/mian-rauf/.gradle/caches/transforms-3/def39a73b1c45a8064746051b6c44549/transformed/jetified-startup-runtime-1.1.1/res
+com.criczodiac.app-sqlite-2.2.0-35 /Users/mian-rauf/.gradle/caches/transforms-3/df978bc7d1b768a080731129afc367c3/transformed/sqlite-2.2.0/res
+com.criczodiac.app-jetified-datastore-release-36 /Users/mian-rauf/.gradle/caches/transforms-3/e5335638d59212b9903c02ad5ba95dd7/transformed/jetified-datastore-release/res
+com.criczodiac.app-jetified-numberpickerview-v1.1.5-37 /Users/mian-rauf/.gradle/caches/transforms-3/ed0a58f40859b48c29138a0ba66dc7c5/transformed/jetified-numberpickerview-v1.1.5/res
+com.criczodiac.app-cardview-1.0.0-38 /Users/mian-rauf/.gradle/caches/transforms-3/f05e89726a6690fac0de0a665b527f44/transformed/cardview-1.0.0/res
+com.criczodiac.app-drawerlayout-1.1.1-39 /Users/mian-rauf/.gradle/caches/transforms-3/f3a0938ba849ebc86a27f39ac8d65554/transformed/drawerlayout-1.1.1/res
+com.criczodiac.app-jetified-savedstate-1.2.0-40 /Users/mian-rauf/.gradle/caches/transforms-3/f4e016e250318946ff0939f218704efe/transformed/jetified-savedstate-1.2.0/res
+com.criczodiac.app-appcompat-1.6.1-41 /Users/mian-rauf/.gradle/caches/transforms-3/f5d78ecab95705c5ecfa40ef80975776/transformed/appcompat-1.6.1/res
+com.criczodiac.app-jetified-flipper-0.201.0-42 /Users/mian-rauf/.gradle/caches/transforms-3/fd69c8c8ee56b54f6bd6f5128e1bbb2f/transformed/jetified-flipper-0.201.0/res
+com.criczodiac.app-pngs-43 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/build/generated/res/pngs/debug
+com.criczodiac.app-resValues-44 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/build/generated/res/resValues/debug
+com.criczodiac.app-packageDebugResources-45 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.criczodiac.app-packageDebugResources-46 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.criczodiac.app-merged_res-47 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/build/intermediates/merged_res/debug
+com.criczodiac.app-debug-48 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/res
+com.criczodiac.app-main-49 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/res
+com.criczodiac.app-packaged_res-50 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-async-storage/async-storage/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-51 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-52 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-53 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-54 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-picker/picker/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-55 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-date-picker/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-56 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-fs/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-57 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-gesture-handler/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-58 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-59 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-linear-gradient/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-60 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-reanimated/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-61 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-safe-area-context/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-62 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-screens/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-63 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-64 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-sqlite-storage/platforms/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-65 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-svg/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-66 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vector-icons/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-67 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vision-camera/android/build/intermediates/packaged_res/debug
+com.criczodiac.app-packaged_res-68 /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-worklets-core/android/build/intermediates/packaged_res/debug

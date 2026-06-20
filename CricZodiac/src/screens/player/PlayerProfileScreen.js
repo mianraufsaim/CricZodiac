@@ -102,6 +102,12 @@ const PlayerProfileScreen = ({ navigation }) => {
   const [dobOpen,    setDobOpen]    = useState(false);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const supportsBowlingStyle = ['bowler', 'allrounder'].includes(form.player_type);
+  const setPlayerType = (playerType) => setForm(f => ({
+    ...f,
+    player_type: playerType,
+    bowling_style: playerType === 'batsman' ? '' : f.bowling_style,
+  }));
 
   // ── Load ──────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -121,7 +127,7 @@ const PlayerProfileScreen = ({ navigation }) => {
           phone:        u?.phone         || '',
           player_type:  p.player_type    || 'allrounder',
           batting_hand: p.batting_hand   || 'right',
-          bowling_style:p.bowling_style  || '',
+          bowling_style:p.player_type === 'batsman' ? '' : p.bowling_style || '',
           jersey_number:p.jersey_number  || '',
           date_of_birth:p.date_of_birth  || '',
           profile_pic:  p.profile_pic    || null,
@@ -170,7 +176,7 @@ const PlayerProfileScreen = ({ navigation }) => {
         await ApiService.post(API_ENDPOINTS.PLAYERS_UPDATE, {
           player_type:   form.player_type,
           batting_hand:  form.batting_hand,
-          bowling_style: form.bowling_style || null,
+          bowling_style: supportsBowlingStyle ? form.bowling_style || null : null,
           jersey_number: form.jersey_number || null,
           date_of_birth: form.date_of_birth || null,
         });
@@ -310,7 +316,7 @@ const PlayerProfileScreen = ({ navigation }) => {
               <Icon name="cricket" size={14} color={COLORS.gold} />
               <Text style={st.cardTitle}>PLAYER TYPE</Text>
             </View>
-            <ChipSelector options={PLAYER_TYPES} value={form.player_type} onChange={v => set('player_type', v)} COLORS={COLORS} st={st} />
+            <ChipSelector options={PLAYER_TYPES} value={form.player_type} onChange={setPlayerType} COLORS={COLORS} st={st} />
           </View>
 
           {/* ── Batting Hand ── */}
@@ -322,20 +328,21 @@ const PlayerProfileScreen = ({ navigation }) => {
             <ChipSelector options={BATTING_HAND} value={form.batting_hand} onChange={v => set('batting_hand', v)} COLORS={COLORS} st={st} />
           </View>
 
-          {/* ── Bowling Style ── */}
-          <View style={st.card}>
-            <View style={st.cardTitleRow}>
-              <Icon name="bullseye-arrow" size={14} color={COLORS.gold} />
-              <Text style={st.cardTitle}>BOWLING STYLE</Text>
-            </View>
-            {bowlingStyleObj && (
-              <View style={[st.selectedStyle, { borderColor: bowlingStyleObj.color }]}>
-                <Icon name="check-circle" size={14} color={bowlingStyleObj.color} style={{ marginRight: 6 }} />
-                <Text style={[st.selectedStyleTxt, { color: bowlingStyleObj.color }]}>{bowlingStyleObj.desc}</Text>
+          {supportsBowlingStyle && (
+            <View style={st.card}>
+              <View style={st.cardTitleRow}>
+                <Icon name="bullseye-arrow" size={14} color={COLORS.gold} />
+                <Text style={st.cardTitle}>BOWLING STYLE</Text>
               </View>
-            )}
-            <BowlingStyleGrid value={form.bowling_style} onChange={v => set('bowling_style', v === form.bowling_style ? '' : v)} st={st} />
-          </View>
+              {bowlingStyleObj && (
+                <View style={[st.selectedStyle, { borderColor: bowlingStyleObj.color }]}>
+                  <Icon name="check-circle" size={14} color={bowlingStyleObj.color} style={{ marginRight: 6 }} />
+                  <Text style={[st.selectedStyleTxt, { color: bowlingStyleObj.color }]}>{bowlingStyleObj.desc}</Text>
+                </View>
+              )}
+              <BowlingStyleGrid value={form.bowling_style} onChange={v => set('bowling_style', v === form.bowling_style ? '' : v)} st={st} />
+            </View>
+          )}
 
           {/* ── View Full Stats ── */}
           {playerId && (

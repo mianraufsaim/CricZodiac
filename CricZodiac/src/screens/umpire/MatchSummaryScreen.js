@@ -20,7 +20,7 @@ import {
   updateMatch,
   upsertTeamPlayersFromServer,
 } from '../../database/queries/matchQueries';
-import { getSeriesById, getSeriesMatches } from '../../database/queries/seriesQueries';
+import { getSeriesById, getSeriesMatches, saveSeriesAward } from '../../database/queries/seriesQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import { processSyncQueue } from '../../services/SyncService';
@@ -82,6 +82,21 @@ const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = fals
   return { winner: null, loser: null, margin: 'Tied', margin_value: 0, type: 'tie' };
 };
 
+const teamForResult = (result, teams) => teams.find(team =>
+  team.local_id === result?.winner_team_local ||
+  team.id === result?.winner_team_local ||
+  String(team.server_id) === String(result?.winner_team_id) ||
+  team.id === String(result?.winner_team_id)
+) || null;
+
+const samePlayer = (left, right) =>
+  String(left?.id || left?.player_local_id || left?.player_id) ===
+  String(right?.id || right?.player_local_id || right?.player_id);
+
+const formatPoints = (points) => Number.isInteger(Number(points))
+  ? String(Number(points))
+  : Number(points || 0).toFixed(1);
+
 const MatchSummaryScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -92,9 +107,13 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const [teams,    setTeams]    = useState([]);
   const [result,   setResult]   = useState(null);
   const [potmName, setPotmName] = useState(null);
-  const [potmPlayers, setPotmPlayers] = useState([]);
+  const [potmLeaders, setPotmLeaders] = useState([]);
   const [selectedPotm, setSelectedPotm] = useState(null);
   const [savingPotm, setSavingPotm] = useState(false);
+  const [mosName, setMosName] = useState(null);
+  const [mosLeaders, setMosLeaders] = useState([]);
+  const [selectedMos, setSelectedMos] = useState(null);
+  const [savingMos, setSavingMos] = useState(false);
   const [creatingRematch, setCreatingRematch] = useState(false);
   const [seriesInfo, setSeriesInfo] = useState(null);
   const [seriesMatches, setSeriesMatches] = useState([]);
@@ -116,6 +135,10 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         return;
       }
       const seriesIdForMatch = matchParam?.series_id || matchParam?.series_local_id || null;
+
+      // Awards are calculated from the server's ball ledger. Flush queued
+      // deliveries before fetching the final result and award candidates.
+      await processSyncQueue({ silent: true }).catch(() => {});
 
       // ── Fetch all data from API in parallel ──────────────────────────
       const [innsRes, teamsRes, resultRes, seriesRes, matchesRes] = await Promise.all([
@@ -151,8 +174,6 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         local_id: t.local_id || String(t.id),
         server_id: t.id,
       }));
-
-      const players = await loadPlayersForTeams(normalizedTeams);
 
       // ── Parse series context for next-match actions ──────────────────
       const serverSeries = seriesRes?.series || seriesRes?.data?.series || [];
@@ -208,6 +229,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
                 ? 'Match Tied!'
                 : `${winner.winner.team_name} won by ${winner.margin}`,
             });
+            await processSyncQueue({ silent: true }).catch(() => {});
             // Re-fetch result from API after saving
             const newRes = await ApiService.get(
               `${API_ENDPOINTS.MATCHES_RESULT}?match_id=${encodeURIComponent(matchId)}`
@@ -219,10 +241,35 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         }
       }
 
+      const fallbackWinner = computeWinner(
+        validInnings,
+        normalizedTeams,
+        matchParam?.players_per_team || 6,
+        matchParam?.allow_last_batsman
+      );
+      const awardWinner = teamForResult(apiResult, normalizedTeams) || fallbackWinner?.winner || null;
+      let matchAward = null;
+      if (awardWinner && apiResult?.result_type !== 'tie' && fallbackWinner?.type !== 'tie') {
+        const winnerId = awardWinner.local_id || awardWinner.id || awardWinner.server_id;
+        const awardRes = await ApiService.get(
+          `${API_ENDPOINTS.MATCHES_AWARDS}?match_id=${encodeURIComponent(matchId)}&winner_team_id=${encodeURIComponent(winnerId)}`
+        ).catch(() => null);
+        matchAward = awardRes?.award || awardRes?.data?.award || null;
+      }
+
+      let seriesAward = null;
+      if (seriesIdForMatch) {
+        const awardRes = await ApiService.get(
+          `${API_ENDPOINTS.MATCHES_AWARDS}?series_id=${encodeURIComponent(seriesIdForMatch)}`
+        ).catch(() => null);
+        seriesAward = awardRes?.award || awardRes?.data?.award || null;
+      }
+
       // ── Commit to state ──────────────────────────────────────────────
       setInnings(validInnings);
       setTeams(normalizedTeams);
-      setPotmPlayers(players);
+      setPotmLeaders(matchAward?.requires_selection ? (matchAward.leaders || []) : []);
+      setSelectedPotm(null);
       setSeriesInfo(nextSeriesInfo);
       setSeriesMatches(nextSeriesMatches);
       setMatchObj(prev => ({
@@ -232,43 +279,18 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       }));
       setResult(apiResult || null);
       setPotmName(
-        (apiResult?.player_of_match_name || '').trim() || null
+        (apiResult?.player_of_match_name || '').trim() || matchAward?.auto_player?.full_name || null
       );
+      setMosName(
+        (nextSeriesInfo?.player_of_series_name || '').trim() || seriesAward?.auto_player?.full_name || null
+      );
+      setMosLeaders(seriesAward?.requires_selection ? (seriesAward.leaders || []) : []);
+      setSelectedMos(null);
     } catch (err) {
       setLoadErr(err.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadPlayersForTeams = async (teamsForMatch) => {
-    const merged = new Map();
-    for (const team of teamsForMatch || []) {
-      const teamId = team.local_id || team.id;
-      if (!teamId) continue;
-
-      const res = await ApiService
-        .get(`${API_ENDPOINTS.TEAMS_PLAYERS}?team_id=${encodeURIComponent(teamId)}`)
-        .catch(() => null);
-      const rows = res?.players || res?.data?.players || [];
-      for (const row of rows) {
-        const localId = row.player_uuid || row.player_local_id || row.local_id || null;
-        const serverId = row.player_id || row.id || null;
-        const key = localId || String(serverId);
-        if (!key || merged.has(key)) continue;
-
-        const fullName = (row.full_name || row.user_name || row.name || '').trim();
-        merged.set(key, {
-          id: localId || String(serverId),
-          local_id: localId,
-          server_id: serverId,
-          full_name: fullName || 'Unknown',
-          player_type: row.player_type || 'player',
-          team_name: team.team_name,
-        });
-      }
-    }
-    return [...merged.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
   };
 
   const loadRosterForTeam = async (team) => {
@@ -319,7 +341,6 @@ const MatchSummaryScreen = ({ navigation, route }) => {
     navigation.navigate('MatchSetup', {
       seriesId,
       seriesName: seriesInfo?.name || matchParam?.series_name || null,
-      series: seriesInfo,
       matchNumber: Math.max(1, seriesMatches.length + 1),
     });
   };
@@ -358,7 +379,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           teamBRoster.length
         ),
         allow_last_batsman: toBool(
-          matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman
+          matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman
         ) ? 1 : 0,
         max_overs_per_bowler: Number(matchObj?.max_overs_per_bowler || matchParam?.max_overs_per_bowler || 0),
         wide_value: Number(matchObj?.wide_value || matchParam?.wide_value || 1),
@@ -448,6 +469,10 @@ const MatchSummaryScreen = ({ navigation, route }) => {
 
   const handleSavePotm = async () => {
     if (!selectedPotm || !winner || winner.type === 'tie') return;
+    if (!potmLeaders.some(player => samePlayer(player, selectedPotm))) {
+      showAlert('Select a tied leader', 'Only players tied on the highest point total are eligible.');
+      return;
+    }
 
     setSavingPotm(true);
     try {
@@ -463,7 +488,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         sorted,
         teams,
         ppt,
-        matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman
+        matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman
       ) || winner;
       const savedMargin = Number(result?.margin);
       const marginValue = Number.isFinite(savedMargin) && savedMargin > 0
@@ -484,8 +509,8 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         margin_type: marginType,
         team_a_score: `${inn1?.total_runs ?? 0}/${inn1?.total_wickets ?? 0}`,
         team_b_score: inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
-        player_of_match: selectedPotm.local_id || selectedPotm.id,
-        player_of_match_server_id: selectedPotm.server_id || (Number.isInteger(Number(selectedPotm.id)) ? Number(selectedPotm.id) : null),
+        player_of_match: selectedPotm.player_local_id || selectedPotm.local_id || selectedPotm.id || String(selectedPotm.player_id),
+        player_of_match_server_id: selectedPotm.player_id || selectedPotm.server_id || (Number.isInteger(Number(selectedPotm.id)) ? Number(selectedPotm.id) : null),
         result_text: winner.type === 'tie'
           ? 'Match Tied!'
           : (result?.result_text || `${winner.winner.team_name} won by ${winner.margin}`),
@@ -495,12 +520,40 @@ const MatchSummaryScreen = ({ navigation, route }) => {
       setResult(prev => ({
         ...(prev || {}),
         player_of_match_name: selectedPotm.full_name,
-        player_of_match_local: selectedPotm.local_id || selectedPotm.id,
-        player_of_match: selectedPotm.server_id || prev?.player_of_match || null,
+        player_of_match_local: selectedPotm.player_local_id || selectedPotm.local_id || selectedPotm.id || null,
+        player_of_match: selectedPotm.player_id || selectedPotm.server_id || prev?.player_of_match || null,
       }));
       processSyncQueue().catch(() => {});
     } finally {
       setSavingPotm(false);
+    }
+  };
+
+  const handleSaveMos = async () => {
+    if (!selectedMos || !mosLeaders.some(player => samePlayer(player, selectedMos))) {
+      showAlert('Select a tied leader', 'Only players tied on the highest point total are eligible.');
+      return;
+    }
+
+    const seriesId = seriesInfo?.id || currentSeriesId;
+    if (!seriesId) return;
+
+    setSavingMos(true);
+    try {
+      await saveSeriesAward({
+        seriesId,
+        playerId: selectedMos.player_local_id || selectedMos.local_id || selectedMos.id || String(selectedMos.player_id),
+        playerServerId: selectedMos.player_id || selectedMos.server_id || null,
+      });
+      setMosName(selectedMos.full_name);
+      setSeriesInfo(prev => ({
+        ...(prev || {}),
+        player_of_series: selectedMos.player_id || selectedMos.server_id || null,
+        player_of_series_name: selectedMos.full_name,
+      }));
+      processSyncQueue({ silent: true }).catch(() => {});
+    } finally {
+      setSavingMos(false);
     }
   };
 
@@ -538,7 +591,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   // ── Compute winner for display ────────────────────────────
   const sortedInnings = [...innings].sort((a, b) => a.innings_number - b.innings_number);
   const ppt           = matchObj?.players_per_team || matchParam?.players_per_team || 6;
-  const allowLastBatsman = matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman ?? seriesInfo?.allow_last_batsman;
+  const allowLastBatsman = matchObj?.allow_last_batsman ?? matchParam?.allow_last_batsman;
 
   // If we have a saved result, use its text; otherwise compute from innings
   let winner = null;
@@ -704,10 +757,10 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* ── Player of the Match ── */}
+        {/* ── Man of the Match ── */}
         {potmName && (
           <>
-            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>PLAYER OF THE MATCH</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>MAN OF THE MATCH</Text>
             <View style={styles.potmCard}>
               <View style={styles.potmAvatar}>
                 <Text style={styles.potmAvatarText}>{potmName[0]?.toUpperCase()}</Text>
@@ -720,24 +773,26 @@ const MatchSummaryScreen = ({ navigation, route }) => {
             </View>
           </>
         )}
-        {!potmName && winner && winner.type !== 'tie' && (
+        {!potmName && potmLeaders.length > 0 && (
           <>
             <Text style={[styles.sectionLabel, { marginTop: 14 }]}>MAN OF THE MATCH</Text>
             <View style={styles.potmPickerCard}>
               <View style={styles.potmPickerHeader}>
                 <Icon name="star-circle-outline" size={22} color={COLORS.gold} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.potmPickerTitle}>Select player of the match</Text>
-                  <Text style={styles.potmPickerSub}>{potmPlayers.length} players available</Text>
+                  <Text style={styles.potmPickerTitle}>Highest points are tied</Text>
+                  <Text style={styles.potmPickerSub}>
+                    {potmLeaders.length} leaders at {formatPoints(potmLeaders[0]?.points)} points
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.potmGrid}>
-                {potmPlayers.map(player => {
-                  const active = selectedPotm?.id === player.id;
+                {potmLeaders.map(player => {
+                  const active = samePlayer(selectedPotm, player);
                   return (
                     <TouchableOpacity
-                      key={player.id}
+                      key={player.player_id}
                       style={[styles.potmOption, active && styles.potmOptionSelected]}
                       onPress={() => setSelectedPotm(player)}
                     >
@@ -750,7 +805,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
                         <Text style={[styles.potmOptionName, active && { color: COLORS.gold }]} numberOfLines={1}>
                           {player.full_name}
                         </Text>
-                        <Text style={styles.potmOptionTeam} numberOfLines={1}>{player.team_name}</Text>
+                        <Text style={styles.potmOptionTeam} numberOfLines={1}>{formatPoints(player.points)} points</Text>
                       </View>
                       {active && <Icon name="check-circle" size={18} color={COLORS.gold} />}
                     </TouchableOpacity>
@@ -768,6 +823,77 @@ const MatchSummaryScreen = ({ navigation, route }) => {
                   : <Icon name="content-save-check" size={17} color={COLORS.navy} />
                 }
                 <Text style={styles.savePotmText}>{savingPotm ? 'SAVING...' : 'SAVE MAN OF THE MATCH'}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {/* ── Man of the Series ── */}
+        {mosName && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>MAN OF THE SERIES</Text>
+            <View style={styles.potmCard}>
+              <View style={styles.potmAvatar}>
+                <Text style={styles.potmAvatarText}>{mosName[0]?.toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.potmName}>{mosName}</Text>
+                <Text style={styles.potmSub}>Series-leading performance</Text>
+              </View>
+              <Icon name="trophy" size={28} color="#D4AF37" />
+            </View>
+          </>
+        )}
+        {!mosName && mosLeaders.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>MAN OF THE SERIES</Text>
+            <View style={styles.potmPickerCard}>
+              <View style={styles.potmPickerHeader}>
+                <Icon name="trophy" size={22} color={COLORS.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.potmPickerTitle}>Highest points are tied</Text>
+                  <Text style={styles.potmPickerSub}>
+                    {mosLeaders.length} leaders at {formatPoints(mosLeaders[0]?.points)} points
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.potmGrid}>
+                {mosLeaders.map(player => {
+                  const active = samePlayer(selectedMos, player);
+                  return (
+                    <TouchableOpacity
+                      key={player.player_id}
+                      style={[styles.potmOption, active && styles.potmOptionSelected]}
+                      onPress={() => setSelectedMos(player)}
+                    >
+                      <View style={[styles.potmOptionAvatar, active && { backgroundColor: COLORS.gold }]}>
+                        <Text style={[styles.potmOptionInitial, active && { color: COLORS.navy }]}>
+                          {player.full_name[0]?.toUpperCase() || 'P'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.potmOptionName, active && { color: COLORS.gold }]} numberOfLines={1}>
+                          {player.full_name}
+                        </Text>
+                        <Text style={styles.potmOptionTeam} numberOfLines={1}>{formatPoints(player.points)} points</Text>
+                      </View>
+                      {active && <Icon name="check-circle" size={18} color={COLORS.gold} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.savePotmBtn, (!selectedMos || savingMos) && styles.savePotmBtnDisabled]}
+                onPress={handleSaveMos}
+                disabled={!selectedMos || savingMos}
+              >
+                {savingMos
+                  ? <ActivityIndicator size="small" color={COLORS.navy} />
+                  : <Icon name="content-save-check" size={17} color={COLORS.navy} />
+                }
+                <Text style={styles.savePotmText}>{savingMos ? 'SAVING...' : 'SAVE MAN OF THE SERIES'}</Text>
               </TouchableOpacity>
             </View>
           </>

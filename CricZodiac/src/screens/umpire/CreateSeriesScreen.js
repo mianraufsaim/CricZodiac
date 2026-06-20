@@ -74,7 +74,6 @@ const CreateSeriesScreen = ({ navigation }) => {
     start_date:  toStr(new Date()),
     end_date:    '',
     format:      'bestOf1',
-    allow_last_batsman: false,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -203,26 +202,6 @@ const CreateSeriesScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.ruleRow, form.allow_last_batsman && styles.ruleRowActive]}
-            onPress={() => set('allow_last_batsman', !form.allow_last_batsman)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.ruleIcon, form.allow_last_batsman && { backgroundColor: COLORS.gold + '24' }]}>
-              <Icon
-                name={form.allow_last_batsman ? 'toggle-switch' : 'toggle-switch-off-outline'}
-                size={26}
-                color={form.allow_last_batsman ? COLORS.gold : COLORS.gray}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.ruleTitle, form.allow_last_batsman && { color: COLORS.gold }]}>
-                Last batter option
-              </Text>
-              <Text style={styles.ruleDesc}>Let the final batter continue when no partner remains.</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={[styles.btn, saving && { opacity: 0.6 }]}
             onPress={handleCreate}
             disabled={saving}
@@ -266,11 +245,6 @@ const getStyles = (COLORS) => StyleSheet.create({
   radio:             { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: COLORS.gray, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   radioActive:       { borderColor: COLORS.gold },
   radioDot:          { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.gold },
-  ruleRow:           { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.darkGray, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.cardBorder },
-  ruleRowActive:     { borderColor: COLORS.gold, backgroundColor: 'rgba(212,175,55,0.08)' },
-  ruleIcon:          { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.card },
-  ruleTitle:         { color: COLORS.white, fontSize: 14, fontWeight: '800' },
-  ruleDesc:          { color: COLORS.gray, fontSize: 11, marginTop: 3, lineHeight: 15 },
 });
 
 export default CreateSeriesScreen;

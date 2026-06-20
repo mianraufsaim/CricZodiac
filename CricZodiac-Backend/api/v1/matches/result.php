@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../includes/cors.php';
 require_once __DIR__ . '/../../../includes/response.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../includes/awards.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') sendError('Method not allowed.', 405);
 
@@ -60,6 +61,22 @@ if (!$result) {
     $st = $pdo->prepare("SELECT * FROM match_results WHERE match_local_id = ? LIMIT 1");
     $st->execute([(string) $matchId]);
     $result = $st->fetch(PDO::FETCH_ASSOC);
+}
+
+// Backfill completed legacy results when the point leader is unique. A tied
+// award remains unset so the app can present the tied leaders for selection.
+if (empty($result['player_of_match']) && !empty($result['winner_team_id'])) {
+    $award = matchAward($pdo, $matchId, (int) $result['winner_team_id']);
+    if (!empty($award['auto_player'])) {
+        $playerId = (int) $award['auto_player']['player_id'];
+        $playerLocalId = $award['auto_player']['player_local_id'] ?? null;
+        $pdo->prepare("UPDATE match_results SET player_of_match = ?, player_of_match_local = ? WHERE id = ?")
+            ->execute([$playerId, $playerLocalId, $result['id']]);
+        $pdo->prepare("UPDATE matches SET player_of_match = ?, updated_at = NOW() WHERE id = ?")
+            ->execute([$playerId, $matchId]);
+        $result['player_of_match'] = $playerId;
+        $result['player_of_match_local'] = $playerLocalId;
+    }
 }
 
 if (!$result) {

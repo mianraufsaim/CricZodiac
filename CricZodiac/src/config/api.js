@@ -66,6 +66,7 @@ export const API_ENDPOINTS = {
   MATCHES_RESULT:     `${API_BASE_URL}/matches/result.php`,
   MATCHES_SCORECARD:       `${API_BASE_URL}/matches/scorecard.php`,
   MATCHES_FULL_SCORECARD:  `${API_BASE_URL}/matches/full-scorecard.php`,
+  MATCHES_AWARDS:          `${API_BASE_URL}/matches/awards.php`,
 
   // Sync
   SYNC_PUSH:      `${API_BASE_URL}/sync/push.php`,

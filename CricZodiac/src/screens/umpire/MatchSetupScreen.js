@@ -11,7 +11,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { createMatch, getMatchTeams, updateMatch } from '../../database/queries/matchQueries';
-import { getSeriesById } from '../../database/queries/seriesQueries';
 import { useAuth } from '../../context/AuthContext';
 import { showAlert } from '../../utils/toast';
 
@@ -127,7 +126,6 @@ const MatchSetupScreen = ({ navigation, route }) => {
     matchNumber = 1,
     match: existingMatch = null,
     lockedTeamNames = null,
-    series: routeSeries = null,
   } = route.params || {};
   const isEditingSetup = !!existingMatch?.id;
   const seriesId = routeSeriesId || existingMatch?.series_id || null;
@@ -145,7 +143,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
       max_overs_per_bowler: Math.min(toNumber(existingMatch?.max_overs_per_bowler, 0), overs),
       wide_value:         toNumber(existingMatch?.wide_value, 1),
       no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
-      allow_last_batsman: toBool(existingMatch?.allow_last_batsman ?? routeSeries?.allow_last_batsman),
+      allow_last_batsman: toBool(existingMatch?.allow_last_batsman),
       team_a_name:        firstText(lockedTeamNames?.teamAName, teamNameFromMatch(existingMatch, 'A')),
       team_b_name:        firstText(lockedTeamNames?.teamBName, teamNameFromMatch(existingMatch, 'B')),
     };
@@ -154,25 +152,6 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const playerMinimum = minPlayersForOvers(form.overs);
-
-  useEffect(() => {
-    if (!seriesId || existingMatch?.allow_last_batsman !== undefined || routeSeries?.allow_last_batsman !== undefined) return;
-
-    let mounted = true;
-    const loadSeriesRules = async () => {
-      try {
-        const row = await getSeriesById(seriesId);
-        if (mounted && row) {
-          setForm(f => ({ ...f, allow_last_batsman: toBool(row.allow_last_batsman) }));
-        }
-      } catch (err) {
-        console.warn('MatchSetup series rules:', err.message);
-      }
-    };
-
-    loadSeriesRules();
-    return () => { mounted = false; };
-  }, [existingMatch?.allow_last_batsman, routeSeries?.allow_last_batsman, seriesId]);
 
   useEffect(() => {
     if (!teamNamesLocked) return;

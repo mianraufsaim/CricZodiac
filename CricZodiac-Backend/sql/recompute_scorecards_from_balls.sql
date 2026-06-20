@@ -34,12 +34,21 @@ SELECT
     SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS expected_balls_bowled,
     FLOOR(SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) / 6)
         + MOD(SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END), 6) * 0.1 AS expected_overs_bowled,
-    SUM(COALESCE(b.runs_scored, 0) + COALESCE(b.extra_runs, 0)) AS expected_runs_conceded,
-    SUM(CASE WHEN b.is_wicket = 1 THEN 1 ELSE 0 END) AS expected_wickets,
+    SUM(
+        COALESCE(b.runs_scored, 0) +
+        CASE WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b.extra_runs, 0) END
+    ) AS expected_runs_conceded,
+    SUM(CASE
+        WHEN w.wicket_type IN ('bowled', 'caught', 'lbw', 'stumped', 'hit_wicket') THEN 1
+        ELSE 0
+    END) AS expected_wickets,
     CASE
         WHEN SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) > 0
         THEN ROUND(
-            CAST(SUM(COALESCE(b.runs_scored, 0) + COALESCE(b.extra_runs, 0)) AS DECIMAL(10,2))
+            CAST(SUM(
+                COALESCE(b.runs_scored, 0) +
+                CASE WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b.extra_runs, 0) END
+            ) AS DECIMAL(10,2))
             / (SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) / 6.0),
             2
         )
@@ -48,6 +57,7 @@ SELECT
     SUM(CASE WHEN b.extra_type = 'no_ball' THEN 1 ELSE 0 END) AS expected_no_balls,
     SUM(CASE WHEN b.extra_type = 'wide' THEN 1 ELSE 0 END) AS expected_wides
 FROM balls b
+LEFT JOIN wickets w ON w.ball_id = b.id
 WHERE b.bowler_id IS NOT NULL
 GROUP BY b.innings_id, b.bowler_id
 ORDER BY b.innings_id, b.bowler_id;
@@ -136,7 +146,15 @@ SELECT
         WHERE o.innings_id = agg.innings_id
           AND o.bowler_id = agg.player_id
           AND o.is_completed = 1
-          AND o.runs_conceded = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM balls b2
+              WHERE b2.over_id = o.id
+                AND (
+                    COALESCE(b2.runs_scored, 0) +
+                    CASE WHEN b2.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b2.extra_runs, 0) END
+                ) > 0
+          )
     ), 0),
     agg.runs_conceded,
     agg.wickets,
@@ -158,11 +176,18 @@ FROM (
         b.bowler_id AS player_id,
         MAX(b.bowler_local_id) AS player_local_id,
         SUM(CASE WHEN b.is_valid_ball = 1 THEN 1 ELSE 0 END) AS legal_balls,
-        SUM(COALESCE(b.runs_scored, 0) + COALESCE(b.extra_runs, 0)) AS runs_conceded,
-        SUM(CASE WHEN b.is_wicket = 1 THEN 1 ELSE 0 END) AS wickets,
+        SUM(
+            COALESCE(b.runs_scored, 0) +
+            CASE WHEN b.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b.extra_runs, 0) END
+        ) AS runs_conceded,
+        SUM(CASE
+            WHEN w.wicket_type IN ('bowled', 'caught', 'lbw', 'stumped', 'hit_wicket') THEN 1
+            ELSE 0
+        END) AS wickets,
         SUM(CASE WHEN b.extra_type = 'no_ball' THEN 1 ELSE 0 END) AS no_balls,
         SUM(CASE WHEN b.extra_type = 'wide' THEN 1 ELSE 0 END) AS wides
     FROM balls b
+    LEFT JOIN wickets w ON w.ball_id = b.id
     WHERE b.bowler_id IS NOT NULL
     GROUP BY b.innings_id, b.bowler_id
 ) agg

@@ -97,23 +97,33 @@ $bat = $pdo->prepare("
     SELECT
         bs.player_id,
         bs.player_local_id,
-        bs.runs_scored,
-        bs.balls_faced,
-        bs.fours,
-        bs.sixes,
-        bs.strike_rate,
+        COALESCE(bt.runs_scored, 0) AS runs_scored,
+        COALESCE(bt.balls_faced, 0) AS balls_faced,
+        COALESCE(bt.fours, 0) AS fours,
+        COALESCE(bt.sixes, 0) AS sixes,
+        CASE WHEN COALESCE(bt.balls_faced, 0) > 0
+             THEN ROUND(CAST(COALESCE(bt.runs_scored, 0) AS DECIMAL(10,2)) / bt.balls_faced * 100, 2)
+             ELSE 0.00 END AS strike_rate,
         bs.is_out,
         bs.dismissal_type,
         bs.batting_order,
         COALESCE(u.name, 'Unknown') AS full_name,
-        (SELECT COUNT(*) FROM balls b2
-          WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
-            AND b2.match_id      = ?
-            AND b2.club_id       = ?
-            AND b2.striker_id    = bs.player_id
-            AND b2.is_valid_ball = 1
-            AND b2.runs_scored   = 0) AS dots
+        COALESCE(bt.dots, 0) AS dots
     FROM batting_scorecards bs
+    LEFT JOIN (
+        SELECT
+            b.striker_id,
+            SUM(COALESCE(b.runs_scored, 0)) AS runs_scored,
+            SUM(CASE WHEN b.extra_type = 'wide' THEN 0 ELSE 1 END) AS balls_faced,
+            SUM(CASE WHEN b.is_four = 1 THEN 1 ELSE 0 END) AS fours,
+            SUM(CASE WHEN b.is_six = 1 THEN 1 ELSE 0 END) AS sixes,
+            SUM(CASE WHEN b.is_valid_ball = 1 AND b.runs_scored = 0 THEN 1 ELSE 0 END) AS dots
+        FROM balls b
+        WHERE (b.innings_id = ? OR b.innings_local_id = ?)
+          AND b.match_id = ?
+          AND b.club_id = ?
+        GROUP BY b.striker_id
+    ) bt ON bt.striker_id = bs.player_id
     JOIN    players p ON p.id = bs.player_id
     LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
@@ -139,7 +149,17 @@ $bowl = $pdo->prepare("
         bs.balls_bowled,
         bs.overs_bowled,
         bs.maidens,
-        bs.runs_conceded,
+        COALESCE((
+          SELECT SUM(
+            COALESCE(b2.runs_scored, 0) +
+            CASE WHEN b2.extra_type IN ('bye', 'leg_bye') THEN 0 ELSE COALESCE(b2.extra_runs, 0) END
+          )
+          FROM balls b2
+          WHERE (b2.innings_id = ? OR b2.innings_local_id = ?)
+            AND b2.match_id  = ?
+            AND b2.club_id   = ?
+            AND b2.bowler_id = bs.player_id
+        ), 0) AS runs_conceded,
         bs.wickets,
         bs.economy_rate,
         bs.no_balls,
@@ -152,14 +172,18 @@ $bowl = $pdo->prepare("
             AND b2.bowler_id     = bs.player_id
             AND b2.is_valid_ball = 1
             AND b2.runs_scored   = 0
-            AND b2.extra_runs    = 0) AS dots
+            AND (b2.extra_type IS NULL OR b2.extra_type IN ('bye', 'leg_bye'))) AS dots
     FROM bowling_scorecards bs
     JOIN    players p ON p.id = bs.player_id
     LEFT JOIN users u ON u.id = p.user_id
     WHERE bs.innings_id = ?
     ORDER BY bs.wickets DESC, bs.economy_rate ASC
 ");
-$bowl->execute([$inningsId, $inningsLocalId, $scMatchId, $clubId, $inningsId]);
+$bowl->execute([
+    $inningsId, $inningsLocalId, $scMatchId, $clubId,
+    $inningsId, $inningsLocalId, $scMatchId, $clubId,
+    $inningsId,
+]);
 $bowling = $bowl->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($bowling as &$row) {
@@ -167,7 +191,9 @@ foreach ($bowling as &$row) {
         $row[$k] = isset($row[$k]) ? (int) $row[$k] : 0;
     }
     $row['overs_bowled'] = isset($row['overs_bowled']) ? (float) $row['overs_bowled'] : 0.0;
-    $row['economy_rate'] = isset($row['economy_rate']) ? (float) $row['economy_rate'] : 0.0;
+    $row['economy_rate'] = $row['balls_bowled'] > 0
+        ? round($row['runs_conceded'] / ($row['balls_bowled'] / 6.0), 2)
+        : 0.0;
 }
 unset($row);
 
@@ -182,8 +208,8 @@ if ($scSeriesId > 0) {
 }
 $extSt = $pdo->prepare("
     SELECT
-        COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN 1          ELSE 0 END), 0) AS wides,
-        COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN 1          ELSE 0 END), 0) AS no_balls,
+        COALESCE(SUM(CASE WHEN extra_type = 'wide'    THEN extra_runs ELSE 0 END), 0) AS wides,
+        COALESCE(SUM(CASE WHEN extra_type = 'no_ball' THEN extra_runs ELSE 0 END), 0) AS no_balls,
         COALESCE(SUM(CASE WHEN extra_type = 'bye'     THEN extra_runs ELSE 0 END), 0) AS byes,
         COALESCE(SUM(CASE WHEN extra_type = 'leg_bye' THEN extra_runs ELSE 0 END), 0) AS leg_byes,
         COALESCE(SUM(extra_runs), 0)                                                   AS total_extras

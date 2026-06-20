@@ -140,7 +140,7 @@ const AdminNavigator = () => {
       })}
     >
       <Tab.Screen name="Home"   component={AdminHomeStack} options={{ tabBarLabel: 'Dashboard' }} />
-      <Tab.Screen name="Users"  component={UsersStack} />
+      <Tab.Screen name="Users"  component={UsersStack} options={{ tabBarLabel: 'Players' }} />
       <Tab.Screen name="Series" component={SeriesStack} />
       <Tab.Screen name="Stats"  component={StatsStack} />
     </Tab.Navigator>

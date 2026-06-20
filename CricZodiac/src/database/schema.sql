@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS series (
   status        TEXT DEFAULT 'active',
   team_a_wins   INTEGER DEFAULT 0,
   team_b_wins   INTEGER DEFAULT 0,
+  player_of_series TEXT REFERENCES players(id),
   team_a_id     TEXT,
   team_b_id     TEXT,
   created_by    TEXT REFERENCES users(id),
