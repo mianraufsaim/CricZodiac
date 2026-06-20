@@ -101,12 +101,13 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
     $startDate = !empty($d['start_date']) ? $d['start_date'] : null;
     $endDate   = !empty($d['end_date'])   ? $d['end_date']   : null;
     $allowLastBatsman = !empty($d['allow_last_batsman']) ? 1 : 0;
+    $allowSuperOver = !empty($d['allow_super_over']) ? 1 : 0;
 
     if ($action === 'insert' || $action === 'create') {
         $pdo->prepare("
-            INSERT INTO series (local_id, club_id, name, description, format, start_date, end_date, allow_last_batsman, status, team_a_wins, team_b_wins, team_a_local, team_b_local, created_at)
-            VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?,NOW())
-            ON DUPLICATE KEY UPDATE name=VALUES(name), format=VALUES(format), description=VALUES(description), club_id=VALUES(club_id), allow_last_batsman=VALUES(allow_last_batsman)
+            INSERT INTO series (local_id, club_id, name, description, format, start_date, end_date, allow_last_batsman, allow_super_over, status, team_a_wins, team_b_wins, team_a_local, team_b_local, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,'active',?,?,?,?,NOW())
+            ON DUPLICATE KEY UPDATE name=VALUES(name), format=VALUES(format), description=VALUES(description), club_id=VALUES(club_id), allow_last_batsman=VALUES(allow_last_batsman), allow_super_over=VALUES(allow_super_over)
         ")->execute([
             $d['id'],
             $d['club_id'] ?? null,
@@ -114,6 +115,7 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
             $d['format'] ?? 'bestOf1',
             $startDate, $endDate,
             $allowLastBatsman,
+            $allowSuperOver,
             $d['team_a_wins'] ?? 0, $d['team_b_wins'] ?? 0,
             $d['team_a_id'] ?? null, $d['team_b_id'] ?? null,
         ]);
@@ -122,7 +124,7 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
     } elseif ($action === 'update') {
         $seriesId = resolveSeriesId($pdo, $d['id'] ?? null);
         if ($seriesId) {
-            $allowed = ['name', 'description', 'format', 'start_date', 'end_date', 'allow_last_batsman', 'status', 'team_a_wins', 'team_b_wins'];
+            $allowed = ['name', 'description', 'format', 'start_date', 'end_date', 'allow_last_batsman', 'allow_super_over', 'status', 'team_a_wins', 'team_b_wins'];
             $sets = []; $params = [];
             foreach ($allowed as $col) {
                 if (array_key_exists($col, $d)) {
@@ -131,7 +133,7 @@ function syncSeries(PDO $pdo, string $action, array $d): bool {
                         $params[] = $startDate;
                     } elseif ($col === 'end_date') {
                         $params[] = $endDate;
-                    } elseif ($col === 'allow_last_batsman') {
+                    } elseif ($col === 'allow_last_batsman' || $col === 'allow_super_over') {
                         $params[] = !empty($d[$col]) ? 1 : 0;
                     } else {
                         $params[] = $d[$col];
@@ -188,10 +190,13 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         $seriesLocalId = $d['series_id'] ?? null;
         $seriesId      = resolveSeriesId($pdo, $seriesLocalId);
         $seriesAllowLast = 0;
+        $seriesAllowSuper = 0;
         if ($seriesId) {
-            $st = $pdo->prepare("SELECT allow_last_batsman FROM series WHERE id = ? LIMIT 1");
+            $st = $pdo->prepare("SELECT allow_last_batsman, allow_super_over FROM series WHERE id = ? LIMIT 1");
             $st->execute([$seriesId]);
-            $seriesAllowLast = (int) ($st->fetchColumn() ?: 0);
+            $seriesRule = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+            $seriesAllowLast = (int) ($seriesRule['allow_last_batsman'] ?? 0);
+            $seriesAllowSuper = (int) ($seriesRule['allow_super_over'] ?? 0);
         }
 
         $clubId              = $d['club_id']              ?? null;
@@ -201,6 +206,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
         $overs               = $d['overs']                ?? 6;
         $playersPerTeam      = $d['players_per_team']     ?? 6;
         $allowLastBatsman    = array_key_exists('allow_last_batsman', $d) ? (!empty($d['allow_last_batsman']) ? 1 : 0) : $seriesAllowLast;
+        $allowSuperOver      = array_key_exists('allow_super_over', $d) ? (!empty($d['allow_super_over']) ? 1 : 0) : $seriesAllowSuper;
         $maxOversPerBowler   = $d['max_overs_per_bowler'] ?? 0;
         $wideValue           = $d['wide_value']           ?? 1;
         $noBallValue         = $d['no_ball_value']        ?? 1;
@@ -225,6 +231,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
                     overs                = ?,
                     players_per_team     = ?,
                     allow_last_batsman   = ?,
+                    allow_super_over     = ?,
                     max_overs_per_bowler = ?,
                     wide_value           = ?,
                     no_ball_value        = ?,
@@ -237,7 +244,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
             ")->execute([
                 $matchLocalId, $clubId,
                 $title, $venue, $matchDate,
-                $overs, $playersPerTeam, $allowLastBatsman, $maxOversPerBowler,
+                $overs, $playersPerTeam, $allowLastBatsman, $allowSuperOver, $maxOversPerBowler,
                 $wideValue, $noBallValue,
                 $teamAId, $teamALocal,
                 $teamBId, $teamBLocal,
@@ -250,14 +257,14 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
             $pdo->prepare("
                 INSERT INTO matches (
                     local_id, club_id, series_id, series_local_id, title, venue, match_date,
-                    overs, players_per_team, allow_last_batsman, max_overs_per_bowler, wide_value, no_ball_value,
+                    overs, players_per_team, allow_last_batsman, allow_super_over, max_overs_per_bowler, wide_value, no_ball_value,
                     team_a_id, team_a_local, team_b_id, team_b_local,
                     status, created_at
                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
             ")->execute([
                 $matchLocalId, $clubId, $seriesId, $seriesLocalId,
                 $title, $venue, $matchDate,
-                $overs, $playersPerTeam, $allowLastBatsman, $maxOversPerBowler,
+                $overs, $playersPerTeam, $allowLastBatsman, $allowSuperOver, $maxOversPerBowler,
                 $wideValue, $noBallValue,
                 $teamAId, $teamALocal,
                 $teamBId, $teamBLocal,
@@ -273,7 +280,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
 
         $allowed = [
             'club_id', 'title', 'venue', 'match_date', 'overs', 'players_per_team',
-            'allow_last_batsman', 'max_overs_per_bowler', 'wide_value', 'no_ball_value', 'status',
+            'allow_last_batsman', 'allow_super_over', 'max_overs_per_bowler', 'wide_value', 'no_ball_value', 'status',
             'toss_winner_id', 'batting_first', 'result_text', 'winner_team_id',
             'player_of_match',
         ];
@@ -284,7 +291,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
                 // Do not let the companion match update erase it with null.
                 if ($col === 'player_of_match' && empty($d[$col])) continue;
                 $sets[] = "$col = ?";
-                $params[] = $col === 'allow_last_batsman' ? (!empty($d[$col]) ? 1 : 0) : $d[$col];
+                $params[] = in_array($col, ['allow_last_batsman', 'allow_super_over'], true) ? (!empty($d[$col]) ? 1 : 0) : $d[$col];
             }
         }
         if (array_key_exists('series_id', $d)) {
@@ -1076,6 +1083,10 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
     $bowlingTeamId  = resolveTeamId($pdo, $d['bowling_team_id']  ?? null);
 
     $inningsNumber = (int) ($d['innings_number'] ?? 1);
+    $isSuperOver = !empty($d['is_super_over']) ? 1 : 0;
+    $superOverNumber = isset($d['super_over_number']) && $d['super_over_number'] !== ''
+        ? (int) $d['super_over_number']
+        : null;
     $isCompleted = !empty($d['is_completed']) ? 1 : 0;
 
     if ($action === 'insert' || $action === 'create') {
@@ -1104,6 +1115,8 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
                     match_id           = COALESCE(?, match_id),
                     match_local_id     = COALESCE(?, match_local_id),
                     innings_number     = ?,
+                    is_super_over      = ?,
+                    super_over_number  = ?,
                     batting_team_id    = ?,
                     batting_team_local = ?,
                     bowling_team_id    = ?,
@@ -1120,6 +1133,7 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
                 $matchId,
                 $d['match_id'] ?? null,
                 $inningsNumber,
+                $isSuperOver, $superOverNumber,
                 $battingTeamId,  $d['batting_team_id']  ?? null,
                 $bowlingTeamId,  $d['bowling_team_id']  ?? null,
                 $d['total_runs'] ?? 0, $d['total_wickets'] ?? 0,
@@ -1131,14 +1145,15 @@ function syncInnings(PDO $pdo, string $action, array $d): bool {
             $pdo->prepare("
                 INSERT INTO innings (
                     local_id, club_id, series_id, match_id, match_local_id,
-                    innings_number,
+                    innings_number, is_super_over, super_over_number,
                     batting_team_id, batting_team_local,
                     bowling_team_id, bowling_team_local,
                     total_runs, total_wickets, is_completed, created_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
             ")->execute([
                 $inningsLocalId, $clubId, $seriesId, $matchId, $d['match_id'] ?? null,
                 $inningsNumber,
+                $isSuperOver, $superOverNumber,
                 $battingTeamId,  $d['batting_team_id']  ?? null,
                 $bowlingTeamId,  $d['bowling_team_id']  ?? null,
                 $d['total_runs'] ?? 0, $d['total_wickets'] ?? 0, $isCompleted,

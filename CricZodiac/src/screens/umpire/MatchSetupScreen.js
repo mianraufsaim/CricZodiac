@@ -13,6 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { createMatch, getMatchTeams, updateMatch } from '../../database/queries/matchQueries';
 import { useAuth } from '../../context/AuthContext';
 import { showAlert } from '../../utils/toast';
+import { getSeriesById } from '../../database/queries/seriesQueries';
 
 // ── Stepper Component ─────────────────────────────────────
 const Stepper = ({ label, value, min, max, onChange, unit = '', COLORS, styles }) => (
@@ -144,6 +145,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
       wide_value:         toNumber(existingMatch?.wide_value, 1),
       no_ball_value:      toNumber(existingMatch?.no_ball_value, 1),
       allow_last_batsman: toBool(existingMatch?.allow_last_batsman),
+      allow_super_over: toBool(existingMatch?.allow_super_over),
       team_a_name:        firstText(lockedTeamNames?.teamAName, teamNameFromMatch(existingMatch, 'A')),
       team_b_name:        firstText(lockedTeamNames?.teamBName, teamNameFromMatch(existingMatch, 'B')),
     };
@@ -215,11 +217,16 @@ const MatchSetupScreen = ({ navigation, route }) => {
     }
     setLoading(true);
     try {
+      const seriesRule = seriesId ? await getSeriesById(seriesId) : null;
+      const allowSuperOver = isEditingSetup
+        ? toBool(existingMatch?.allow_super_over)
+        : toBool(seriesRule?.allow_super_over);
       const matchData = {
         ...form,
         overs:            form.overs,
         players_per_team: form.players_per_team,
         allow_last_batsman: form.allow_last_batsman ? 1 : 0,
+        allow_super_over: allowSuperOver ? 1 : 0,
         series_id:        seriesId,
         club_id:          existingMatch?.club_id || activeClub?.server_id || user?.club_id || null,
       };
@@ -236,6 +243,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
           overs:                matchData.overs,
           players_per_team:     matchData.players_per_team,
           allow_last_batsman:   matchData.allow_last_batsman,
+          allow_super_over:     matchData.allow_super_over,
           series_id:            matchData.series_id,
           wide_value:           matchData.wide_value,
           no_ball_value:        matchData.no_ball_value,

@@ -74,6 +74,7 @@ const CreateSeriesScreen = ({ navigation }) => {
     start_date:  toStr(new Date()),
     end_date:    '',
     format:      'bestOf1',
+    allow_super_over: false,
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -202,6 +203,24 @@ const CreateSeriesScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
+            style={[styles.ruleRow, form.allow_super_over && styles.ruleRowActive]}
+            onPress={() => set('allow_super_over', !form.allow_super_over)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.ruleIcon, form.allow_super_over && { backgroundColor: COLORS.gold + '24' }]}>
+              <Icon
+                name={form.allow_super_over ? 'toggle-switch' : 'toggle-switch-off-outline'}
+                size={26}
+                color={form.allow_super_over ? COLORS.gold : COLORS.gray}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ruleTitle, form.allow_super_over && { color: COLORS.gold }]}>Super over for tied matches</Text>
+              <Text style={styles.ruleDesc}>Play a one-over eliminator. A tied super over automatically starts another.</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.btn, saving && { opacity: 0.6 }]}
             onPress={handleCreate}
             disabled={saving}
@@ -242,6 +261,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   formatOptionActive:{ borderColor: COLORS.gold, backgroundColor: 'rgba(212,175,55,0.08)' },
   formatLabel:       { color: COLORS.white, fontWeight: '700', fontSize: 14 },
   formatDesc:        { color: COLORS.gray, fontSize: 11, marginTop: 2 },
+  ruleRow:            { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.darkGray, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: COLORS.cardBorder, marginBottom: 16 },
+  ruleRowActive:      { borderColor: COLORS.gold, backgroundColor: COLORS.gold + '10' },
+  ruleIcon:           { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  ruleTitle:          { color: COLORS.white, fontSize: 14, fontWeight: '700' },
+  ruleDesc:           { color: COLORS.gray, fontSize: 11, marginTop: 3, lineHeight: 16 },
   radio:             { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: COLORS.gray, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   radioActive:       { borderColor: COLORS.gold },
   radioDot:          { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.gold },

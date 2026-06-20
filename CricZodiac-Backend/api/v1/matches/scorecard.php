@@ -85,7 +85,7 @@ $inningsId      = (int)    $inningsRow['id'];
 $inningsLocalId = (string) ($inningsRow['local_id'] ?? '');
 
 // Cast innings fields
-foreach (['id', 'match_id', 'batting_team_id', 'bowling_team_id', 'total_runs', 'total_wickets', 'innings_number'] as $k) {
+foreach (['id', 'match_id', 'batting_team_id', 'bowling_team_id', 'total_runs', 'total_wickets', 'innings_number', 'is_super_over', 'super_over_number'] as $k) {
     $inningsRow[$k] = isset($inningsRow[$k]) ? (int) $inningsRow[$k] : null;
 }
 $inningsRow['total_overs']  = isset($inningsRow['total_overs'])  ? (float) $inningsRow['total_overs']  : 0.0;

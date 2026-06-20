@@ -82,6 +82,11 @@ const isBowlerCreditWicket = (ball) => {
   return ball.wicket_type ? BOWLER_CREDIT_WICKET_TYPES.has(ball.wicket_type) : true;
 };
 const toBool = (value) => value === true || value === 1 || value === '1';
+const superOverFirstInningsNumber = (superOverNumber) => 3 + ((Math.max(1, Number(superOverNumber) || 1) - 1) * 2);
+const isSecondSuperOverInnings = (inningsNumber, superOverNumber) =>
+  Number(inningsNumber) === superOverFirstInningsNumber(superOverNumber) + 1;
+const superOverLabel = (superOverNumber, isChase = false) =>
+  `Super Over ${Math.max(1, Number(superOverNumber) || 1)}${isChase ? ' Chase' : ''}`;
 const maxWicketsForMatch = (match) =>
   Math.max(1, Number(match?.players_per_team || 6) - (toBool(match?.allow_last_batsman) ? 0 : 1));
 const isLastBatterMode = (match, wickets) =>
@@ -381,7 +386,8 @@ const WicketDismissalModal = ({ visible, striker, nonStriker, bowlingPlayers, is
 // ── Innings Complete Modal ────────────────────────────────
 const InningsCompleteModal = ({
   visible, battingTeam, bowlingTeam, score, wickets,
-  onStartNext, onEndMatch, isLastInnings, resultText, COLORS, ic,
+  onStartNext, onEndMatch, isLastInnings, resultText, nextActionLabel,
+  isSuperOver, superOverNumber, showTarget, isTieBreaker, COLORS, ic,
 }) => (
   <Modal visible={visible} transparent animationType="fade">
     <View style={ic.overlay}>
@@ -393,14 +399,20 @@ const InningsCompleteModal = ({
           style={{ marginBottom: 12 }}
         />
         <Text style={ic.title}>
-          {isLastInnings ? 'Match Over!' : '1st Innings Complete'}
+          {isLastInnings
+            ? 'Match Over!'
+            : isTieBreaker
+              ? 'Match Tied'
+              : isSuperOver
+                ? superOverLabel(superOverNumber)
+                : '1st Innings Complete'}
         </Text>
 
-        {!isLastInnings ? (
+        {showTarget ? (
           <>
             <Text style={ic.team}>{battingTeam?.team_name}</Text>
             <Text style={ic.score}>{score}/{wickets}</Text>
-            <Text style={[ic.sub, { color: COLORS.gray }]}>Target for 2nd innings: {score + 1}</Text>
+            <Text style={[ic.sub, { color: COLORS.gray }]}>Target: {score + 1}</Text>
           </>
         ) : (
           <>
@@ -412,7 +424,7 @@ const InningsCompleteModal = ({
         {!isLastInnings
           ? <TouchableOpacity style={ic.nextBtn} onPress={onStartNext}>
               <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={ic.nextGrad}>
-                <Text style={ic.nextTxt}>Start 2nd Innings →</Text>
+                <Text style={ic.nextTxt}>{nextActionLabel || 'Continue →'}</Text>
               </LinearGradient>
             </TouchableOpacity>
           : <TouchableOpacity style={ic.nextBtn} onPress={onEndMatch}>
@@ -714,6 +726,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const {
     match: matchParam, battingTeam: battingTeamParam, bowlingTeam: bowlingTeamParam,
     inningsNumber: inningsNumberParam, target,
+    isSuperOver: isSuperOverParam = false,
+    superOverNumber: superOverNumberParam = null,
     matchId: routeMatchId,   // passed from SeriesDetailScreen for resume
   } = route.params || {};
 
@@ -724,12 +738,26 @@ const LiveScoringScreen = ({ navigation, route }) => {
     bowlingTeam:   bowlingTeamParam  || null,
     inningsNumber: inningsNumberParam || 1,
     target:        target             || null,
+    isSuperOver:   toBool(isSuperOverParam),
+    superOverNumber: superOverNumberParam,
   });
   const match         = resolvedParams.match;
   const battingTeam   = resolvedParams.battingTeam;
   const bowlingTeam   = resolvedParams.bowlingTeam;
   const inningsNumber = resolvedParams.inningsNumber;
   const resolvedTarget = resolvedParams.target;
+  const isSuperOver = toBool(resolvedParams.isSuperOver || innings?.is_super_over);
+  const superOverNumber = Number(
+    resolvedParams.superOverNumber || innings?.super_over_number || (isSuperOver ? Math.max(1, Math.ceil((Number(inningsNumber) - 2) / 2)) : 0)
+  ) || 0;
+  const isSuperOverChase = isSuperOver && isSecondSuperOverInnings(inningsNumber, superOverNumber);
+  const inningsOversLimit = isSuperOver ? 1 : Math.max(1, Number(match?.overs || 1));
+  const inningsWicketLimit = isSuperOver
+    ? Math.min(2, maxWicketsForMatch(match))
+    : maxWicketsForMatch(match);
+  const inningsDisplayLabel = isSuperOver
+    ? superOverLabel(superOverNumber, isSuperOverChase)
+    : `${inningsNumber === 1 ? '1st' : '2nd'} Innings`;
 
   // Core state
   const [innings, setInnings]           = useState(null);
@@ -1015,6 +1043,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
     let rBattingTeam   = battingTeamParam || null;
     let rBowlingTeam   = bowlingTeamParam || null;
     let rInningsNumber = inningsNumberParam || 1;
+    let rIsSuperOver   = toBool(isSuperOverParam);
+    let rSuperOverNumber = Number(superOverNumberParam) || null;
+    let rTarget = target || null;
 
     // If any key param is missing, recover everything from SQLite (+ server fallback)
     if (!rMatch || !rBattingTeam || !rBowlingTeam) {
@@ -1095,18 +1126,79 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
         if (activeInnings) {
           rInningsNumber = activeInnings.innings_number;
+          rIsSuperOver = toBool(activeInnings.is_super_over);
+          rSuperOverNumber = activeInnings.super_over_number || (rIsSuperOver ? Math.max(1, Math.ceil((rInningsNumber - 2) / 2)) : null);
           rBattingTeam   = teams.find(t => t.id === activeInnings.batting_team_id) || teams[0];
           rBowlingTeam   = teams.find(t => t.id === activeInnings.bowling_team_id) || teams[1];
         } else {
-          // No innings started yet — fresh match, default to innings 1
-          rInningsNumber = 1;
-          rBattingTeam   = teams[0];
-          rBowlingTeam   = teams[1];
+          // Recover the exact continuation after an app restart while the
+          // innings-complete modal was open. This is especially important for
+          // repeatable super overs because every pair has its own target.
+          const lastCompleted = [...allInnings]
+            .filter(i => i.is_completed)
+            .sort((a, b) => b.innings_number - a.innings_number)[0];
+          const teamForId = (teamId, fallbackIndex) =>
+            teams.find(t => t.id === teamId || String(t.server_id) === String(teamId)) || teams[fallbackIndex];
+
+          if (!lastCompleted) {
+            rInningsNumber = 1;
+            rBattingTeam   = teams[0];
+            rBowlingTeam   = teams[1];
+          } else if (toBool(lastCompleted.is_super_over)) {
+            const finishedSuperOver = Number(lastCompleted.super_over_number) || Math.max(1, Math.ceil((lastCompleted.innings_number - 2) / 2));
+            const firstLegNumber = superOverFirstInningsNumber(finishedSuperOver);
+            const firstLeg = allInnings.find(i => i.innings_number === firstLegNumber);
+            const wasChase = isSecondSuperOverInnings(lastCompleted.innings_number, finishedSuperOver);
+
+            if (!wasChase) {
+              rInningsNumber = firstLegNumber + 1;
+              rIsSuperOver = true;
+              rSuperOverNumber = finishedSuperOver;
+              rBattingTeam = teamForId(lastCompleted.bowling_team_id, 1);
+              rBowlingTeam = teamForId(lastCompleted.batting_team_id, 0);
+              rTarget = (lastCompleted.total_runs || 0) + 1;
+            } else if (firstLeg && Number(firstLeg.total_runs) === Number(lastCompleted.total_runs)) {
+              const nextSuperOver = finishedSuperOver + 1;
+              rInningsNumber = superOverFirstInningsNumber(nextSuperOver);
+              rIsSuperOver = true;
+              rSuperOverNumber = nextSuperOver;
+              rBattingTeam = teamForId(lastCompleted.bowling_team_id, 1);
+              rBowlingTeam = teamForId(lastCompleted.batting_team_id, 0);
+              rTarget = null;
+            } else {
+              setLoading(false);
+              navigation.replace('MatchSummary', { match: rMatch, inningsId: lastCompleted.id });
+              return;
+            }
+          } else if (Number(lastCompleted.innings_number) === 1) {
+            rInningsNumber = 2;
+            rBattingTeam = teamForId(lastCompleted.bowling_team_id, 1);
+            rBowlingTeam = teamForId(lastCompleted.batting_team_id, 0);
+            rTarget = (lastCompleted.total_runs || 0) + 1;
+          } else {
+            const regulationFirst = allInnings.find(i => i.innings_number === 1);
+            const regulationTied = regulationFirst && Number(regulationFirst.total_runs) === Number(lastCompleted.total_runs);
+            if (regulationTied && toBool(rMatch.allow_super_over)) {
+              rInningsNumber = superOverFirstInningsNumber(1);
+              rIsSuperOver = true;
+              rSuperOverNumber = 1;
+              rBattingTeam = teamForId(lastCompleted.batting_team_id, 0);
+              rBowlingTeam = teamForId(lastCompleted.bowling_team_id, 1);
+              rTarget = null;
+            } else {
+              setLoading(false);
+              navigation.replace('MatchSummary', { match: rMatch, inningsId: lastCompleted.id });
+              return;
+            }
+          }
         }
 
         // ── Step 4: Recover target for 2nd innings ─────────────────────────
-        let rTarget = target || null;
-        if (rInningsNumber === 2 && !rTarget) {
+        if (rIsSuperOver && !rTarget) {
+          const firstLegNumber = superOverFirstInningsNumber(rSuperOverNumber);
+          const firstLeg = allInnings.find(i => i.innings_number === firstLegNumber && i.is_completed);
+          if (firstLeg) rTarget = (firstLeg.total_runs || 0) + 1;
+        } else if (rInningsNumber === 2 && !rTarget) {
           const inn1 = allInnings.find(i => i.innings_number === 1 && i.is_completed);
           if (inn1) rTarget = (inn1.total_runs || 0) + 1;
         }
@@ -1118,6 +1210,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
           bowlingTeam:   rBowlingTeam,
           inningsNumber: rInningsNumber,
           target:        rTarget,
+          isSuperOver:   rIsSuperOver,
+          superOverNumber: rSuperOverNumber,
         });
       } catch (err) {
         showAlert('Error', 'Could not resume match: ' + err.message);
@@ -1137,12 +1231,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
           club_id:         rMatch.club_id   || null,
           series_id:       rMatch.series_id || null,
           innings_number:  rInningsNumber,
+          is_super_over:  rIsSuperOver ? 1 : 0,
+          super_over_number: rSuperOverNumber,
           batting_team_id: rBattingTeam.id,
           bowling_team_id: rBowlingTeam.id,
         });
         active = {
           id:              inningsId,
           innings_number:  rInningsNumber,
+          is_super_over:  rIsSuperOver ? 1 : 0,
+          super_over_number: rSuperOverNumber,
           batting_team_id: rBattingTeam.id,
           bowling_team_id: rBowlingTeam.id,
           total_runs: 0, total_wickets: 0, extras: 0,
@@ -1564,7 +1662,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
         lastOverBowlerIdRef.current = bwl.id; // track for consecutive-over restriction
 
-        if (ovNum >= match.overs) {
+        if (ovNum >= inningsOversLimit) {
           _endInnings(newTotal, totWkts, inn.id);
           return;
         }
@@ -1690,7 +1788,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const isFour = runsCredit === 4;
     const isSix = runsCredit === 6;
     const creditsBowler = BOWLER_CREDIT_WICKET_TYPES.has(dismissalType);
-    const maxWktsAllowed = maxWicketsForMatch(match);
+    const maxWktsAllowed = inningsWicketLimit;
     const noReplacementNeeded = toBool(match?.allow_last_batsman) && newWkts === Math.max(1, Number(match?.players_per_team || 6) - 1);
     const strikerStatsAfterWicket = {
       ...strikerStatsRef.current,
@@ -1815,13 +1913,20 @@ const LiveScoringScreen = ({ navigation, route }) => {
       setAllBalls(prev => [...prev, ballDisplay]);
       setOverBalls(prev => [...prev, ballDisplay]);
 
-      // 4. All out → end innings
+      // 4. A run-out can complete a chase with completed runs. End immediately
+      // before asking for another batter, in a normal innings or super over.
+      if (resolvedTarget && newTotal >= resolvedTarget) {
+        _endInnings(newTotal, newWkts, inn.id);
+        return;
+      }
+
+      // 5. All out → end innings
       if (newWkts >= maxWktsAllowed) {
         _endInnings(newTotal, newWkts, inn.id);
         return;
       }
 
-      // 5. Over complete on this wicket ball
+      // 6. Over complete on this wicket ball
       if (newLegal >= 6) {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         setCurrentOver(null);
@@ -1831,14 +1936,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
         overCompletedOnWicket = true;
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
         lastOverBowlerIdRef.current = bwl.id;
-        if (ovNum >= match.overs) {
+        if (ovNum >= inningsOversLimit) {
           _endInnings(newTotal, newWkts, inn.id);
           return;
         }
         pendingSelectBowlerRef.current = true;
       }
 
-      // 6. Navigate to replace the dismissed batsman
+      // 7. Navigate to replace the dismissed batsman
       const strikerWasAtStrikerEndAfterRuns = runOutRuns % 2 === 0;
       let strikerEndPlayer = strikerWasAtStrikerEndAfterRuns ? str : ns;
       let strikerEndStats = strikerWasAtStrikerEndAfterRuns
@@ -2022,24 +2127,39 @@ const LiveScoringScreen = ({ navigation, route }) => {
     try {
       await updateInnings(inningsId || innings?.id, { is_completed: 1 });
 
-      // Compute result text for 2nd innings
-      if (inningsNumber === 2 && resolvedTarget) {
+      // A normal second innings or a super-over chase decides its pair.
+      const decidingInnings = (!isSuperOver && inningsNumber === 2) || (isSuperOver && isSuperOverChase);
+      if (decidingInnings && resolvedTarget) {
         const finalRuns = runs  ?? totalRuns;
         const finalWkts = wkts ?? totalWickets;
-        const maxWkts   = maxWicketsForMatch(match);
+        const maxWkts   = inningsWicketLimit;
+        const phaseName = isSuperOver ? `Super Over ${superOverNumber}` : 'Match';
         let result;
         if (finalRuns >= resolvedTarget) {
           // Batting team chased down — win by remaining wickets
           const wicketsLeft = maxWkts - finalWkts;
-          result = `${battingTeam.team_name} wins by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
+          result = isSuperOver
+            ? `${battingTeam.team_name} wins ${phaseName} by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`
+            : `${battingTeam.team_name} wins by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
         } else if (finalRuns === resolvedTarget - 1) {
-          result = 'Match Tied!';
+          if (isSuperOver) {
+            result = `${phaseName} tied! Super Over ${superOverNumber + 1} required.`;
+          } else {
+            result = toBool(match?.allow_super_over)
+              ? 'Match tied! Super Over 1 required.'
+              : 'Match Tied!';
+          }
         } else {
           // Bowling team defended — win by run difference
           const runDiff = (resolvedTarget - 1) - finalRuns;
-          result = `${bowlingTeam.team_name} wins by ${runDiff} run${runDiff !== 1 ? 's' : ''}!`;
+          result = isSuperOver
+            ? `${bowlingTeam.team_name} wins ${phaseName} by ${runDiff} run${runDiff !== 1 ? 's' : ''}!`
+            : `${bowlingTeam.team_name} wins by ${runDiff} run${runDiff !== 1 ? 's' : ''}!`;
         }
         setInningsResultText(result);
+      } else if (isSuperOver) {
+        const finalRuns = runs ?? totalRuns;
+        setInningsResultText(`${battingTeam.team_name} set a target of ${finalRuns + 1}.`);
       }
 
       setShowInningsComplete(true);
@@ -2054,8 +2174,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
     const snapMatch   = match;
     const snapInnings = inningsRef.current;
 
-    // Belt-and-suspenders: ensure innings 1 is marked complete regardless
-    // of whether _endInnings ran cleanly before navigation.
+    // Belt-and-suspenders: ensure the completed innings is saved before the
+    // next regular or super-over innings is created.
     try {
       if (snapInnings?.id) {
         await updateInnings(snapInnings.id, { is_completed: 1 });
@@ -2064,15 +2184,66 @@ const LiveScoringScreen = ({ navigation, route }) => {
       console.warn('[handleStartNextInnings] is_completed update failed:', e.message);
     }
 
-    setTimeout(() => {
-      navigation.replace('LiveScoring', {
-        match:         snapMatch,
-        battingTeam:   bowlingTeam,
-        bowlingTeam:   battingTeam,
+    const goToInnings = (params) => {
+      setTimeout(() => navigation.replace('LiveScoring', { match: snapMatch, ...params }), 400);
+    };
+
+    if (isSuperOver) {
+      if (!isSuperOverChase) {
+        goToInnings({
+          battingTeam: bowlingTeam,
+          bowlingTeam: battingTeam,
+          inningsNumber: superOverFirstInningsNumber(superOverNumber) + 1,
+          target: snapRuns + 1,
+          isSuperOver: true,
+          superOverNumber,
+        });
+        return;
+      }
+
+      const tied = Number(snapRuns) === Number(resolvedTarget) - 1;
+      if (tied) {
+        const nextSuperOver = superOverNumber + 1;
+        goToInnings({
+          battingTeam: bowlingTeam,
+          bowlingTeam: battingTeam,
+          inningsNumber: superOverFirstInningsNumber(nextSuperOver),
+          target: null,
+          isSuperOver: true,
+          superOverNumber: nextSuperOver,
+        });
+      } else {
+        handleEndMatch();
+      }
+      return;
+    }
+
+    if (inningsNumber === 1) {
+      goToInnings({
+        battingTeam: bowlingTeam,
+        bowlingTeam: battingTeam,
         inningsNumber: 2,
-        target:        snapRuns + 1,
+        target: snapRuns + 1,
       });
-    }, 400);
+      return;
+    }
+
+    const tied = Number(snapRuns) === Number(resolvedTarget) - 1;
+    if (inningsNumber === 2 && tied && toBool(snapMatch?.allow_super_over)) {
+      goToInnings({
+        // The side that completed the regulation chase bats first in each
+        // super over. The next pair repeats that same order.
+        battingTeam,
+        bowlingTeam,
+        inningsNumber: superOverFirstInningsNumber(1),
+        target: null,
+        isSuperOver: true,
+        superOverNumber: 1,
+      });
+      return;
+    }
+
+    handleEndMatch();
   };
 
   const handleEndMatch = () => {
@@ -2163,6 +2334,21 @@ const LiveScoringScreen = ({ navigation, route }) => {
     );
   }
 
+  const completedScoreTied = Boolean(resolvedTarget) && Number(totalRuns) === Number(resolvedTarget) - 1;
+  const needsFirstSuperOver = !isSuperOver && inningsNumber === 2 && completedScoreTied && toBool(match.allow_super_over);
+  const needsAnotherSuperOver = isSuperOver && isSuperOverChase && completedScoreTied;
+  const isLastInnings = isSuperOver
+    ? isSuperOverChase && !completedScoreTied
+    : inningsNumber === 2 && !needsFirstSuperOver;
+  const modalShowsTarget = (!isSuperOver && inningsNumber === 1) || (isSuperOver && !isSuperOverChase);
+  const nextInningsActionLabel = isSuperOver
+    ? (isSuperOverChase
+      ? `Start Super Over ${superOverNumber + 1}`
+      : `Start ${superOverLabel(superOverNumber, true)} →`)
+    : inningsNumber === 1
+      ? 'Start 2nd Innings →'
+      : 'Start Super Over 1 →';
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -2182,7 +2368,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         {/* Centre — score + overs on one row */}
         <View style={styles.headerCenter}>
           <Text style={styles.headerScore}>{totalRuns}/{totalWickets}</Text>
-          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{match?.overs ?? '—'}</Text>
+          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{inningsOversLimit}</Text>
         </View>
 
         {/* Right — scorecard icon */}
@@ -2210,7 +2396,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
       {/* Tabs */}
       <View style={styles.tabRow}>
         {[
-          { id: 'scorecard',  label: `${inningsNumber === 1 ? '1st' : '2nd'} Innings` },
+          { id: 'scorecard',  label: inningsDisplayLabel },
           { id: 'ballByBall', label: 'Ball-by-Ball' },
         ].map(t => (
           <TouchableOpacity
@@ -2229,7 +2415,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         <View style={sc.scoreBandRow}>
           <Text style={sc.scoreBandMain}>{totalRuns}/{totalWickets}</Text>
           <Text style={sc.scoreBandSep}>  ·  </Text>
-          <Text style={sc.scoreBandMeta}>Ov {formatOvers()}/{match?.overs ?? '—'}</Text>
+          <Text style={sc.scoreBandMeta}>Ov {formatOvers()}/{inningsOversLimit}</Text>
           <Text style={sc.scoreBandSep}>  ·  </Text>
           <Text style={sc.scoreBandMeta}>RR {runRate()}</Text>
         </View>
@@ -2237,7 +2423,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         {resolvedTarget ? (() => {
           const runsNeeded  = Math.max(0, resolvedTarget - totalRuns);
           const ballsBowled = (overNumber - 1) * 6 + legalBalls;
-          const ballsLeft   = Math.max(0, (match?.overs || 0) * 6 - ballsBowled);
+          const ballsLeft   = Math.max(0, inningsOversLimit * 6 - ballsBowled);
           const reqRate     = ballsLeft > 0 ? ((runsNeeded / ballsLeft) * 6).toFixed(2) : '—';
           const won         = totalRuns >= resolvedTarget;
           const tied        = !won && runsNeeded === 0;
@@ -2413,7 +2599,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
               { text: 'Close Innings', onPress: () => _endInnings() },
             ])}
           >
-            <Text style={sc.endBtnTxt}>CLOSE INNINGS</Text>
+            <Text style={sc.endBtnTxt}>{isSuperOver ? 'CLOSE SUPER OVER' : 'CLOSE INNINGS'}</Text>
           </TouchableOpacity>
           <View style={{ height: 30 }} />
         </ScrollView>
@@ -2447,8 +2633,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
         bowlingTeam={bowlingTeam}
         score={totalRuns}
         wickets={totalWickets}
-        isLastInnings={inningsNumber === 2}
+        isLastInnings={isLastInnings}
         resultText={inningsResultText}
+        nextActionLabel={nextInningsActionLabel}
+        isSuperOver={isSuperOver}
+        superOverNumber={superOverNumber}
+        showTarget={modalShowsTarget}
+        isTieBreaker={needsFirstSuperOver || needsAnotherSuperOver}
         onStartNext={handleStartNextInnings}
         onEndMatch={handleEndMatch}
         COLORS={COLORS}

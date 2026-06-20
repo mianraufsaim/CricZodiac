@@ -171,6 +171,7 @@ const initializeTables = async (database) => {
         overs           INTEGER DEFAULT 6,
         players_per_team INTEGER DEFAULT 6,
         allow_last_batsman INTEGER DEFAULT 0,
+        allow_super_over INTEGER DEFAULT 0,
         team_a_id       TEXT,
         team_b_id       TEXT,
         umpire_id       TEXT,
@@ -216,6 +217,8 @@ const initializeTables = async (database) => {
         server_id       INTEGER,
         match_id        TEXT NOT NULL,
         innings_number  INTEGER NOT NULL,
+        is_super_over   INTEGER DEFAULT 0,
+        super_over_number INTEGER,
         batting_team_id TEXT NOT NULL,
         bowling_team_id TEXT NOT NULL,
         total_runs      INTEGER DEFAULT 0,
@@ -378,6 +381,7 @@ const initializeTables = async (database) => {
         start_date    TEXT,
         end_date      TEXT,
         allow_last_batsman INTEGER DEFAULT 0,
+        allow_super_over INTEGER DEFAULT 0,
         status        TEXT DEFAULT 'active',
         player_of_series TEXT,
         created_by    TEXT,
@@ -430,8 +434,12 @@ const initializeTables = async (database) => {
     `ALTER TABLE series ADD COLUMN team_a_id TEXT;`,
     `ALTER TABLE series ADD COLUMN team_b_id TEXT;`,
     `ALTER TABLE series ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
+    `ALTER TABLE series ADD COLUMN allow_super_over INTEGER DEFAULT 0;`,
     `ALTER TABLE series ADD COLUMN player_of_series TEXT;`,
     `ALTER TABLE matches ADD COLUMN allow_last_batsman INTEGER DEFAULT 0;`,
+    `ALTER TABLE matches ADD COLUMN allow_super_over INTEGER DEFAULT 0;`,
+    `ALTER TABLE innings ADD COLUMN is_super_over INTEGER DEFAULT 0;`,
+    `ALTER TABLE innings ADD COLUMN super_over_number INTEGER;`,
   ]) {
     try { await database.transaction(tx => { tx.executeSql(colSql); }); } catch (_) { /* exists */ }
   }

@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS series (
   start_date    TEXT,
   end_date      TEXT,
   allow_last_batsman INTEGER DEFAULT 0,
+  allow_super_over INTEGER DEFAULT 0,
   status        TEXT DEFAULT 'active',
   team_a_wins   INTEGER DEFAULT 0,
   team_b_wins   INTEGER DEFAULT 0,
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS matches (
   overs            INTEGER DEFAULT 6,
   players_per_team INTEGER DEFAULT 6,
   allow_last_batsman INTEGER DEFAULT 0,
+  allow_super_over INTEGER DEFAULT 0,
   max_overs_per_bowler INTEGER DEFAULT 0,   -- 0 = no limit
   wide_value       INTEGER DEFAULT 1,
   no_ball_value    INTEGER DEFAULT 1,
@@ -160,6 +162,8 @@ CREATE TABLE IF NOT EXISTS innings (
   server_id       INTEGER,
   match_id        TEXT NOT NULL REFERENCES matches(id),
   innings_number  INTEGER NOT NULL,         -- 1 | 2
+  is_super_over   INTEGER DEFAULT 0,
+  super_over_number INTEGER,
   batting_team_id TEXT NOT NULL REFERENCES teams(id),
   bowling_team_id TEXT NOT NULL REFERENCES teams(id),
   total_runs      INTEGER DEFAULT 0,

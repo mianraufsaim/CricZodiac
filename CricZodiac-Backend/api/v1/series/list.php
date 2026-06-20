@@ -33,6 +33,7 @@ $stmt = $pdo->prepare("
         s.start_date,
         s.end_date,
         s.allow_last_batsman,
+        s.allow_super_over,
         s.status,
         s.team_a_id,
         s.team_a_local,
@@ -88,6 +89,7 @@ foreach ($series as &$s) {
     $s['team_b_wins']     = (int) ($s['team_b_wins'] ?? 0);
     $s['player_of_series'] = isset($s['player_of_series']) ? (int) $s['player_of_series'] : null;
     $s['allow_last_batsman'] = (int) ($s['allow_last_batsman'] ?? 0);
+    $s['allow_super_over'] = (int) ($s['allow_super_over'] ?? 0);
     $s['created_by']      = isset($s['created_by']) ? (int) $s['created_by'] : null;
     $s['match_count']     = (int) ($s['match_count'] ?? 0);
     $s['live_count']      = (int) ($s['live_count'] ?? 0);

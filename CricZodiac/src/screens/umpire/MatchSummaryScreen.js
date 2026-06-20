@@ -30,6 +30,8 @@ const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
 
 const totalMatchesForSeries = (format) => SERIES_TOTAL_MATCHES[format] || 1;
 const toBool = (value) => value === true || value === 1 || value === '1';
+const superOverLabel = (superOverNumber, isChase = false) =>
+  `Super Over ${Math.max(1, Number(superOverNumber) || 1)}${isChase ? ' Chase' : ''}`;
 const maxWicketsForMatch = (ppt = 6, allowLastBatsman = false) =>
   Math.max(1, Number(ppt || 6) - (toBool(allowLastBatsman) ? 0 : 1));
 
@@ -59,17 +61,16 @@ const normalizeSeriesMatch = (row) => ({
   no_ball_value: Number(row.no_ball_value || 1),
 });
 
-// ── Pure winner helper ────────────────────────────────────
-const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = false) => {
-  if (!sortedInnings || sortedInnings.length < 2) return null;
-  const [inn1, inn2] = sortedInnings;
+const teamForInnings = (innings, teamsArr, fallbackName) =>
+  teamsArr.find(t => t.id === innings.batting_team_id) ||
+  teamsArr.find(t => t.local_id === innings.batting_team_local) ||
+  teamsArr.find(t => String(t.server_id) === String(innings.batting_team_id)) ||
+  { team_name: fallbackName, id: innings.batting_team_id };
+
+const computeInningsPairWinner = (inn1, inn2, teamsArr, ppt, allowLastBatsman) => {
   if (!inn1 || !inn2) return null;
-  const team1 = teamsArr.find(t => t.id === inn1.batting_team_id) ||
-                teamsArr.find(t => t.local_id === inn1.batting_team_local) ||
-                { team_name: 'Team A', id: inn1.batting_team_id };
-  const team2 = teamsArr.find(t => t.id === inn2.batting_team_id) ||
-                teamsArr.find(t => t.local_id === inn2.batting_team_local) ||
-                { team_name: 'Team B', id: inn2.batting_team_id };
+  const team1 = teamForInnings(inn1, teamsArr, 'Team A');
+  const team2 = teamForInnings(inn2, teamsArr, 'Team B');
   const r1 = inn1.total_runs || 0;
   const r2 = inn2.total_runs || 0;
   if (r1 > r2) {
@@ -80,6 +81,48 @@ const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = fals
     return { winner: team2, loser: team1, margin: `${w} wicket${w !== 1 ? 's' : ''}`, margin_value: w, type: 'wickets' };
   }
   return { winner: null, loser: null, margin: 'Tied', margin_value: 0, type: 'tie' };
+};
+
+// ── Pure winner helper ────────────────────────────────────
+const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = false) => {
+  if (!sortedInnings || sortedInnings.length < 2) return null;
+  const regularInnings = sortedInnings
+    .filter(inn => !toBool(inn.is_super_over))
+    .sort((a, b) => a.innings_number - b.innings_number);
+  const regulation = computeInningsPairWinner(regularInnings[0], regularInnings[1], teamsArr, ppt, allowLastBatsman);
+  if (!regulation || regulation.type !== 'tie') return regulation;
+
+  const superOverPairs = new Map();
+  for (const innings of sortedInnings) {
+    if (!toBool(innings.is_super_over)) continue;
+    const number = Number(innings.super_over_number) || Math.max(1, Math.ceil((Number(innings.innings_number) - 2) / 2));
+    const pair = superOverPairs.get(number) || [];
+    pair.push(innings);
+    superOverPairs.set(number, pair);
+  }
+
+  const completedPairs = [...superOverPairs.entries()]
+    .filter(([, pair]) => pair.length >= 2 && pair.every(innings => toBool(innings.is_completed)))
+    .sort(([a], [b]) => b - a);
+  if (!completedPairs.length) return regulation;
+
+  const [superOverNumber, pair] = completedPairs[0];
+  const superOverResult = computeInningsPairWinner(
+    pair.sort((a, b) => a.innings_number - b.innings_number)[0],
+    pair.sort((a, b) => a.innings_number - b.innings_number)[1],
+    teamsArr,
+    ppt,
+    allowLastBatsman,
+  );
+  return superOverResult?.type === 'tie'
+    ? regulation
+    : { ...superOverResult, super_over_number: superOverNumber };
+};
+
+const resultTextForWinner = (winner) => {
+  if (!winner || winner.type === 'tie') return 'Match Tied!';
+  const superOver = winner.super_over_number ? ` Super Over ${winner.super_over_number}` : '';
+  return `${winner.winner.team_name} won${superOver} by ${winner.margin}`;
 };
 
 const teamForResult = (result, teams) => teams.find(team =>
@@ -225,9 +268,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               team_a_score:    `${inn1.total_runs ?? 0}/${inn1.total_wickets ?? 0}`,
               team_b_score:    inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
               player_of_match: null,
-              result_text:     winner.type === 'tie'
-                ? 'Match Tied!'
-                : `${winner.winner.team_name} won by ${winner.margin}`,
+              result_text:     resultTextForWinner(winner),
             });
             await processSyncQueue({ silent: true }).catch(() => {});
             // Re-fetch result from API after saving
@@ -511,9 +552,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         team_b_score: inn2 ? `${inn2.total_runs ?? 0}/${inn2.total_wickets ?? 0}` : '—',
         player_of_match: selectedPotm.player_local_id || selectedPotm.local_id || selectedPotm.id || String(selectedPotm.player_id),
         player_of_match_server_id: selectedPotm.player_id || selectedPotm.server_id || (Number.isInteger(Number(selectedPotm.id)) ? Number(selectedPotm.id) : null),
-        result_text: winner.type === 'tie'
-          ? 'Match Tied!'
-          : (result?.result_text || `${winner.winner.team_name} won by ${winner.margin}`),
+        result_text: result?.result_text || resultTextForWinner(computedWinner || winner),
       });
 
       setPotmName(selectedPotm.full_name);
@@ -598,11 +637,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   if (result) {
     const winnerTeam = teams.find(t =>
       t.id === result.winner_team_local || t.local_id === result.winner_team_local ||
-      t.id === String(result.winner_team_id)
+      t.id === String(result.winner_team_id) || String(t.server_id) === String(result.winner_team_id)
     );
     const loserTeam = teams.find(t =>
       t.id === result.loser_team_local || t.local_id === result.loser_team_local ||
-      t.id === String(result.loser_team_id)
+      t.id === String(result.loser_team_id) || String(t.server_id) === String(result.loser_team_id)
     );
     if (result.result_type === 'tie') {
       winner = { type: 'tie', winner: null, loser: null, margin: 'Tied', margin_value: 0, text: result.result_text };
@@ -621,6 +660,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
           ? `${marginValue} ${resultMarginType === 'runs' ? `run${marginValue !== 1 ? 's' : ''}` : `wicket${marginValue !== 1 ? 's' : ''}`}`
           : computed?.margin,
         margin_value: marginValue,
+        super_over_number: computed?.super_over_number || null,
         text: result.result_text,
       };
     }
@@ -691,11 +731,11 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               <Icon name="trophy" size={34} color="#D4AF37" style={{ marginBottom: 8 }} />
               <Text style={styles.resultWinnerName}>{winner.winner?.team_name}</Text>
               <View style={styles.resultMarginRow}>
-                <Text style={styles.resultMarginLabel}>WON BY</Text>
+                <Text style={styles.resultMarginLabel}>
+                  {winner.super_over_number ? `SUPER OVER ${winner.super_over_number}` : 'WON BY'}
+                </Text>
                 <Text style={styles.resultMarginValue}>
-                  {result?.result_text
-                    ? result.result_text.replace(`${winner.winner?.team_name} won by `, '')
-                    : winner.margin}
+                  {winner.margin}
                 </Text>
               </View>
             </LinearGradient>
@@ -718,7 +758,14 @@ const MatchSummaryScreen = ({ navigation, route }) => {
                 <View key={`${inn.id || inn.innings_number}`} style={[styles.inningsCard, isWinner && styles.inningsCardWinner]}>
                   <View style={styles.inningsTop}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.inningsNum}>INNINGS {i + 1}</Text>
+                      <Text style={styles.inningsNum}>
+                        {toBool(inn.is_super_over)
+                          ? superOverLabel(
+                            inn.super_over_number || Math.max(1, Math.ceil((Number(inn.innings_number) - 2) / 2)),
+                            Number(inn.innings_number) % 2 === 0,
+                          ).toUpperCase()
+                          : `INNINGS ${inn.innings_number}`}
+                      </Text>
                       <Text style={styles.inningsTeam}>{team?.team_name || `Team ${i + 1}`}</Text>
                     </View>
                     {isWinner && (

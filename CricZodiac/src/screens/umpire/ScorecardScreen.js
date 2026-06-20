@@ -28,6 +28,15 @@ const fmtOvers = (overs) => {
   const balls = Math.round((overs - full) * 10);
   return `${full}.${balls}`;
 };
+const toBool = (value) => value === true || value === 1 || value === '1';
+const inningsLabel = (innings) => {
+  if (toBool(innings?.is_super_over)) {
+    const superOver = Number(innings.super_over_number) || Math.max(1, Math.ceil((Number(innings.innings_number) - 2) / 2));
+    const isChase = Number(innings.innings_number) % 2 === 0;
+    return `SO ${superOver}${isChase ? ' Chase' : ''}`;
+  }
+  return Number(innings?.innings_number) === 1 ? '1st Inn' : '2nd Inn';
+};
 
 // ── Extras card (always shown below any active table) ─────
 const EXTRA_TYPES = [
@@ -154,6 +163,9 @@ const ScoreSummary = ({ innings, COLORS, styles }) => {
   if (!innings) return null;
   return (
     <View style={styles.summaryStrip}>
+      {toBool(innings.is_super_over) ? (
+        <Text style={styles.summaryTeam}>{inningsLabel(innings).toUpperCase()}</Text>
+      ) : null}
       {innings.batting_team_name ? (
         <Text style={styles.summaryTeam}>{innings.batting_team_name}</Text>
       ) : null}
@@ -331,7 +343,7 @@ const ScorecardScreen = ({ navigation, route }) => {
         >
           {/* ── Innings tabs (admin: switch 1st / 2nd innings) ── */}
           {isAdminFlow && scorecards.length > 0 ? (
-            <View style={styles.inningsTabs}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.inningsTabs}>
               {scorecards.map((sc, idx) => (
                 <TouchableOpacity
                   key={idx}
@@ -339,7 +351,7 @@ const ScorecardScreen = ({ navigation, route }) => {
                   onPress={() => setInningsTab(idx)}
                 >
                   <Text style={[styles.innTabText, inningsTab === idx && styles.innTabTextActive]}>
-                    {idx === 0 ? '1st Inn' : '2nd Inn'}
+                    {inningsLabel(sc.innings)}
                   </Text>
                   {sc.innings?.total_runs != null ? (
                     <Text style={[styles.innScore, inningsTab === idx && { color: COLORS.gold }]}>
@@ -348,7 +360,7 @@ const ScorecardScreen = ({ navigation, route }) => {
                   ) : null}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           ) : null}
 
           {/* ── Innings summary strip ── */}
@@ -450,10 +462,10 @@ const getStyles = (COLORS) => StyleSheet.create({
 
   // Innings switcher tabs
   inningsTabs: {
-    flexDirection: 'row', marginHorizontal: 16, marginBottom: 8, gap: 10,
+    paddingHorizontal: 16, paddingBottom: 8, gap: 10,
   },
   innTab: {
-    flex: 1, alignItems: 'center', paddingVertical: 10,
+    width: 104, alignItems: 'center', paddingVertical: 10,
     backgroundColor: COLORS.card, borderRadius: 14,
     borderWidth: 1, borderColor: COLORS.cardBorder,
     gap: 2,

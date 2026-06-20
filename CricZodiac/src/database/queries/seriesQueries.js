@@ -13,12 +13,13 @@ export const createSeries = async (data, userId) => {
     start_date: data.start_date || null,
     end_date: data.end_date || null,
     allow_last_batsman: data.allow_last_batsman ? 1 : 0,
+    allow_super_over: data.allow_super_over ? 1 : 0,
   };
   await executeTransaction([
     {
       sql: `INSERT INTO series
-              (id, name, description, start_date, end_date, format, allow_last_batsman, status, created_by, club_id, sync_status)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+              (id, name, description, start_date, end_date, format, allow_last_batsman, allow_super_over, status, created_by, club_id, sync_status)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       params: [
         id,
         seriesData.name,
@@ -27,6 +28,7 @@ export const createSeries = async (data, userId) => {
         seriesData.end_date,
         seriesData.format      || 'bestOf1',
         seriesData.allow_last_batsman,
+        seriesData.allow_super_over,
         'active',
         userId || null,
         seriesData.club_id     || null,
@@ -77,9 +79,9 @@ export const upsertSeriesFromServer = async (serverSeries) => {
     await executeQuery(
       `INSERT OR REPLACE INTO series
          (id, server_id, name, description, start_date, end_date, format, status,
-          allow_last_batsman, created_by, club_id, team_a_wins, team_b_wins, player_of_series, team_a_id, team_b_id,
+          allow_last_batsman, allow_super_over, created_by, club_id, team_a_wins, team_b_wins, player_of_series, team_a_id, team_b_id,
           created_at, updated_at, sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         seriesId,
         s.id || null,
@@ -90,6 +92,7 @@ export const upsertSeriesFromServer = async (serverSeries) => {
         s.format || 'bestOf1',
         s.status || 'active',
         s.allow_last_batsman ? 1 : 0,
+        s.allow_super_over ? 1 : 0,
         s.created_by != null ? String(s.created_by) : null,
         s.club_id != null ? String(s.club_id) : null,
         s.team_a_wins || 0,

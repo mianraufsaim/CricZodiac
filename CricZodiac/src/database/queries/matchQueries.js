@@ -18,20 +18,28 @@ const bowlerRunsForBall = (ball) => {
 
 export const createMatch = async (matchData) => {
   const id = matchData.id || uuid.v4();
+  const seriesRule = matchData.series_id
+    ? await queryFirstRow('SELECT allow_super_over FROM series WHERE id = ?', [matchData.series_id])
+    : null;
+  const allowSuperOver = Object.prototype.hasOwnProperty.call(matchData, 'allow_super_over')
+    ? (matchData.allow_super_over ? 1 : 0)
+    : (seriesRule?.allow_super_over ? 1 : 0);
+  const payload = { ...matchData, id, allow_super_over: allowSuperOver };
   const queries = [
     {
       sql: `INSERT INTO matches (
         id, club_id, title, venue, match_date, overs, players_per_team,
-        allow_last_batsman,
+        allow_last_batsman, allow_super_over,
         team_a_id, team_b_id, series_id,
         wide_value, no_ball_value, max_overs_per_bowler,
         status, created_at, sync_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),?)`,
       params: [
         id, matchData.club_id || null,
         matchData.title, matchData.venue, matchData.match_date,
         matchData.overs || 6, matchData.players_per_team || 6,
         matchData.allow_last_batsman ? 1 : 0,
+        allowSuperOver,
         matchData.team_a_id, matchData.team_b_id,
         matchData.series_id || null,
         matchData.wide_value || 1, matchData.no_ball_value || 1, matchData.max_overs_per_bowler || 0,
@@ -41,7 +49,7 @@ export const createMatch = async (matchData) => {
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
             VALUES (?,?,?,?,?,?,datetime('now'))`,
-      params: [uuid.v4(), 'matches', 'create', id, JSON.stringify({ ...matchData, id }), SYNC_STATUS.PENDING],
+      params: [uuid.v4(), 'matches', 'create', id, JSON.stringify(payload), SYNC_STATUS.PENDING],
     },
   ];
   await executeTransaction(queries);
@@ -88,10 +96,10 @@ export const upsertMatchesFromServer = async (serverMatches) => {
     await executeQuery(
       `INSERT OR REPLACE INTO matches (
         id, server_id, club_id, title, venue, match_date, overs, players_per_team,
-        allow_last_batsman, team_a_id, team_b_id, series_id, toss_winner_id, toss_choice, batting_first,
+        allow_last_batsman, allow_super_over, team_a_id, team_b_id, series_id, toss_winner_id, toss_choice, batting_first,
         wide_value, no_ball_value, max_overs_per_bowler, status, result_text,
         winner_team_id, player_of_match, created_at, updated_at, sync_status
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         matchId,
         m.id || null,
@@ -102,6 +110,7 @@ export const upsertMatchesFromServer = async (serverMatches) => {
         m.overs || 6,
         m.players_per_team || 6,
         m.allow_last_batsman ? 1 : 0,
+        m.allow_super_over ? 1 : 0,
         m.team_a_local || (m.team_a_id != null ? String(m.team_a_id) : null),
         m.team_b_local || (m.team_b_id != null ? String(m.team_b_id) : null),
         m.series_local_id || (m.series_id != null ? String(m.series_id) : null),
@@ -462,9 +471,10 @@ export const createInnings = async (inningsData) => {
   const seriesId = inningsData.series_id || matchRow?.series_id || null;
   await executeTransaction([
     {
-      sql: `INSERT INTO innings (id, match_id, innings_number, batting_team_id, bowling_team_id, sync_status)
-            VALUES (?,?,?,?,?,?)`,
+      sql: `INSERT INTO innings (id, match_id, innings_number, is_super_over, super_over_number, batting_team_id, bowling_team_id, sync_status)
+            VALUES (?,?,?,?,?,?,?,?)`,
       params: [id, inningsData.match_id, inningsData.innings_number,
+               inningsData.is_super_over ? 1 : 0, inningsData.super_over_number || null,
                inningsData.batting_team_id, inningsData.bowling_team_id, SYNC_STATUS.PENDING],
     },
     {
@@ -500,6 +510,8 @@ export const enqueueInningsSync = async (inningsRow, match) => {
         club_id:         clubId,
         series_id:       seriesId,
         innings_number:  inningsRow.innings_number,
+        is_super_over:   inningsRow.is_super_over ? 1 : 0,
+        super_over_number: inningsRow.super_over_number || null,
         batting_team_id: inningsRow.batting_team_id,
         bowling_team_id: inningsRow.bowling_team_id,
         total_runs:      inningsRow.total_runs      || 0,
@@ -528,6 +540,8 @@ export const updateInnings = async (id, data) => {
     club_id:         matchRow?.club_id || null,
     series_id:       matchRow?.series_id || null,
     innings_number:  next.innings_number,
+    is_super_over:   next.is_super_over ? 1 : 0,
+    super_over_number: next.super_over_number || null,
     batting_team_id: next.batting_team_id,
     bowling_team_id: next.bowling_team_id,
     total_runs:      next.total_runs || 0,
@@ -989,15 +1003,17 @@ export const upsertInningsFromServer = async (serverInnings, matchLocalId) => {
 
     await executeQuery(
       `INSERT OR REPLACE INTO innings (
-         id, server_id, match_id, innings_number,
+         id, server_id, match_id, innings_number, is_super_over, super_over_number,
          batting_team_id, bowling_team_id,
          total_runs, total_wickets, total_overs, is_completed, sync_status
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         localId,
         inn.id   || null,
         matchLocalId,
         inn.innings_number,
+        inn.is_super_over ? 1 : 0,
+        inn.super_over_number || null,
         battingLocal,
         bowlingLocal,
         inn.total_runs    || 0,

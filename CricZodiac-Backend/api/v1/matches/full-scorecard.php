@@ -30,7 +30,7 @@ $isUuid = (bool) preg_match(
 $matchSql = "
     SELECT
         m.id, m.local_id, m.status, m.venue, m.match_date, m.overs,
-        m.players_per_team, m.allow_last_batsman, m.result_text, m.winner_team_id,
+        m.players_per_team, m.allow_last_batsman, m.allow_super_over, m.result_text, m.winner_team_id,
         COALESCE(m.club_id,    s.club_id) AS club_id,
         COALESCE(m.series_id,  s.id)      AS series_id,
         ta.team_name AS team_a_name,
@@ -63,7 +63,7 @@ $seriesId = (int) ($matchRow['series_id'] ?? 0);
 // Explicit column list avoids PDO key-collision from team JOINs
 $ist = $pdo->prepare("
     SELECT
-        i.id, i.local_id, i.match_id, i.innings_number,
+        i.id, i.local_id, i.match_id, i.innings_number, i.is_super_over, i.super_over_number,
         i.batting_team_id, i.bowling_team_id,
         i.total_runs, i.total_wickets, i.total_overs,
         i.extras, i.is_completed, i.created_at, i.updated_at,
@@ -86,7 +86,7 @@ foreach ($allInnings as $inn) {
 
     // Cast innings fields
     foreach (['id','match_id','batting_team_id','bowling_team_id',
-              'total_runs','total_wickets','innings_number'] as $k) {
+              'total_runs','total_wickets','innings_number','is_super_over','super_over_number'] as $k) {
         $inn[$k] = isset($inn[$k]) ? (int) $inn[$k] : null;
     }
     $inn['total_overs']  = isset($inn['total_overs'])  ? (float) $inn['total_overs']  : 0.0;

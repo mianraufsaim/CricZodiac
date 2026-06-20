@@ -49,6 +49,8 @@ $stmt = $pdo->prepare("
         i.match_id,
         i.match_local_id,
         i.innings_number,
+        i.is_super_over,
+        i.super_over_number,
         i.batting_team_id,
         i.batting_team_local,
         i.bowling_team_id,
@@ -77,7 +79,7 @@ foreach ($innings as &$inn) {
     foreach (['id', 'match_id', 'batting_team_id', 'bowling_team_id'] as $key) {
         $inn[$key] = isset($inn[$key]) ? (int) $inn[$key] : null;
     }
-    foreach (['total_runs', 'total_wickets', 'extras', 'innings_number'] as $key) {
+    foreach (['total_runs', 'total_wickets', 'extras', 'innings_number', 'is_super_over', 'super_over_number'] as $key) {
         $inn[$key] = isset($inn[$key]) ? (int) $inn[$key] : 0;
     }
     $inn['total_overs']  = isset($inn['total_overs'])  ? (float) $inn['total_overs']  : 0.0;
