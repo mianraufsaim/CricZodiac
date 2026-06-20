@@ -43,20 +43,33 @@ const fallOverLabel = (overNumber, legalBallNumber) =>
 
 const ballLabel = (ball) => {
   if (ball.is_wicket) return 'W';
-  if (ball.extra_type === 'wide')    return `${ball.extra_runs || 1}-Wd`;
-  if (ball.extra_type === 'no_ball') return `${ball.runs_scored || 0}-NB`;
+  if (ball.extra_type === 'wide') {
+    const totalWideRuns = Number(ball.extra_runs || 0);
+    return totalWideRuns > 1 ? `${totalWideRuns}-WD` : 'WD';
+  }
+  if (ball.extra_type === 'no_ball') {
+    const batRuns = Number(ball.runs_scored || 0);
+    return batRuns > 0 ? `${batRuns}-NB` : 'NB';
+  }
   if (ball.extra_type === 'bye')     return `${ball.extra_runs || 0}-B`;
   if (ball.extra_type === 'leg_bye') return `${ball.extra_runs || 0}-LB`;
   return String(ball.runs_scored || 0);
 };
 
-const ballColor = (ball, COLORS) => {
-  if (ball.is_wicket)              return COLORS.danger;
-  if (ball.extra_type === 'wide' || ball.extra_type === 'no_ball') return COLORS.warning;
-  if (ball.runs_scored === 4)      return COLORS.royalBlue;
-  if (ball.runs_scored === 6)      return COLORS.purple;
-  if (ball.runs_scored === 0)      return '#6B7280';   // mid-gray — visible on both themes
-  return COLORS.royalBlue;
+const ballBadgePalette = (ball, COLORS) => {
+  if (Number(ball?.is_wicket || 0) === 1) {
+    return { background: COLORS.danger, border: COLORS.danger, text: '#FFFFFF' };
+  }
+  if (['wide', 'no_ball', 'bye', 'leg_bye'].includes(ball?.extra_type)) {
+    return { background: COLORS.gold, border: '#F6D365', text: COLORS.navy };
+  }
+  if ([4, 6].includes(Number(ball?.runs_scored || 0))) {
+    return { background: '#14532D', border: '#22C55E', text: '#DCFCE7' };
+  }
+  if ([1, 2, 3].includes(Number(ball?.runs_scored || 0))) {
+    return { background: '#F8FAFC', border: '#CBD5E1', text: '#0F172A' };
+  }
+  return { background: '#475569', border: '#64748B', text: '#FFFFFF' };
 };
 
 const crossedRunsForDelivery = (extraType, runsScored = 0, extraRuns = 0, wideValue = 1) => {
@@ -85,8 +98,8 @@ const toBool = (value) => value === true || value === 1 || value === '1';
 const superOverFirstInningsNumber = (superOverNumber) => 3 + ((Math.max(1, Number(superOverNumber) || 1) - 1) * 2);
 const isSecondSuperOverInnings = (inningsNumber, superOverNumber) =>
   Number(inningsNumber) === superOverFirstInningsNumber(superOverNumber) + 1;
-const superOverLabel = (superOverNumber, isChase = false) =>
-  `Super Over ${Math.max(1, Number(superOverNumber) || 1)}${isChase ? ' Chase' : ''}`;
+const superOverLabel = (_sequence, isChase = false) =>
+  `Super Over${isChase ? ' Chase' : ''}`;
 const maxWicketsForMatch = (match) =>
   Math.max(1, Number(match?.players_per_team || 6) - (toBool(match?.allow_last_batsman) ? 0 : 1));
 const isLastBatterMode = (match, wickets) =>
@@ -154,12 +167,13 @@ const BowlerRow = ({ bowler, legalBalls, COLORS, sc }) => {
 
 const BallDot = ({ ball, onPress, COLORS, sc }) => {
   const label = ballLabel(ball);
+  const badge = ballBadgePalette(ball, COLORS);
   return (
     <TouchableOpacity
-      style={[sc.dot, { backgroundColor: ballColor(ball, COLORS) }]}
+      style={[sc.dot, { backgroundColor: badge.background, borderWidth: 1, borderColor: badge.border }]}
       onPress={() => onPress && onPress(ball)}
     >
-      <Text style={[sc.dotTxt, label.length > 2 && { fontSize: 9 }]}>{label}</Text>
+      <Text style={[sc.dotTxt, { color: badge.text }, label.length > 2 && { fontSize: 9 }]}>{label}</Text>
     </TouchableOpacity>
   );
 };
@@ -171,12 +185,12 @@ const EmptyDot = ({ COLORS, sc }) => (
 // ── Wicket Dismissal Types ─────────────────────────────────
 const WICKET_TYPES_FULL = [
   { id: 'bowled',     label: 'Bowled',      icon: 'cricket',                   color: '#DC2626' },
-  { id: 'caught',     label: 'Caught',      icon: 'hand-pointing-right',        color: '#7C3AED' },
-  { id: 'run_out',    label: 'Run Out',     icon: 'run-fast',                   color: '#D97706' },
-  { id: 'lbw',        label: 'LBW',         icon: 'human',                      color: '#2563EB' },
-  { id: 'stumped',    label: 'Stumped',     icon: 'close-circle-outline',        color: '#059669' },
-  { id: 'hit_wicket', label: 'Hit Wicket',  icon: 'kabaddi',                    color: '#EA580C' },
-  { id: 'retired',    label: 'Retired',     icon: 'walk',                       color: '#6B7280' },
+  { id: 'caught',     label: 'Caught',      icon: 'hand-clap',                 color: '#7C3AED' },
+  { id: 'run_out',    label: 'Run Out',     icon: 'run-fast',                  color: '#D97706' },
+  { id: 'lbw',        label: 'LBW',         icon: 'target',                    color: '#2563EB' },
+  { id: 'stumped',    label: 'Stumped',     icon: 'hand-extended',             color: '#059669' },
+  { id: 'hit_wicket', label: 'Hit Wicket',  icon: 'baseball-bat',               color: '#EA580C' },
+  { id: 'retired',    label: 'Retired Hurt', icon: 'walk',                      color: '#6B7280' },
   { id: 'other',      label: 'Other',       icon: 'dots-horizontal-circle',     color: '#6B7280' },
 ];
 
@@ -439,6 +453,44 @@ const InningsCompleteModal = ({
 );
 
 // ── Ball-by-Ball Feed ─────────────────────────────────────
+const ballResultLabel = (ball) => {
+  if (Number(ball?.is_wicket || 0) === 1) return 'W';
+
+  const batRuns = Number(ball?.runs_scored || 0);
+  const extraRuns = Number(ball?.extra_runs || 0);
+  if (ball?.extra_type === 'wide') return extraRuns > 1 ? `${extraRuns}-WD` : 'WD';
+  if (ball?.extra_type === 'no_ball') return batRuns > 0 ? `${batRuns}-NB` : 'NB';
+  if (ball?.extra_type === 'bye') return `${extraRuns}-B`;
+  if (ball?.extra_type === 'leg_bye') return `${extraRuns}-LB`;
+  return String(batRuns);
+};
+
+const ballOutcomeText = (ball) => {
+  const wicketType = String(ball?.wicket_type || '').toLowerCase();
+  const fielderName = ball?.fielder_name || ball?.wicket_fielder_name || '';
+  if (Number(ball?.is_wicket || 0) === 1) {
+    if (wicketType === 'caught') return fielderName ? `Caught by ${fielderName}` : 'Caught';
+    if (wicketType === 'run_out') return fielderName ? `Run out by ${fielderName}` : 'Run out';
+    if (wicketType === 'stumped') return fielderName ? `Stumped by ${fielderName}` : 'Stumped';
+    if (wicketType === 'bowled') return 'Bowled';
+    if (wicketType === 'lbw') return 'LBW';
+    if (wicketType === 'hit_wicket') return 'Hit wicket';
+    if (wicketType === 'retired' || wicketType === 'retired_hurt') return 'Retired hurt';
+    return wicketType ? wicketType.replace(/_/g, ' ') : 'Wicket';
+  }
+
+  const batRuns = Number(ball?.runs_scored || 0);
+  const extraRuns = Number(ball?.extra_runs || 0);
+  if (ball?.extra_type === 'wide') return extraRuns > 1 ? `${extraRuns} wides` : 'Wide';
+  if (ball?.extra_type === 'no_ball') return batRuns ? `No ball + ${batRuns} run${batRuns === 1 ? '' : 's'}` : 'No ball';
+  if (ball?.extra_type === 'bye') return `${extraRuns} bye${extraRuns === 1 ? '' : 's'}`;
+  if (ball?.extra_type === 'leg_bye') return `${extraRuns} leg bye${extraRuns === 1 ? '' : 's'}`;
+  if (batRuns === 6) return 'Six runs';
+  if (batRuns === 4) return 'Four runs';
+  if (batRuns === 0) return 'Dot ball';
+  return `${batRuns} run${batRuns === 1 ? '' : 's'}`;
+};
+
 const BallByBallTab = ({ allBalls, COLORS, bb }) => {
   // Group balls by over_id (maintain order)
   const overs = [];
@@ -456,26 +508,35 @@ const BallByBallTab = ({ allBalls, COLORS, bb }) => {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }}>
       {overs.map((over, oi) => (
         <View key={over.overId || oi} style={bb.overBlock}>
-          <Text style={bb.overLabel}>Over {over.overNumber}</Text>
-          {[...over.balls].reverse().map((ball, bi) => (
-            <View key={ball.id || bi} style={bb.ballRow}>
-              <View style={[bb.ballDot, { backgroundColor: ballColor(ball, COLORS) }]}>
-                {(() => { const lbl = ballLabel(ball); return (
-                  <Text style={[bb.ballDotTxt, lbl.length > 2 && { fontSize: 8 }]}>{lbl}</Text>
-                ); })()}
+          <View style={bb.overHeader}>
+            <Text style={bb.overLabel}>OVER {Math.max(0, Number(over.overNumber || 1) - 1)}</Text>
+            <View style={bb.overRule} />
+          </View>
+          {[...over.balls].reverse().map((ball, bi) => {
+            const badge = ballBadgePalette(ball, COLORS);
+            return (
+              <View key={ball.id || bi} style={bb.ballRow}>
+                <View style={bb.deliveryPill}>
+                  <Text style={bb.deliveryText}>
+                    {Math.max(0, Number(over.overNumber || 1) - 1)}.{Math.max(0, Number(ball.ball_number) || 0)}
+                  </Text>
+                </View>
+                <View style={bb.playerStack}>
+                  <View style={bb.playerLine}>
+                  <Icon name="cricket" size={16} color={COLORS.gold} />
+                  <Text style={bb.playerName} numberOfLines={1}>{ball.striker_name || 'Batter'}</Text>
+                  <Text style={bb.facesText}>facing</Text>
+                  <Icon name="tennis-ball" size={15} color={COLORS.gold} />
+                  <Text style={bb.playerName} numberOfLines={1}>{ball.bowler_name || 'Bowler'}</Text>
+                  </View>
+                  <Text style={bb.outcomeText} numberOfLines={1}>{ballOutcomeText(ball)}</Text>
+                </View>
+                <View style={[bb.resultBadge, { backgroundColor: badge.background, borderColor: badge.border }]}>
+                  <Text style={[bb.resultText, { color: badge.text }]} numberOfLines={1}>{ballResultLabel(ball)}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={bb.ballDesc}>
-                  {over.overNumber}.{ball.extra_type === 'wide' ? `${ball.extra_runs || 1}Wd` : ball.extra_type === 'no_ball' ? 'NB' : ball.extra_type === 'bye' ? 'B' : ball.extra_type === 'leg_bye' ? 'LB' : ball.ball_number}{'  '}{ball.striker_name || '—'}
-                  {ball.is_wicket ? '  🔴 OUT' : ''}
-                </Text>
-                <Text style={bb.ballSub}>{ball.bowler_name || '—'}</Text>
-              </View>
-              <Text style={bb.ballRuns}>
-                +{(ball.runs_scored || 0) + (ball.extra_runs || 0)}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ))}
       {overs.length === 0 && (
@@ -508,20 +569,20 @@ const ScoringPad = ({ onRun, onExtra, onWicket, onUndo, onSwap, canUndo, canSwap
           <TouchableOpacity
             key={r}
             style={[pad.runBtn,
-              r === 4 ? { backgroundColor: COLORS.royalBlue, borderColor: COLORS.royalBlue } :
-              r === 6 ? { backgroundColor: COLORS.purple,    borderColor: COLORS.purple }    : {}
+              (r === 4 || r === 6) ? { backgroundColor: '#14532D', borderColor: '#22C55E' } : {}
             ]}
             onPress={() => onRun(r)}
           >
-            <Text style={[pad.runTxt, (r === 4 || r === 6) && { color: '#FFFFFF' }]}>{r}</Text>
+            <Text style={[pad.runTxt, (r === 4 || r === 6) && { color: '#DCFCE7' }]}>{r}</Text>
           </TouchableOpacity>
         ))}
-        {/* 5+ button — opens cross-platform TextInput modal (Alert.prompt is iOS only) */}
+        {/* Custom runs — opens a cross-platform numeric input. */}
         <TouchableOpacity
           style={[pad.runBtn, { backgroundColor: COLORS.orange, borderColor: COLORS.orange }]}
           onPress={() => setCustomModal({ visible: true, value: '' })}
+          accessibilityLabel="Enter custom runs"
         >
-          <Text style={[pad.runTxt, { color: '#FFFFFF' }]}>5+</Text>
+          <Icon name="pencil-plus" size={23} color="#FFFFFF" />
         </TouchableOpacity>
         {/* Undo follows the delivery ledger, including wides and no-balls. */}
         <TouchableOpacity
@@ -611,7 +672,7 @@ const EXTRA_CONFIG = {
   wide:    { icon: 'arrow-expand-horizontal', label: 'WIDE',     sub: 'Additional wide runs', accentKey: 'warning' },
   no_ball: { icon: 'close-circle',   label: 'NO BALL',  sub: 'Runs scored off bat', accentKey: 'danger'  },
   bye:     { icon: 'run-fast',        label: 'BYE',      sub: 'Bye runs',            accentKey: 'cyan'    },
-  leg_bye: { icon: 'human-handsup',   label: 'LEG BYE',  sub: 'Leg bye runs',        accentKey: 'purple'  },
+  leg_bye: { icon: 'human-handsup',   label: 'LEG BYE',  sub: 'Leg bye runs',        accent: '#F2B01E'    },
 };
 
 const getErmStyles = (COLORS) => StyleSheet.create({
@@ -638,7 +699,7 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
   const [customVal, setCustomVal] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const cfg = EXTRA_CONFIG[type] || {};
-  const accent = COLORS[cfg.accentKey] || COLORS.gold;
+  const accent = cfg.accent || COLORS[cfg.accentKey] || COLORS.gold;
 
   const handleSelect = (r) => { setShowCustom(false); setCustomVal(''); onSelect(r); };
   const handleCustomConfirm = () => {
@@ -649,12 +710,9 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
 
   if (!visible || !type) return null;
 
-  // Run number text colour: 4 → royalBlue, 6 → purple, others → always-white on coloured bg
-  const runNumColor = (r) => {
-    if (r === 4) return COLORS.royalBlue;
-    if (r === 6) return COLORS.purple;
-    return COLORS.white;
-  };
+  const extraRunOptions = ['bye', 'leg_bye'].includes(type)
+    ? EXTRA_RUN_OPTS.filter(r => r !== 0)
+    : EXTRA_RUN_OPTS;
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={handleClose}>
@@ -673,15 +731,24 @@ const ExtraRunsModal = ({ visible, type, COLORS, onSelect, onCancel }) => {
 
           {/* Run grid */}
           <View style={erm.grid}>
-            {EXTRA_RUN_OPTS.map(r => (
-              <TouchableOpacity key={r} style={[erm.runBtn, { borderColor: accent + '66' }]} onPress={() => handleSelect(r)}>
-                <Text style={[erm.runNum, { color: runNumColor(r) }]}>{r}</Text>
-                {r === 6 && <Text style={erm.runSub}>🎯</Text>}
-              </TouchableOpacity>
-            ))}
-            {/* 5+ custom */}
-            <TouchableOpacity style={[erm.runBtn, { borderColor: accent, backgroundColor: accent + '22' }]} onPress={() => setShowCustom(true)}>
-              <Text style={[erm.runNum, { color: accent }]}>5+</Text>
+            {extraRunOptions.map(r => {
+              const displayValue = r === 0 && type === 'wide'
+                ? 'WD'
+                : r === 0 && type === 'no_ball'
+                  ? 'NB'
+                  : String(r);
+              return (
+                <TouchableOpacity key={r} style={[erm.runBtn, { borderColor: accent + '66' }]} onPress={() => handleSelect(r)}>
+                  <Text style={[erm.runNum, { color: accent }, displayValue.length > 1 && { fontSize: 17 }]}>{displayValue}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={[erm.runBtn, { borderColor: accent, backgroundColor: accent + '22' }]}
+              onPress={() => setShowCustom(true)}
+              accessibilityLabel="Enter custom extra runs"
+            >
+              <Icon name="pencil-plus" size={23} color={accent} />
               <Text style={erm.runSub}>custom</Text>
             </TouchableOpacity>
           </View>
@@ -758,6 +825,12 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const inningsDisplayLabel = isSuperOver
     ? superOverLabel(superOverNumber, isSuperOverChase)
     : `${inningsNumber === 1 ? '1st' : '2nd'} Innings`;
+  const [seriesName, setSeriesName] = useState(
+    matchParam?.series_name || route.params?.seriesName || ''
+  );
+  const headerSeriesName = seriesName || match?.series_name || 'CricZodiac';
+  const headerMatchName = match?.title || 'Match';
+  const headerVenue = match?.venue?.trim?.() || '';
 
   // Core state
   const [innings, setInnings]           = useState(null);
@@ -912,55 +985,78 @@ const LiveScoringScreen = ({ navigation, route }) => {
       }
     };
 
-    if (selection.type === 'new_batsman') {
-      // Striker was out — incoming batsman takes strike
-      const nextStriker = selection.striker || null;
+    const savedBattingStats = async (player) => {
       const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
-      strikerRef.current = nextStriker;
-      strikerStatsRef.current = emptyStats;
-      setStriker(nextStriker);
-      setStrikerStats(emptyStats);
-      triggerBowlerIfNeeded();
-    } else if (selection.type === 'new_non_striker') {
-      // Non-striker was out (e.g. run out at non-striker's end) — replace non-striker only
-      const nextNonStriker = selection.striker || null;
-      const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
-      nonStrikerRef.current = nextNonStriker;
-      nonStrikerStatsRef.current = emptyStats;
-      setNonStriker(nextNonStriker);   // SelectBatsman returns player in .striker field
-      setNonStrikerStats(emptyStats);
-      triggerBowlerIfNeeded();
-    } else if (selection.striker && selection.nonStriker) {
-      // Opening pair (or re-selection due to technical restart) — clear all
-      // existing balls/overs/scorecards for this innings so scoring starts fresh.
-      const activeInnings = inningsRef.current;
-      if (activeInnings?.id) {
-        clearInningsProgress(activeInnings.id).catch(e =>
-          console.warn('[LiveScoring] clearInningsProgress failed:', e)
-        );
+      const activeInningsId = inningsRef.current?.id;
+      if (!player?.id || !activeInningsId) return emptyStats;
+
+      try {
+        const stats = await getPlayerBattingStats(activeInningsId, player.id);
+        return stats
+          ? { runs: stats.runs_scored || 0, balls: stats.balls_faced || 0, fours: stats.fours || 0, sixes: stats.sixes || 0 }
+          : emptyStats;
+      } catch (error) {
+        console.warn('[LiveScoring] Could not restore batter stats:', error?.message);
+        return emptyStats;
       }
-      const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
-      strikerRef.current = selection.striker;
-      nonStrikerRef.current = selection.nonStriker;
-      strikerStatsRef.current = emptyStats;
-      nonStrikerStatsRef.current = emptyStats;
-      setStriker(selection.striker);
-      setNonStriker(selection.nonStriker);
-      setStrikerStats(emptyStats);
-      setNonStrikerStats(emptyStats);
-      // Reset all live-scoring state
-      setTotalRuns(0);       totalRunsRef.current = 0;
-      setTotalWickets(0);    totalWktsRef.current = 0;
-      setExtras({ wide: 0, no_ball: 0, bye: 0, leg_bye: 0 });
-      setOverNumber(1);      overNumRef.current = 1;
-      setLegalBalls(0);      legalRef.current = 0;
-      setCurrentOver(null);  overRef.current = null;
-      setOverBalls([]);
-      setAllBalls([]);
-      setPartnership({ runs: 0, balls: 0 });
-      setBowlerStats({ overs: 0, runs: 0, wickets: 0, maidens: 0 });
-    }
-    navigation.setParams({ batsmanSelection: null });
+    };
+
+    const applyBatsmanSelection = async () => {
+      if (selection.type === 'new_batsman') {
+        // An incoming batter, including a returning retired-hurt batter, takes strike.
+        const nextStriker = selection.striker || null;
+        const nextStats = await savedBattingStats(nextStriker);
+        strikerRef.current = nextStriker;
+        strikerStatsRef.current = nextStats;
+        setStriker(nextStriker);
+        setStrikerStats(nextStats);
+        triggerBowlerIfNeeded();
+      } else if (selection.type === 'new_non_striker') {
+        // Replace the non-striker only, preserving a returning batter's figures.
+        const nextNonStriker = selection.striker || null;
+        const nextStats = await savedBattingStats(nextNonStriker);
+        nonStrikerRef.current = nextNonStriker;
+        nonStrikerStatsRef.current = nextStats;
+        setNonStriker(nextNonStriker);   // SelectBatsman returns player in .striker field
+        setNonStrikerStats(nextStats);
+        triggerBowlerIfNeeded();
+      } else if (selection.striker && selection.nonStriker) {
+        // Opening pair (or re-selection due to technical restart) — clear all
+        // existing balls/overs/scorecards for this innings so scoring starts fresh.
+        const activeInnings = inningsRef.current;
+        if (activeInnings?.id) {
+          clearInningsProgress(activeInnings.id).catch(e =>
+            console.warn('[LiveScoring] clearInningsProgress failed:', e)
+          );
+        }
+        const emptyStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+        strikerRef.current = selection.striker;
+        nonStrikerRef.current = selection.nonStriker;
+        strikerStatsRef.current = emptyStats;
+        nonStrikerStatsRef.current = emptyStats;
+        setStriker(selection.striker);
+        setNonStriker(selection.nonStriker);
+        setStrikerStats(emptyStats);
+        setNonStrikerStats(emptyStats);
+        // Reset all live-scoring state
+        setTotalRuns(0);       totalRunsRef.current = 0;
+        setTotalWickets(0);    totalWktsRef.current = 0;
+        setExtras({ wide: 0, no_ball: 0, bye: 0, leg_bye: 0 });
+        setOverNumber(1);      overNumRef.current = 1;
+        setLegalBalls(0);      legalRef.current = 0;
+        setCurrentOver(null);  overRef.current = null;
+        setOverBalls([]);
+        setAllBalls([]);
+        setPartnership({ runs: 0, balls: 0 });
+        setBowlerStats({ overs: 0, runs: 0, wickets: 0, maidens: 0 });
+      }
+      navigation.setParams({ batsmanSelection: null });
+    };
+
+    applyBatsmanSelection().catch((error) => {
+      console.warn('[LiveScoring] Could not apply batsman selection:', error?.message);
+      navigation.setParams({ batsmanSelection: null });
+    });
   }, [navigation, route.params?.batsmanSelection]);
 
   useEffect(() => {
@@ -1222,6 +1318,17 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
     // ── Step 2: Normal init using resolved variables ───────────────────────
     try {
+      const directSeriesName = rMatch.series_name || rMatch.seriesName || route.params?.seriesName;
+      if (directSeriesName) {
+        setSeriesName(directSeriesName);
+      } else if (rMatch.series_id) {
+        const series = await queryFirstRow(
+          'SELECT name FROM series WHERE id = ? OR server_id = ? LIMIT 1',
+          [rMatch.series_id, rMatch.series_id]
+        );
+        setSeriesName(series?.name || '');
+      }
+
       const existingInnings = await getMatchInnings(rMatch.id);
       let active = existingInnings.find(i => i.innings_number === rInningsNumber && !i.is_completed);
 
@@ -1909,6 +2016,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         wicket_type: dismissalType,
         wicket_batsman_id: outBatsman.id,
         fielder_id: fielder?.id || null,
+        fielder_name: fielder?.full_name || null,
       };
       setAllBalls(prev => [...prev, ballDisplay]);
       setOverBalls(prev => [...prev, ballDisplay]);
@@ -2133,7 +2241,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         const finalRuns = runs  ?? totalRuns;
         const finalWkts = wkts ?? totalWickets;
         const maxWkts   = inningsWicketLimit;
-        const phaseName = isSuperOver ? `Super Over ${superOverNumber}` : 'Match';
+        const phaseName = isSuperOver ? 'Super Over' : 'Match';
         let result;
         if (finalRuns >= resolvedTarget) {
           // Batting team chased down — win by remaining wickets
@@ -2143,10 +2251,10 @@ const LiveScoringScreen = ({ navigation, route }) => {
             : `${battingTeam.team_name} wins by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
         } else if (finalRuns === resolvedTarget - 1) {
           if (isSuperOver) {
-            result = `${phaseName} tied! Super Over ${superOverNumber + 1} required.`;
+            result = `${phaseName} tied! Another Super Over required.`;
           } else {
             result = toBool(match?.allow_super_over)
-              ? 'Match tied! Super Over 1 required.'
+              ? 'Match tied! Super Over required.'
               : 'Match Tied!';
           }
         } else {
@@ -2343,11 +2451,11 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const modalShowsTarget = (!isSuperOver && inningsNumber === 1) || (isSuperOver && !isSuperOverChase);
   const nextInningsActionLabel = isSuperOver
     ? (isSuperOverChase
-      ? `Start Super Over ${superOverNumber + 1}`
+      ? 'Start Super Over'
       : `Start ${superOverLabel(superOverNumber, true)} →`)
     : inningsNumber === 1
       ? 'Start 2nd Innings →'
-      : 'Start Super Over 1 →';
+      : 'Start Super Over →';
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.container}>
@@ -2365,10 +2473,16 @@ const LiveScoringScreen = ({ navigation, route }) => {
           <View style={styles.headerSide} />
         )}
 
-        {/* Centre — score + overs on one row */}
+        {/* Centre — match identity stays visible; score remains in the innings band below. */}
         <View style={styles.headerCenter}>
-          <Text style={styles.headerScore}>{totalRuns}/{totalWickets}</Text>
-          <Text style={styles.headerOvers}>  Ov {formatOvers()}/{inningsOversLimit}</Text>
+          <Text style={styles.headerSeries} numberOfLines={1}>{headerSeriesName}</Text>
+          <Text style={styles.headerMatch} numberOfLines={1}>{headerMatchName}</Text>
+          {headerVenue ? (
+            <View style={styles.headerVenueRow}>
+              <Icon name="map-marker" size={11} color={COLORS.gray} />
+              <Text style={styles.headerVenue} numberOfLines={1}>{headerVenue}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Right — scorecard icon */}
@@ -2383,12 +2497,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
       {/* Team row — teams centred */}
       <View style={styles.subHeader}>
         <View style={styles.teamsCenter}>
-          <View style={[styles.teamPill, { borderColor: COLORS.gold }]}>
-            <Text style={styles.teamPillTxt}>{battingTeam.team_name}</Text>
+          <View style={[styles.teamPill, styles.battingTeamPill, { borderColor: COLORS.gold, backgroundColor: COLORS.gold + '18' }]}>
+            <Icon name="cricket" size={15} color={COLORS.gold} style={styles.teamPillIcon} />
+            <Text style={styles.teamPillTxt} numberOfLines={1}>{battingTeam.team_name}</Text>
           </View>
-          <Text style={styles.vsLabel}>vs</Text>
-          <View style={styles.teamPill}>
-            <Text style={styles.teamPillTxt}>{bowlingTeam.team_name}</Text>
+          <Text style={styles.vsLabel}>VS</Text>
+          <View style={[styles.teamPill, styles.bowlingTeamPill, { borderColor: COLORS.cyan, backgroundColor: COLORS.cyan + '14' }]}>
+            <Icon name="shield-outline" size={15} color={COLORS.cyan} style={styles.teamPillIcon} />
+            <Text style={styles.teamPillTxt} numberOfLines={1}>{bowlingTeam.team_name}</Text>
           </View>
         </View>
       </View>
@@ -2664,18 +2780,23 @@ const getStyles = (COLORS) => StyleSheet.create({
   container:    { flex: 1 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 48, paddingHorizontal: 16, paddingBottom: 8 },
   headerSide:      { width: 44, alignItems: 'center' },
-  headerCenter:    { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
-  headerScore:     { color: COLORS.white, fontSize: 26, fontWeight: '900' },
-  headerOvers:     { color: COLORS.gray, fontSize: 13, fontWeight: '600' },
+  headerCenter:    { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  headerSeries:    { color: COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
+  headerMatch:     { color: COLORS.white, fontSize: 16, fontWeight: '900', marginTop: 1 },
+  headerVenueRow:  { flexDirection: 'row', alignItems: 'center', gap: 3, maxWidth: '100%', marginTop: 2 },
+  headerVenue:     { color: COLORS.gray, fontSize: 10, fontWeight: '600', flexShrink: 1 },
   // TARGET badge — top-left of header in 2nd innings (height matches centre score row)
   targetBadge:      { width: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 4, paddingHorizontal: 4, borderWidth: 1.5, borderColor: COLORS.gold, overflow: 'hidden' },
   targetBadgeLabel: { color: COLORS.gold + 'BB', fontSize: 7, fontWeight: '900', letterSpacing: 1.5, marginBottom: 0 },
   targetBadgeNum:   { color: COLORS.gold, fontSize: 26, fontWeight: '900', lineHeight: 30 },
-  subHeader:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 8 },
+  subHeader:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginBottom: 10 },
   teamsCenter:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  teamPill:        { backgroundColor: COLORS.card, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.cardBorder },
-  teamPillTxt:     { color: COLORS.white, fontSize: 11, fontWeight: '600' },
-  vsLabel:         { color: COLORS.gray, fontSize: 11 },
+  teamPill:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexGrow: 0, flexShrink: 1, maxWidth: '43%', minHeight: 40, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5 },
+  battingTeamPill: { shadowColor: COLORS.gold, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  bowlingTeamPill: { shadowColor: COLORS.cyan, shadowOpacity: 0.14, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  teamPillIcon:   { marginRight: 6 },
+  teamPillTxt:    { color: COLORS.white, fontSize: 14, fontWeight: '900', flexShrink: 1, textAlign: 'center' },
+  vsLabel:        { color: COLORS.gray, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
   tabRow:       { flexDirection: 'row', marginHorizontal: 14, marginBottom: 6, gap: 8 },
   tab:          { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.cardBorder },
   tabActive:    { backgroundColor: COLORS.royalBlue, borderColor: COLORS.cyan },
@@ -2689,10 +2810,10 @@ const getScStyles = (COLORS) => StyleSheet.create({
   summaryItem:   { flex: 1, alignItems: 'center' },
   summaryVal:    { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   summaryLabel:  { color: COLORS.gray, fontSize: 9, marginTop: 2 },
-  scoreBandWrap:  { backgroundColor: COLORS.card + 'CC', marginHorizontal: 12, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
+  scoreBandWrap:  { backgroundColor: COLORS.card + 'CC', marginHorizontal: 12, borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   scoreBandRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  scoreBandMain:  { color: COLORS.white, fontWeight: '900', fontSize: 18 },
-  scoreBandMeta:  { color: COLORS.gray,  fontWeight: '600', fontSize: 13 },
+  scoreBandMain:  { color: COLORS.white, fontWeight: '900', fontSize: 32, lineHeight: 36 },
+  scoreBandMeta:  { color: COLORS.gray,  fontWeight: '700', fontSize: 12 },
   scoreBandSep:   { color: COLORS.cardBorder, fontSize: 13 },
   // Chase pill — shown below score row in 2nd innings
   chasePill:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.gold + '60', overflow: 'hidden' },
@@ -2744,14 +2865,20 @@ const getPadStyles = (COLORS) => StyleSheet.create({
 
 // Ball-by-ball tab styles
 const getBbStyles = (COLORS) => StyleSheet.create({
-  overBlock:   { marginBottom: 14 },
-  overLabel:   { color: COLORS.gold, fontWeight: '700', fontSize: 12, letterSpacing: 2, marginBottom: 8 },
-  ballRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, padding: 10, marginBottom: 4, gap: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
-  ballDot:     { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  ballDotTxt:  { color: '#FFFFFF', fontWeight: '800', fontSize: 11 },
-  ballDesc:    { color: COLORS.white, fontSize: 13, fontWeight: '600' },
-  ballSub:     { color: COLORS.gray, fontSize: 11, marginTop: 1 },
-  ballRuns:    { color: COLORS.white, fontWeight: '800', fontSize: 14 },
+  overBlock:    { marginBottom: 16 },
+  overHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
+  overLabel:    { color: COLORS.gold, fontWeight: '900', fontSize: 11, letterSpacing: 1.8 },
+  overRule:     { flex: 1, height: 1, backgroundColor: COLORS.cardBorder },
+  ballRow:      { flexDirection: 'row', alignItems: 'center', minHeight: 62, backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 5, gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
+  deliveryPill: { width: 40, minHeight: 30, borderRadius: 8, backgroundColor: COLORS.darkGray, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },
+  deliveryText: { color: COLORS.white, fontWeight: '900', fontSize: 11 },
+  playerStack:  { flex: 1, minWidth: 0 },
+  playerLine:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  playerName:   { color: COLORS.white, fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  facesText:    { color: COLORS.gray, fontSize: 10, fontWeight: '600', flexShrink: 0 },
+  outcomeText:  { color: COLORS.gray, fontSize: 10, fontWeight: '600', marginTop: 3 },
+  resultBadge:  { minWidth: 46, maxWidth: 64, minHeight: 30, borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
+  resultText:   { fontSize: 11, fontWeight: '900' },
 });
 
 // Innings complete modal

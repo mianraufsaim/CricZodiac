@@ -95,14 +95,19 @@ const ManagePlayersScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.searchBar}>
-        <Icon name="magnify" size={20} color={COLORS.gray} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search players..."
+          placeholder="Search here"
           placeholderTextColor={COLORS.gray}
           value={search}
           onChangeText={setSearch}
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+            <Icon name="close-circle" size={16} color={COLORS.gray} />
+          </TouchableOpacity>
+        )}
+        <Icon name="magnify" size={19} color={COLORS.gold} style={{ marginLeft: 10 }} />
       </View>
 
       <FlatList

@@ -4,11 +4,11 @@
 // Creation delegates to CreateUserScreen (credentials + share).
 // ============================================================
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator,
-  Modal, TextInput, Animated, RefreshControl,
+  Modal, TextInput, RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -165,20 +165,6 @@ const ManageUsersScreen = ({ navigation }) => {
   const [search,        setSearch]        = useState('');
   const [addSheet,      setAddSheet]      = useState(false);
   const [selected,      setSelected]      = useState(null);
-  const [searchVisible, setSearchVisible] = useState(false);
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const searchRef  = useRef(null);
-
-  const toggleSearch = () => {
-    const opening = !searchVisible;
-    setSearchVisible(opening);
-    if (!opening) setSearch('');
-    Animated.timing(searchAnim, {
-      toValue: opening ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => { if (opening) searchRef.current?.focus(); });
-  };
 
   const load = async () => {
     setLoading(true);
@@ -321,9 +307,6 @@ const ManageUsersScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={st.title}>Manage Users</Text>
         <View style={st.headerRight}>
-          <TouchableOpacity onPress={toggleSearch} style={st.searchIconBtn}>
-            <Icon name={searchVisible ? 'close' : 'magnify'} size={22} color={searchVisible ? COLORS.danger : COLORS.gold} />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => setAddSheet(true)}>
             <LinearGradient colors={[COLORS.cyan, COLORS.royalBlue]} style={st.addBtn}>
               <Icon name="account-plus" size={18} color={COLORS.navy} />
@@ -331,27 +314,6 @@ const ManageUsersScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Animated Search Bar */}
-      {searchVisible && (
-        <Animated.View style={[st.searchBar, { opacity: searchAnim }]}>
-          <Icon name="magnify" size={18} color={COLORS.gray} />
-          <TextInput
-            ref={searchRef}
-            style={st.searchInput}
-            placeholder="Search by name, email, phone..."
-            placeholderTextColor={COLORS.gray}
-            value={search}
-            onChangeText={setSearch}
-            autoCapitalize="none"
-          />
-          {search ? (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Icon name="close-circle" size={16} color={COLORS.gray} />
-            </TouchableOpacity>
-          ) : null}
-        </Animated.View>
-      )}
 
       {/* Summary */}
       <View style={st.summary}>
@@ -403,6 +365,24 @@ const ManageUsersScreen = ({ navigation }) => {
             </TouchableOpacity>
           );
         })}
+      </View>
+
+      {/* Search stays at the point where the player list begins. */}
+      <View style={st.searchBar}>
+        <TextInput
+          style={st.searchInput}
+          placeholder="Search here"
+          placeholderTextColor={COLORS.gray}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        {search ? (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+            <Icon name="close-circle" size={18} color={COLORS.gray} />
+          </TouchableOpacity>
+        ) : null}
+        <Icon name="magnify" size={20} color={COLORS.gold} />
       </View>
 
       {/* List */}
@@ -463,7 +443,6 @@ const getStStyles = (COLORS) => StyleSheet.create({
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 12 },
   title:         { color: COLORS.white, fontSize: 18, fontWeight: '700' },
   headerRight:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  searchIconBtn: { padding: 2 },
   addBtn:        { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 14, marginBottom: 10, gap: 8, borderWidth: 1, borderColor: COLORS.cardBorder, height: 46 },
   searchInput:   { flex: 1, color: COLORS.white, fontSize: 14 },

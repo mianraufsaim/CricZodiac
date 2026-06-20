@@ -129,7 +129,7 @@ const MatchCard = ({ item, COLORS, styles }) => {
             <View style={styles.perfLabel}>
               <Icon name="cricket" size={11} color={COLORS.gold} />
               <Text style={[styles.perfLabelTxt, { color: COLORS.gold }]}>BATTING</Text>
-              {bat.is_out ? (
+              {Number(bat.is_out) === 1 ? (
                 <View style={styles.dismissalPill}>
                   <Icon name="close-circle" size={9} color={COLORS.danger} />
                   <Text style={styles.dismissalTxt}>
@@ -138,6 +138,11 @@ const MatchCard = ({ item, COLORS, styles }) => {
                       : 'Out'}
                     {bat.bowler_name ? ` · b. ${bat.bowler_name}` : ''}
                   </Text>
+                </View>
+              ) : ['retired', 'retired_hurt'].includes(String(bat.dismissal_type || '').toLowerCase()) ? (
+                <View style={[styles.dismissalPill, { backgroundColor: COLORS.warning + '22', borderColor: COLORS.warning + '44' }]}>
+                  <Icon name="walk" size={9} color={COLORS.warning} />
+                  <Text style={[styles.dismissalTxt, { color: COLORS.warning }]}>Retired Hurt</Text>
                 </View>
               ) : (
                 <View style={[styles.dismissalPill, { backgroundColor: COLORS.success + '22', borderColor: COLORS.success + '44' }]}>

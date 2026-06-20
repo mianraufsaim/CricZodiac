@@ -822,10 +822,10 @@ export const saveWicket = async (wicketData) => {
   return id;
 };
 
-// ── Retired Batsman ───────────────────────────────────────
-// Retired is NOT a wicket: no ball is saved, over doesn't advance,
-// bowling/innings wicket counts are untouched. We only mark the
-// batsman's batting_scorecards row as retired.
+// ── Retired Hurt Batsman ──────────────────────────────────
+// Retired hurt is NOT a wicket: no ball is saved, over doesn't advance,
+// bowling/innings wicket counts are untouched. The batter remains not out
+// and can return later in the same innings.
 export const retireBatsman = async (inningsId, batsmanId) => {
   const eventId = uuid.v4();
   await executeTransaction([
@@ -840,10 +840,18 @@ export const retireBatsman = async (inningsId, batsmanId) => {
     },
     {
       sql: `UPDATE batting_scorecards
-            SET is_out = 1, dismissal_type = 'retired',
+            SET is_out = 0, dismissal_type = 'retired_hurt',
+                bowler_id = NULL, fielder_id = NULL,
                 sync_status = ?, updated_at = datetime('now')
             WHERE innings_id = ? AND player_id = ?`,
       params: [SYNC_STATUS.PENDING, inningsId, batsmanId],
+    },
+    // Retain only the latest temporary-status change while offline.
+    {
+      sql: `DELETE FROM sync_queue
+            WHERE table_name = 'batting_scorecards' AND local_id = ?
+              AND sync_status IN (?, ?)`,
+      params: [`${inningsId}:${batsmanId}`, SYNC_STATUS.PENDING, SYNC_STATUS.FAILED],
     },
     {
       sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
@@ -851,7 +859,40 @@ export const retireBatsman = async (inningsId, batsmanId) => {
       params: [
         eventId, 'batting_scorecards', 'update',
         `${inningsId}:${batsmanId}`,
-        JSON.stringify({ innings_id: inningsId, player_id: batsmanId, is_out: 1, dismissal_type: 'retired' }),
+        JSON.stringify({ innings_id: inningsId, player_id: batsmanId, is_out: 0, dismissal_type: 'retired_hurt' }),
+        SYNC_STATUS.PENDING,
+      ],
+    },
+  ]);
+};
+
+// A retired-hurt batter may return later in the same innings. Keep the same
+// scorecard row so their previous runs and balls continue without duplication.
+export const resumeRetiredHurtBatsman = async (inningsId, batsmanId) => {
+  const eventId = uuid.v4();
+  await executeTransaction([
+    {
+      sql: `UPDATE batting_scorecards
+            SET is_out = 0, dismissal_type = NULL,
+                bowler_id = NULL, fielder_id = NULL,
+                sync_status = ?, updated_at = datetime('now')
+            WHERE innings_id = ? AND player_id = ?`,
+      params: [SYNC_STATUS.PENDING, inningsId, batsmanId],
+    },
+    // A queued retirement must not arrive after the return event.
+    {
+      sql: `DELETE FROM sync_queue
+            WHERE table_name = 'batting_scorecards' AND local_id = ?
+              AND sync_status IN (?, ?)`,
+      params: [`${inningsId}:${batsmanId}`, SYNC_STATUS.PENDING, SYNC_STATUS.FAILED],
+    },
+    {
+      sql: `INSERT INTO sync_queue (event_id, table_name, action_type, local_id, payload_json, sync_status, created_at)
+            VALUES (?,?,?,?,?,?,datetime('now'))`,
+      params: [
+        eventId, 'batting_scorecards', 'update',
+        `${inningsId}:${batsmanId}`,
+        JSON.stringify({ innings_id: inningsId, player_id: batsmanId, is_out: 0, dismissal_type: null }),
         SYNC_STATUS.PENDING,
       ],
     },
@@ -1238,15 +1279,18 @@ export const getBallsWithPlayers = (inningsId) =>
            w.fielder_id AS wicket_fielder_id,
            us.name  AS striker_name,
            uns.name AS non_striker_name,
-           ubw.name AS bowler_name
+           ubw.name AS bowler_name,
+           uf.name  AS fielder_name
     FROM balls b
     LEFT JOIN wickets w ON w.ball_id = b.id
     LEFT JOIN players s   ON b.striker_id     = s.id
     LEFT JOIN players ns  ON b.non_striker_id = ns.id
     LEFT JOIN players bw  ON b.bowler_id      = bw.id
+    LEFT JOIN players f   ON w.fielder_id     = f.id
     LEFT JOIN users us    ON s.user_id        = us.id
     LEFT JOIN users uns   ON ns.user_id       = uns.id
     LEFT JOIN users ubw   ON bw.user_id       = ubw.id
+    LEFT JOIN users uf    ON f.user_id        = uf.id
     WHERE b.innings_id = ?
     ORDER BY b.created_at ASC
   `, [inningsId]);

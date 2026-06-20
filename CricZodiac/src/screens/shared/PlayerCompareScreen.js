@@ -179,10 +179,9 @@ const PlayerPicker = ({ visible, onClose, onSelect, excludeId, clubParams, COLOR
           <Text style={styles.sheetTitle}>Select Player</Text>
 
           <View style={styles.searchWrap}>
-            <Icon name="magnify" size={18} color={COLORS.gray} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search players..."
+              placeholder="Search here"
               placeholderTextColor={COLORS.gray}
               value={query}
               onChangeText={setQuery}
@@ -192,6 +191,7 @@ const PlayerPicker = ({ visible, onClose, onSelect, excludeId, clubParams, COLOR
                 <Icon name="close-circle" size={16} color={COLORS.gray} />
               </TouchableOpacity>
             )}
+            <Icon name="magnify" size={18} color={COLORS.gold} />
           </View>
 
           {loading ? (

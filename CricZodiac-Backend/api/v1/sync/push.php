@@ -2034,6 +2034,13 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
         $battingOrder = resolveBattingOrder($pdo, $inningsId ? (int)$inningsId : null, $clubId ? (int)$clubId : null, $seriesId ? (int)$seriesId : null, $matchId ? (int)$matchId : null, $playerId ? (int)$playerId : null);
     }
 
+    // Retired hurt is a temporary interruption, never a dismissal. An
+    // explicit null dismissal_type means the batter has resumed their innings.
+    $hasDismissalType = array_key_exists('dismissal_type', $d);
+    $dismissalType = $hasDismissalType ? $d['dismissal_type'] : null;
+    $isRetiredHurt = in_array(strtolower((string) $dismissalType), ['retired', 'retired_hurt'], true);
+    $isOut = $isRetiredHurt ? 0 : (!empty($d['is_out']) ? 1 : 0);
+
     // Upsert by innings_id + player_id (existing unique key)
     $existing = null;
     if ($inningsId && $playerId) {
@@ -2051,8 +2058,13 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
             SET club_id        = COALESCE(club_id, ?),
                 series_id      = COALESCE(series_id, ?),
                 match_id       = COALESCE(match_id, ?),
-                is_out         = CASE WHEN ? = 1 THEN 1 ELSE is_out END,
-                dismissal_type = COALESCE(?, dismissal_type),
+                is_out         = CASE
+                    WHEN ? = 1 THEN 0
+                    WHEN ? = 1 THEN 1
+                    WHEN ? = 1 AND ? = 0 THEN 0
+                    ELSE is_out
+                END,
+                dismissal_type = CASE WHEN ? = 1 THEN ? ELSE dismissal_type END,
                 bowler_id      = COALESCE(?, bowler_id),
                 bowler_local_id = COALESCE(?, bowler_local_id),
                 fielder_id     = COALESCE(?, fielder_id),
@@ -2061,7 +2073,12 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
             WHERE id = ?
         ")->execute([
             $clubId, $seriesId, $matchId,
-            $d['is_out'] ?? 0, $d['dismissal_type'] ?? null,
+            $isRetiredHurt ? 1 : 0,
+            $isOut,
+            $hasDismissalType ? 1 : 0,
+            $isOut,
+            $hasDismissalType ? 1 : 0,
+            $dismissalType,
             $bowlerId,
             $bowlerLocalId,
             $fielderId,
@@ -2087,7 +2104,7 @@ function syncBattingScorecard(PDO $pdo, string $action, array $d): bool {
             $d['id'], $clubId, $seriesId, $matchId,
             $inningsId, $d['innings_id'] ?? null,
             $playerId,  $d['player_id']  ?? null,
-            $d['is_out'] ?? 0, $d['dismissal_type'] ?? null,
+            $isOut, $dismissalType,
             $bowlerId, $bowlerLocalId,
             $fielderId,
             $battingOrder,

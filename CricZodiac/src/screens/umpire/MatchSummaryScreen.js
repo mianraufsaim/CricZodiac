@@ -30,8 +30,8 @@ const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
 
 const totalMatchesForSeries = (format) => SERIES_TOTAL_MATCHES[format] || 1;
 const toBool = (value) => value === true || value === 1 || value === '1';
-const superOverLabel = (superOverNumber, isChase = false) =>
-  `Super Over ${Math.max(1, Number(superOverNumber) || 1)}${isChase ? ' Chase' : ''}`;
+const superOverLabel = (_sequence, isChase = false) =>
+  `Super Over${isChase ? ' Chase' : ''}`;
 const maxWicketsForMatch = (ppt = 6, allowLastBatsman = false) =>
   Math.max(1, Number(ppt || 6) - (toBool(allowLastBatsman) ? 0 : 1));
 
@@ -121,7 +121,7 @@ const computeWinner = (sortedInnings, teamsArr, ppt = 6, allowLastBatsman = fals
 
 const resultTextForWinner = (winner) => {
   if (!winner || winner.type === 'tie') return 'Match Tied!';
-  const superOver = winner.super_over_number ? ` Super Over ${winner.super_over_number}` : '';
+  const superOver = winner.super_over_number ? ' Super Over' : '';
   return `${winner.winner.team_name} won${superOver} by ${winner.margin}`;
 };
 
@@ -732,7 +732,7 @@ const MatchSummaryScreen = ({ navigation, route }) => {
               <Text style={styles.resultWinnerName}>{winner.winner?.team_name}</Text>
               <View style={styles.resultMarginRow}>
                 <Text style={styles.resultMarginLabel}>
-                  {winner.super_over_number ? `SUPER OVER ${winner.super_over_number}` : 'WON BY'}
+                  {winner.super_over_number ? 'SUPER OVER' : 'WON BY'}
                 </Text>
                 <Text style={styles.resultMarginValue}>
                   {winner.margin}

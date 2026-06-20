@@ -53,7 +53,7 @@ export const WICKET_TYPES = [
   { id: 'lbw',        label: 'LBW' },
   { id: 'stumped',    label: 'Stumped' },
   { id: 'hit_wicket', label: 'Hit Wicket' },
-  { id: 'retired',    label: 'Retired' },
+  { id: 'retired',    label: 'Retired Hurt' },
   { id: 'other',      label: 'Other' },
 ];
 

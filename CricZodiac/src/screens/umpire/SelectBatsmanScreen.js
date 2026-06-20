@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getTeamPlayers, upsertTeamPlayersFromServer } from '../../database/queries/matchQueries';
+import { getTeamPlayers, upsertTeamPlayersFromServer, resumeRetiredHurtBatsman } from '../../database/queries/matchQueries';
 import { getBattingScorecard } from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
@@ -20,6 +20,9 @@ const getPlayerDisplayName = (player) => (
 ).trim();
 
 const isMissingPlayerName = (name) => !name || name.toLowerCase() === 'unknown';
+const isRetiredHurt = (dismissalType) => ['retired', 'retired_hurt'].includes(
+  String(dismissalType || '').toLowerCase()
+);
 
 const SelectBatsmanScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -41,22 +44,8 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
   const [striker, setStriker]   = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
   const [searchQuery, setSearchQuery]     = useState('');
-  const [searchVisible, setSearchVisible] = useState(false);
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const searchRef  = useRef(null);
 
   useEffect(() => { load(); }, []);
-
-  const toggleSearch = () => {
-    const opening = !searchVisible;
-    setSearchVisible(opening);
-    if (opening) setSearchQuery('');
-    Animated.timing(searchAnim, {
-      toValue: opening ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => { if (opening) searchRef.current?.focus(); });
-  };
 
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) return players;
@@ -121,34 +110,52 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
       teamPlayers = await loadLocalTeamPlayers();
     }
 
-    // 3. Filter out already-batting and dismissed players
-    const scorecard    = await getBattingScorecard(inningsId);
+    // 3. Filter out already-batting and genuinely dismissed players.
+    // A retired-hurt batter remains eligible to return later in the innings.
+    const scorecard = await getBattingScorecard(inningsId);
     const outPlayerIds = new Set();
+    const retiredHurtPlayerIds = new Set();
     for (const score of scorecard) {
-      if (score.is_out) outPlayerIds.add(score.player_id);
+      if (isRetiredHurt(score.dismissal_type)) {
+        retiredHurtPlayerIds.add(String(score.player_id));
+      } else if (Number(score.is_out) === 1) {
+        outPlayerIds.add(String(score.player_id));
+      }
     }
 
     const availablePlayers = [];
     for (const player of teamPlayers) {
       if (
-        player.player_id === existingStrikerId ||
-        player.player_id === existingNonStrikerId ||
-        outPlayerIds.has(player.player_id)
+        String(player.player_id) === String(existingStrikerId) ||
+        String(player.player_id) === String(existingNonStrikerId) ||
+        outPlayerIds.has(String(player.player_id))
       ) continue;
 
       availablePlayers.push({
-        id:          player.player_id,
-        full_name:   getPlayerDisplayName(player) || 'Unknown',
-        player_type: player.player_type || 'allrounder',
+        id:                         player.player_id,
+        full_name:                  getPlayerDisplayName(player) || 'Unknown',
+        player_type:                player.player_type || 'allrounder',
+        isReturningFromRetiredHurt: retiredHurtPlayerIds.has(String(player.player_id)),
       });
     }
 
     setPlayers(availablePlayers);
   };
 
-  const handleConfirm = () => {
+  const resumeIfReturningFromRetiredHurt = async (batter) => {
+    if (!batter?.isReturningFromRetiredHurt) return;
+    await resumeRetiredHurtBatsman(inningsId, batter.id);
+  };
+
+  const handleConfirm = async () => {
     if (mode === 'new_batsman') {
       if (!striker) { showAlert('Select a batsman'); return; }
+      try {
+        await resumeIfReturningFromRetiredHurt(striker);
+      } catch (error) {
+        showAlert('Unable to Resume Batter', error?.message || 'Please try selecting the batter again.');
+        return;
+      }
       // Preserve the original selectionType so LiveScoring knows whether to update
       // striker or non-striker (e.g. 'new_non_striker' for run-out of non-striker)
       navigation.navigate({
@@ -165,6 +172,15 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
     } else {
       if (!striker) { showAlert('Selection Incomplete', 'Please select the Striker.'); return; }
       if (!nonStriker) { showAlert('Selection Incomplete', 'Please select the Non-Striker.'); return; }
+      try {
+        await Promise.all([
+          resumeIfReturningFromRetiredHurt(striker),
+          resumeIfReturningFromRetiredHurt(nonStriker),
+        ]);
+      } catch (error) {
+        showAlert('Unable to Resume Batter', error?.message || 'Please try selecting the batters again.');
+        return;
+      }
       navigation.navigate({
         name: returnScreen,
         params: {
@@ -196,42 +212,23 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
     setStriker(item);
   };
 
+  const canConfirm = mode === 'new_batsman' ? !!striker : !!striker && !!nonStriker;
+
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
       <View style={styles.header}>
         <Text style={styles.title}>{mode === 'new_batsman' ? 'New Batsman' : 'Select Batsmen'}</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleSearch} style={styles.searchIconBtn}>
-            <Icon name={searchVisible ? 'close' : 'magnify'} size={22} color={searchVisible ? COLORS.danger : COLORS.gold} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleConfirm}>
-            <Text style={[
-              styles.confirm,
-              (mode === 'new_batsman' ? !striker : (!striker || !nonStriker)) && { opacity: 0.4 },
-            ]}>CONFIRM</Text>
+          <TouchableOpacity
+            onPress={handleConfirm}
+            disabled={!canConfirm}
+            style={[styles.doneBtn, !canConfirm && styles.doneBtnDisabled]}
+          >
+            <Icon name="check" size={18} color={COLORS.navy} />
+            <Text style={styles.doneTxt}>DONE</Text>
           </TouchableOpacity>
         </View>
       </View>
-
-      {searchVisible && (
-        <Animated.View style={[styles.searchBar, { opacity: searchAnim }]}>
-          <Icon name="magnify" size={18} color={COLORS.gray} style={{ marginRight: 8 }} />
-          <TextInput
-            ref={searchRef}
-            style={styles.searchInput}
-            placeholder="Search players..."
-            placeholderTextColor={COLORS.gray}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={16} color={COLORS.gray} />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      )}
 
       {mode !== 'new_batsman' && (
         <View style={styles.selectedRow}>
@@ -263,6 +260,23 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search here"
+          placeholderTextColor={COLORS.gray}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Icon name="close-circle" size={16} color={COLORS.gray} />
+          </TouchableOpacity>
+        )}
+        <Icon name="magnify" size={19} color={COLORS.gold} style={{ marginLeft: 10 }} />
+      </View>
 
       <FlatList
         data={filteredPlayers}
@@ -301,13 +315,14 @@ const SelectBatsmanScreen = ({ navigation, route }) => {
 
 const getStyles = (COLORS) => StyleSheet.create({
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 12 },
-  headerRight:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  searchIconBtn: { padding: 2 },
-  searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 44, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
+  headerRight:   { alignItems: 'flex-end' },
+  searchBar:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 48, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   searchInput:   { flex: 1, color: COLORS.white, fontSize: 14 },
   emptyText:     { color: COLORS.gray, textAlign: 'center', marginTop: 40, fontSize: 14 },
   title:         { color: COLORS.white, fontSize: 18, fontWeight: '700' },
-  confirm:       { color: COLORS.gold, fontWeight: '800', fontSize: 15 },
+  doneBtn:       { minWidth: 94, minHeight: 46, borderRadius: 10, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 14 },
+  doneBtnDisabled: { opacity: 0.38 },
+  doneTxt:       { color: COLORS.navy, fontWeight: '900', fontSize: 14 },
   selectedRow:  { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 12 },
   selectedChip:       { flex: 1, backgroundColor: COLORS.card, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.cardBorder },
   selectedChipHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

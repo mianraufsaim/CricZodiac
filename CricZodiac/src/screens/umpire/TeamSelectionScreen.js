@@ -2,8 +2,8 @@
 // CricZodiac — Team Selection Screen
 // ============================================================
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated, Modal, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Modal, ActivityIndicator } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -123,11 +123,8 @@ const TeamSelectionScreen = ({ navigation, route }) => {
   const [wkB, setWkB]               = useState(null);
   const [activeTab, setActiveTab]   = useState('A');
   const [saving, setSaving]         = useState(false);
-  const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery]     = useState('');
   const [roleModal, setRoleModal]         = useState({ visible: false, player: null });
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const searchRef  = useRef(null);
 
   useEffect(() => { loadPlayers(); }, []);
 
@@ -150,17 +147,6 @@ const TeamSelectionScreen = ({ navigation, route }) => {
     } finally {
       setLoadingPlayers(false);
     }
-  };
-
-  const toggleSearch = () => {
-    const opening = !searchVisible;
-    setSearchVisible(opening);
-    if (opening) setSearchQuery('');
-    Animated.timing(searchAnim, {
-      toValue: opening ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => { if (opening) searchRef.current?.focus(); });
   };
 
   const filteredPlayers = useMemo(() => {
@@ -326,35 +312,17 @@ const TeamSelectionScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Players</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleSearch} style={styles.searchIconBtn}>
-            <Icon name={searchVisible ? 'close' : 'magnify'} size={22} color={searchVisible ? COLORS.danger : COLORS.gold} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveTeams} disabled={saving}>
-            <Text style={[styles.doneBtn, saving && { opacity: 0.5 }]}>{saving ? '...' : 'DONE'}</Text>
+          <TouchableOpacity
+            onPress={handleSaveTeams}
+            disabled={saving}
+            style={[styles.doneBtn, saving && styles.doneBtnDisabled]}
+            accessibilityLabel="Finish selecting players"
+          >
+            <Icon name="check" size={18} color={COLORS.navy} />
+            <Text style={styles.doneTxt}>{saving ? 'SAVING' : 'DONE'}</Text>
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Search bar */}
-      {searchVisible && (
-        <Animated.View style={[styles.searchBar, { opacity: searchAnim }]}>
-          <Icon name="magnify" size={18} color={COLORS.gray} style={{ marginRight: 8 }} />
-          <TextInput
-            ref={searchRef}
-            style={styles.searchInput}
-            placeholder="Search players..."
-            placeholderTextColor={COLORS.gray}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={16} color={COLORS.gray} />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      )}
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -386,6 +354,23 @@ const TeamSelectionScreen = ({ navigation, route }) => {
           {currentTeam.length}/{limit} selected  •  Tap to add/remove  •  Long-press → Assign roles
         </Text>
       )}
+
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search here"
+          placeholderTextColor={COLORS.gray}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Icon name="close-circle" size={16} color={COLORS.gray} />
+          </TouchableOpacity>
+        )}
+        <Icon name="magnify" size={19} color={COLORS.gold} style={{ marginLeft: 10 }} />
+      </View>
 
       {loadingPlayers ? (
         <View style={styles.loadingWrap}>
@@ -426,9 +411,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   header:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 12 },
   headerTitle:       { fontSize: 18, fontWeight: '700', color: COLORS.white },
   headerRight:       { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  searchIconBtn:     { padding: 2 },
-  doneBtn:           { color: COLORS.gold, fontWeight: '800', fontSize: 15 },
-  searchBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 44, marginHorizontal: 20, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder, overflow: 'hidden' },
+  doneBtn:           { minWidth: 94, minHeight: 46, borderRadius: 10, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 14 },
+  doneBtnDisabled:   { opacity: 0.5 },
+  doneTxt:           { color: COLORS.navy, fontWeight: '900', fontSize: 14 },
+  searchBar:         { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 48, marginHorizontal: 20, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder, overflow: 'hidden' },
   searchInput:       { flex: 1, color: COLORS.white, fontSize: 14 },
   tabs:              { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 8 },
   tab:               { flex: 1, paddingVertical: 10, backgroundColor: COLORS.card, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: COLORS.cardBorder },

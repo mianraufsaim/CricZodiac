@@ -63,12 +63,14 @@ const ChooseBattingMode = ({ match, teamA, teamB, navigation, COLORS, styles }) 
       </View>
 
       <View style={styles.teamsBar}>
-        <View style={styles.teamChip}>
-          <Text style={styles.teamChipText}>{teamA?.team_name}</Text>
+        <View style={[styles.teamChip, styles.teamChipA]}>
+          <Icon name="shield" size={16} color={COLORS.gold} style={styles.teamChipIcon} />
+          <Text style={styles.teamChipText} numberOfLines={1}>{teamA?.team_name}</Text>
         </View>
-        <Text style={styles.vsText}>vs</Text>
-        <View style={styles.teamChip}>
-          <Text style={styles.teamChipText}>{teamB?.team_name}</Text>
+        <Text style={styles.vsText}>VS</Text>
+        <View style={[styles.teamChip, styles.teamChipB]}>
+          <Icon name="shield" size={16} color={COLORS.cyan} style={styles.teamChipIcon} />
+          <Text style={styles.teamChipText} numberOfLines={1}>{teamB?.team_name}</Text>
         </View>
       </View>
 
@@ -82,7 +84,7 @@ const ChooseBattingMode = ({ match, teamA, teamB, navigation, COLORS, styles }) 
       <View style={styles.phaseContainer}>
         <Text style={styles.phaseTitle}>Who bats first?</Text>
         <Text style={styles.chooseSubtitle}>
-          (No toss needed — loser of previous match picks)
+          (No toss needed — Winner of previous match picks)
         </Text>
 
         <View style={[styles.callRow, { marginTop: 16 }]}>
@@ -234,12 +236,14 @@ const TossScreen = ({ navigation, route }) => {
 
       {/* Teams bar */}
       <View style={styles.teamsBar}>
-        <View style={styles.teamChip}>
-          <Text style={styles.teamChipText}>{teamA?.team_name}</Text>
+        <View style={[styles.teamChip, styles.teamChipA]}>
+          <Icon name="shield" size={16} color={COLORS.gold} style={styles.teamChipIcon} />
+          <Text style={styles.teamChipText} numberOfLines={1}>{teamA?.team_name}</Text>
         </View>
-        <Text style={styles.vsText}>vs</Text>
-        <View style={styles.teamChip}>
-          <Text style={styles.teamChipText}>{teamB?.team_name}</Text>
+        <Text style={styles.vsText}>VS</Text>
+        <View style={[styles.teamChip, styles.teamChipB]}>
+          <Icon name="shield" size={16} color={COLORS.cyan} style={styles.teamChipIcon} />
+          <Text style={styles.teamChipText} numberOfLines={1}>{teamB?.team_name}</Text>
         </View>
       </View>
 
@@ -389,10 +393,13 @@ const getStyles = (COLORS) => StyleSheet.create({
   container:         { flex: 1, paddingHorizontal: 20 },
   header:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, marginBottom: 20 },
   headerTitle:       { fontSize: 20, fontWeight: '800', color: COLORS.white, letterSpacing: 4 },
-  teamsBar:          { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20, gap: 12 },
-  teamChip:          { backgroundColor: COLORS.card, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.gold },
-  teamChipText:      { color: COLORS.white, fontWeight: '700', fontSize: 13 },
-  vsText:            { color: COLORS.gold, fontWeight: '800', fontSize: 16 },
+  teamsBar:          { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20, gap: 8 },
+  teamChip:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexShrink: 1, maxWidth: '43%', minHeight: 46, borderRadius: 23, paddingHorizontal: 14, borderWidth: 1.5 },
+  teamChipA:         { backgroundColor: COLORS.gold + '18', borderColor: COLORS.gold },
+  teamChipB:         { backgroundColor: COLORS.cyan + '14', borderColor: COLORS.cyan },
+  teamChipIcon:      { marginRight: 6 },
+  teamChipText:      { color: COLORS.white, fontWeight: '900', fontSize: 15, flexShrink: 1, textAlign: 'center' },
+  vsText:            { color: COLORS.gray, fontWeight: '900', fontSize: 11, letterSpacing: 1 },
   coinArea:          { alignItems: 'center', justifyContent: 'center', height: 200, marginVertical: 20 },
   coinContainer:     { width: 150, height: 150, borderRadius: 75, backgroundColor: COLORS.gold, shadowColor: COLORS.gold, shadowOpacity: 0.8, shadowRadius: 20, elevation: 20 },
   coin:              { width: 150, height: 150, borderRadius: 75, alignItems: 'center', justifyContent: 'center' },

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -35,9 +35,6 @@ const SelectBowlerScreen = ({ navigation, route }) => {
   const [players, setPlayers]             = useState([]);
   const [selected, setSelected]           = useState(null);
   const [searchQuery, setSearchQuery]     = useState('');
-  const [searchVisible, setSearchVisible] = useState(false);
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const searchRef  = useRef(null);
 
   useEffect(() => { load(); }, []);
 
@@ -124,17 +121,6 @@ const SelectBowlerScreen = ({ navigation, route }) => {
     setPlayers(availablePlayers);
   };
 
-  const toggleSearch = () => {
-    const opening = !searchVisible;
-    setSearchVisible(opening);
-    if (opening) setSearchQuery('');
-    Animated.timing(searchAnim, {
-      toValue: opening ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => { if (opening) searchRef.current?.focus(); });
-  };
-
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) return players;
     const q = searchQuery.toLowerCase();
@@ -164,34 +150,29 @@ const SelectBowlerScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Select Bowler</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleSearch} style={styles.searchIconBtn}>
-            <Icon name={searchVisible ? 'close' : 'magnify'} size={22} color={searchVisible ? COLORS.danger : COLORS.cyan} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={confirm}>
-            <Text style={[styles.confirm, !selected && { opacity: 0.4 }]}>CONFIRM</Text>
+          <TouchableOpacity onPress={confirm} disabled={!selected} style={[styles.doneBtn, !selected && styles.doneBtnDisabled]}>
+            <Icon name="check" size={18} color={COLORS.navy} />
+            <Text style={styles.doneTxt}>DONE</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {searchVisible && (
-        <Animated.View style={[styles.searchBar, { opacity: searchAnim }]}>
-          <Icon name="magnify" size={18} color={COLORS.gray} style={{ marginRight: 8 }} />
-          <TextInput
-            ref={searchRef}
-            style={styles.searchInput}
-            placeholder="Search bowlers..."
-            placeholderTextColor={COLORS.gray}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={16} color={COLORS.gray} />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      )}
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search here"
+          placeholderTextColor={COLORS.gray}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Icon name="close-circle" size={16} color={COLORS.gray} />
+          </TouchableOpacity>
+        )}
+        <Icon name="magnify" size={19} color={COLORS.cyan} style={{ marginLeft: 10 }} />
+      </View>
 
       <FlatList
         data={filteredPlayers}
@@ -228,13 +209,14 @@ const SelectBowlerScreen = ({ navigation, route }) => {
 
 const getStyles = (COLORS) => StyleSheet.create({
   header:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, marginBottom: 12 },
-  headerRight:    { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  searchIconBtn:  { padding: 2 },
-  searchBar:      { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 44, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
+  headerRight:    { alignItems: 'flex-end' },
+  searchBar:      { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 10, paddingHorizontal: 14, height: 48, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
   searchInput:    { flex: 1, color: COLORS.white, fontSize: 14 },
   emptyText:      { color: COLORS.gray, textAlign: 'center', marginTop: 40, fontSize: 14 },
   title:          { color: COLORS.white, fontSize: 18, fontWeight: '700' },
-  confirm:        { color: COLORS.gold, fontWeight: '800', fontSize: 15 },
+  doneBtn:        { minWidth: 94, minHeight: 46, borderRadius: 10, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 14 },
+  doneBtnDisabled:{ opacity: 0.38 },
+  doneTxt:        { color: COLORS.navy, fontWeight: '900', fontSize: 14 },
   row:            { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   rowSelected:    { borderColor: COLORS.cyan },
   rowCurrent:     { opacity: 0.4 },

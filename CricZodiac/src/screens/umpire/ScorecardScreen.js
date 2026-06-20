@@ -31,9 +31,8 @@ const fmtOvers = (overs) => {
 const toBool = (value) => value === true || value === 1 || value === '1';
 const inningsLabel = (innings) => {
   if (toBool(innings?.is_super_over)) {
-    const superOver = Number(innings.super_over_number) || Math.max(1, Math.ceil((Number(innings.innings_number) - 2) / 2));
     const isChase = Number(innings.innings_number) % 2 === 0;
-    return `SO ${superOver}${isChase ? ' Chase' : ''}`;
+    return `Super Over${isChase ? ' Chase' : ''}`;
   }
   return Number(innings?.innings_number) === 1 ? '1st Inn' : '2nd Inn';
 };
@@ -96,17 +95,21 @@ const BattingTable = ({ rows, COLORS, styles }) => (
         const rs = b.runs_scored || 0;
         const bf = b.balls_faced || 0;
         const sr = bf > 0 ? ((rs / bf) * 100).toFixed(1) : '0.0';
+        const isOut = Number(b.is_out) === 1;
+        const isRetiredHurt = ['retired', 'retired_hurt'].includes(String(b.dismissal_type || '').toLowerCase());
         return (
           <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
             <View style={{ flex: 3 }}>
               <Text style={styles.playerName} numberOfLines={1}>{b.full_name}</Text>
               <Text style={styles.dismissal}>
-                {b.is_out
+                {isOut
                   ? (b.dismissal_type
                       ? b.dismissal_type.replace(/_/g, ' ')
                         + (b.bowler_name ? ` · b. ${b.bowler_name}` : '')
                       : 'out')
-                  : 'not out'}
+                  : (isRetiredHurt
+                    ? 'retired hurt'
+                    : 'not out')}
               </Text>
             </View>
             <Text style={[styles.td, rs >= 50 && styles.tdGold]}>{rs}</Text>
