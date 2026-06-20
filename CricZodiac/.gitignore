@@ -1,0 +1,4 @@
+# Android signing secrets
+android/keystore.properties
+android/*.jks
+android/*.keystore
