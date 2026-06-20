@@ -260,7 +260,7 @@ function syncMatch(PDO $pdo, string $action, array $d): bool {
                     overs, players_per_team, allow_last_batsman, allow_super_over, max_overs_per_bowler, wide_value, no_ball_value,
                     team_a_id, team_a_local, team_b_id, team_b_local,
                     status, created_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'setup',NOW())
             ")->execute([
                 $matchLocalId, $clubId, $seriesId, $seriesLocalId,
                 $title, $venue, $matchDate,
