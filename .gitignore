@@ -1,3 +1,4 @@
-**/.DS_Store
+# Build artifacts
+*.apk
+*.aab
 *.DS_Store
-.DS_Store
