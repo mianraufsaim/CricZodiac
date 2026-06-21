@@ -1,7 +1,21 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- react-native-vision-camera (ball tracking) + image-picker launchCamera -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      Note: no READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE.
+      Picking a player/profile photo uses launchImageLibrary, which goes through the
+      Android system photo picker (no permission needed) and complies with Google
+      Play's Photo & Video Permissions policy for one-time photo selection.
+    -->
+    <!-- react-native-fs declares WRITE_EXTERNAL_STORAGE uncapped; cap it to ≤ API 32
+         (irrelevant under scoped storage on Android 13+). -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:node="replace" />
 
     <application
       android:name=".MainApplication"

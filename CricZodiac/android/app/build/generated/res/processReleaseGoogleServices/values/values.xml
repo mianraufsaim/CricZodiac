@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gcm_defaultSenderId" translatable="false">818402093115</string>
+    <string name="google_api_key" translatable="false">AIzaSyDkgSo9PKyQ4RH4EK-1LL9UtbtxPgwk4Nc</string>
+    <string name="google_app_id" translatable="false">1:818402093115:android:3cffd6c3d743f1cc1e541e</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDkgSo9PKyQ4RH4EK-1LL9UtbtxPgwk4Nc</string>
+    <string name="google_storage_bucket" translatable="false">criczodiac.firebasestorage.app</string>
+    <string name="project_id" translatable="false">criczodiac</string>
+</resources>

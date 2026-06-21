@@ -1,0 +1,445 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.criczodiac"
+4    android:versionCode="3"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:4:5-67
+11-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:5:5-79
+12-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:5:22-76
+13    <!-- react-native-vision-camera (ball tracking) + image-picker launchCamera -->
+14    <uses-permission android:name="android.permission.CAMERA" />
+14-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:7:5-65
+14-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:7:22-62
+15    <!--
+16      Note: no READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE.
+17      Picking a player/profile photo uses launchImageLibrary, which goes through the
+18      Android system photo picker (no permission needed) and complies with Google
+19      Play's Photo & Video Permissions policy for one-time photo selection.
+20    -->
+21    <!--
+22         react-native-fs declares WRITE_EXTERNAL_STORAGE uncapped; cap it to ≤ API 32
+23         (irrelevant under scoped storage on Android 13+).
+24    -->
+25    <uses-permission
+25-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:16:5-18:32
+26        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+26-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:16:22-78
+27        android:maxSdkVersion="32" />
+27-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:17:9-35
+28    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+28-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:8:5-76
+28-->[:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:8:22-73
+29    <uses-permission android:name="android.permission.WAKE_LOCK" />
+29-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:9:5-68
+29-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:9:22-65
+30    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+31    <uses-permission android:name="com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE" />
+31-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:26:5-110
+31-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:26:22-107
+32    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+32-->[com.google.android.gms:play-services-measurement-impl:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/2851f8a5f8e6f9b14001253ad72fa889/transformed/jetified-play-services-measurement-impl-23.2.0/AndroidManifest.xml:27:5-79
+32-->[com.google.android.gms:play-services-measurement-impl:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/2851f8a5f8e6f9b14001253ad72fa889/transformed/jetified-play-services-measurement-impl-23.2.0/AndroidManifest.xml:27:22-76
+33    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" />
+33-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:26:5-88
+33-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:26:22-85
+34    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" />
+34-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:27:5-82
+34-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:27:22-79
+35
+36    <permission
+36-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
+37        android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+37-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
+38        android:protectionLevel="signature" />
+38-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
+39
+40    <uses-permission android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+40-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
+40-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
+41
+42    <application
+42-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:20:5-39:19
+43        android:name="com.criczodiac.MainApplication"
+43-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:21:7-38
+44        android:allowBackup="false"
+44-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:25:7-34
+45        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+45-->[androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
+46        android:extractNativeLibs="false"
+47        android:icon="@mipmap/ic_launcher"
+47-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:23:7-41
+48        android:label="@string/app_name"
+48-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:22:7-39
+49        android:roundIcon="@mipmap/ic_launcher_round"
+49-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:24:7-52
+50        android:theme="@style/AppTheme" >
+50-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:26:7-38
+51        <activity
+51-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:27:7-38:18
+52            android:name="com.criczodiac.MainActivity"
+52-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:28:9-37
+53            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+53-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:30:9-118
+54            android:exported="true"
+54-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:33:9-32
+55            android:label="@string/app_name"
+55-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:29:9-41
+56            android:launchMode="singleTask"
+56-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:31:9-40
+57            android:windowSoftInputMode="adjustResize" >
+57-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:32:9-51
+58            <intent-filter>
+58-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:34:9-37:25
+59                <action android:name="android.intent.action.MAIN" />
+59-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:35:13-65
+59-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:35:21-62
+60
+61                <category android:name="android.intent.category.LAUNCHER" />
+61-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:36:13-73
+61-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:36:23-70
+62            </intent-filter>
+63        </activity>
+64
+65        <meta-data
+65-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:12:9-14:36
+66            android:name="firebase_analytics_collection_enabled"
+66-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:13:13-65
+67            android:value="true" />
+67-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:14:13-33
+68        <meta-data
+68-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:15:9-17:37
+69            android:name="firebase_analytics_collection_deactivated"
+69-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:16:13-69
+70            android:value="false" />
+70-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:17:13-34
+71        <meta-data
+71-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:18:9-20:36
+72            android:name="google_analytics_adid_collection_enabled"
+72-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:19:13-68
+73            android:value="true" />
+73-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:20:13-33
+74        <meta-data
+74-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:21:9-23:36
+75            android:name="google_analytics_ssaid_collection_enabled"
+75-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:22:13-69
+76            android:value="true" />
+76-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:23:13-33
+77        <meta-data
+77-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:24:9-26:36
+78            android:name="google_analytics_automatic_screen_reporting_enabled"
+78-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:25:13-79
+79            android:value="true" />
+79-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:26:13-33
+80        <meta-data
+80-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:27:9-29:36
+81            android:name="google_analytics_default_allow_analytics_storage"
+81-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:28:13-76
+82            android:value="true" />
+82-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:29:13-33
+83        <meta-data
+83-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:30:9-32:36
+84            android:name="google_analytics_default_allow_ad_storage"
+84-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:31:13-69
+85            android:value="true" />
+85-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:32:13-33
+86        <meta-data
+86-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:33:9-35:36
+87            android:name="google_analytics_default_allow_ad_user_data"
+87-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:34:13-71
+88            android:value="true" />
+88-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:35:13-33
+89        <meta-data
+89-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:36:9-38:36
+90            android:name="google_analytics_default_allow_ad_personalization_signals"
+90-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:37:13-85
+91            android:value="true" />
+91-->[:react-native-firebase_analytics] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/analytics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:38:13-33
+92        <meta-data
+92-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:9:9-11:36
+93            android:name="app_data_collection_default_enabled"
+93-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:10:13-63
+94            android:value="true" />
+94-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:11:13-33
+95
+96        <service
+96-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:13:9-21:19
+97            android:name="com.google.firebase.components.ComponentDiscoveryService"
+97-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:14:13-84
+98            android:directBootAware="true"
+98-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:15:13-43
+99            android:exported="false" >
+99-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:16:13-37
+100            <meta-data
+100-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:18:13-20:85
+101                android:name="com.google.firebase.components:io.invertase.firebase.app.ReactNativeFirebaseAppRegistrar"
+101-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:19:17-120
+102                android:value="com.google.firebase.components.ComponentRegistrar" />
+102-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:20:17-82
+103            <meta-data
+103-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:33:13-35:85
+104                android:name="com.google.firebase.components:com.google.firebase.analytics.connector.internal.AnalyticsConnectorRegistrar"
+104-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:34:17-139
+105                android:value="com.google.firebase.components.ComponentRegistrar" />
+105-->[com.google.android.gms:play-services-measurement-api:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/91d965d95a876a5d7199dd6e1e96f836/transformed/jetified-play-services-measurement-api-23.2.0/AndroidManifest.xml:35:17-82
+106            <meta-data
+106-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:15:13-17:85
+107                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsKtxRegistrar"
+107-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:16:17-130
+108                android:value="com.google.firebase.components.ComponentRegistrar" />
+108-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:17:17-82
+109            <meta-data
+109-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:18:13-20:85
+110                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsRegistrar"
+110-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:19:17-127
+111                android:value="com.google.firebase.components.ComponentRegistrar" />
+111-->[com.google.firebase:firebase-installations:19.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/b8140273d3bfe57bf61ce828515c19c8/transformed/jetified-firebase-installations-19.1.0/AndroidManifest.xml:20:17-82
+112            <meta-data
+112-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:35:13-37:85
+113                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
+113-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:36:17-109
+114                android:value="com.google.firebase.components.ComponentRegistrar" />
+114-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:37:17-82
+115        </service>
+116
+117        <provider
+117-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:23:9-27:38
+118            android:name="io.invertase.firebase.app.ReactNativeFirebaseAppInitProvider"
+118-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:24:13-88
+119            android:authorities="com.criczodiac.reactnativefirebaseappinitprovider"
+119-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:25:13-86
+120            android:exported="false"
+120-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:26:13-37
+121            android:initOrder="99" />
+121-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:27:13-35
+122        <provider
+122-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:8:9-16:20
+123            android:name="com.imagepicker.ImagePickerProvider"
+123-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:9:13-63
+124            android:authorities="com.criczodiac.imagepickerprovider"
+124-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:10:13-71
+125            android:exported="false"
+125-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:11:13-37
+126            android:grantUriPermissions="true" >
+126-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:12:13-47
+127            <meta-data
+127-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:13:13-15:70
+128                android:name="android.support.FILE_PROVIDER_PATHS"
+128-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:14:17-67
+129                android:resource="@xml/imagepicker_provider_paths" />
+129-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:15:17-67
+130        </provider>
+131        <provider
+131-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:8:9-16:20
+132            android:name="cl.json.RNShareFileProvider"
+132-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:9:13-55
+133            android:authorities="com.criczodiac.rnshare.fileprovider"
+133-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:10:13-72
+134            android:exported="false"
+134-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:11:13-37
+135            android:grantUriPermissions="true" >
+135-->[:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:12:13-47
+136            <meta-data
+136-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:13:13-15:70
+137                android:name="android.support.FILE_PROVIDER_PATHS"
+137-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:14:17-67
+138                android:resource="@xml/share_download_paths" />
+138-->[:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:15:17-67
+139        </provider>
+140
+141        <activity
+141-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:23:9-27:75
+142            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
+142-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:24:13-93
+143            android:excludeFromRecents="true"
+143-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:25:13-46
+144            android:exported="false"
+144-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:26:13-37
+145            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+145-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:27:13-72
+146        <!--
+147            Service handling Google Sign-In user revocation. For apps that do not integrate with
+148            Google Sign-In, this service will never be started.
+149        -->
+150        <service
+150-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:33:9-37:51
+151            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+151-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:34:13-89
+152            android:exported="true"
+152-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:35:13-36
+153            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
+153-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:36:13-107
+154            android:visibleToInstantApps="true" />
+154-->[com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:37:13-48
+155        <service
+155-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:9:9-15:19
+156            android:name="com.google.mlkit.common.internal.MlKitComponentDiscoveryService"
+156-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:10:13-91
+157            android:directBootAware="true"
+157-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:17:13-43
+158            android:exported="false" >
+158-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:11:13-37
+159            <meta-data
+159-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:12:13-14:85
+160                android:name="com.google.firebase.components:com.google.mlkit.vision.barcode.internal.BarcodeRegistrar"
+160-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:13:17-120
+161                android:value="com.google.firebase.components.ComponentRegistrar" />
+161-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:14:17-82
+162            <meta-data
+162-->[com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:12:13-14:85
+163                android:name="com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar"
+163-->[com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:13:17-124
+164                android:value="com.google.firebase.components.ComponentRegistrar" />
+164-->[com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:14:17-82
+165            <meta-data
+165-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:20:13-22:85
+166                android:name="com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar"
+166-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:21:17-120
+167                android:value="com.google.firebase.components.ComponentRegistrar" />
+167-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:22:17-82
+168        </service>
+169
+170        <provider
+170-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:9:9-13:38
+171            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+171-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:10:13-78
+172            android:authorities="com.criczodiac.mlkitinitprovider"
+172-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:11:13-69
+173            android:exported="false"
+173-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:12:13-37
+174            android:initOrder="99" />
+174-->[com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:13:13-35
+175
+176        <receiver
+176-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:29:9-33:20
+177            android:name="com.google.android.gms.measurement.AppMeasurementReceiver"
+177-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:30:13-85
+178            android:enabled="true"
+178-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:31:13-35
+179            android:exported="false" >
+179-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:32:13-37
+180        </receiver>
+181
+182        <service
+182-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:35:9-38:40
+183            android:name="com.google.android.gms.measurement.AppMeasurementService"
+183-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:36:13-84
+184            android:enabled="true"
+184-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:37:13-35
+185            android:exported="false" />
+185-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:38:13-37
+186        <service
+186-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:39:9-43:72
+187            android:name="com.google.android.gms.measurement.AppMeasurementJobService"
+187-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:40:13-87
+188            android:enabled="true"
+188-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:41:13-35
+189            android:exported="false"
+189-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:42:13-37
+190            android:permission="android.permission.BIND_JOB_SERVICE" />
+190-->[com.google.android.gms:play-services-measurement:23.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/aac7f2f1c66d443ae8ab9213a6b0a5a2/transformed/jetified-play-services-measurement-23.2.0/AndroidManifest.xml:43:13-69
+191
+192        <activity
+192-->[com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:9-173
+193            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+193-->[com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:19-85
+194            android:exported="false"
+194-->[com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:146-170
+195            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+195-->[com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:86-145
+196
+197        <provider
+197-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:23:9-28:39
+198            android:name="com.google.firebase.provider.FirebaseInitProvider"
+198-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:24:13-77
+199            android:authorities="com.criczodiac.firebaseinitprovider"
+199-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:25:13-72
+200            android:directBootAware="true"
+200-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:26:13-43
+201            android:exported="false"
+201-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:27:13-37
+202            android:initOrder="100" />
+202-->[com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:28:13-36
+203
+204        <uses-library
+204-->[androidx.privacysandbox.ads:ads-adservices:1.1.0-beta11] /Users/mian-rauf/.gradle/caches/transforms-4/495f313ccfb6c3d3b3014fa8a3e9a6c8/transformed/jetified-ads-adservices-1.1.0-beta11/AndroidManifest.xml:23:9-25:40
+205            android:name="android.ext.adservices"
+205-->[androidx.privacysandbox.ads:ads-adservices:1.1.0-beta11] /Users/mian-rauf/.gradle/caches/transforms-4/495f313ccfb6c3d3b3014fa8a3e9a6c8/transformed/jetified-ads-adservices-1.1.0-beta11/AndroidManifest.xml:24:13-50
+206            android:required="false" />
+206-->[androidx.privacysandbox.ads:ads-adservices:1.1.0-beta11] /Users/mian-rauf/.gradle/caches/transforms-4/495f313ccfb6c3d3b3014fa8a3e9a6c8/transformed/jetified-ads-adservices-1.1.0-beta11/AndroidManifest.xml:25:13-37
+207
+208        <meta-data
+208-->[com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:21:9-23:69
+209            android:name="com.google.android.gms.version"
+209-->[com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:22:13-58
+210            android:value="@integer/google_play_services_version" />
+210-->[com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:23:13-66
+211
+212        <provider
+212-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+213            android:name="androidx.startup.InitializationProvider"
+213-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+214            android:authorities="com.criczodiac.androidx-startup"
+214-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+215            android:exported="false" >
+215-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+216            <meta-data
+216-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+217                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+217-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+218                android:value="androidx.startup" />
+218-->[androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+219            <meta-data
+219-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
+220                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+220-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
+221                android:value="androidx.startup" />
+221-->[androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
+222        </provider>
+223
+224        <service
+224-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:29:9-35:19
+225            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+225-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:30:13-103
+226            android:exported="false" >
+226-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:31:13-37
+227            <meta-data
+227-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:32:13-34:39
+228                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+228-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:33:17-94
+229                android:value="cct" />
+229-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:34:17-36
+230        </service>
+231        <service
+231-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:26:9-30:19
+232            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+232-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:27:13-117
+233            android:exported="false"
+233-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:28:13-37
+234            android:permission="android.permission.BIND_JOB_SERVICE" >
+234-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:29:13-69
+235        </service>
+236
+237        <receiver
+237-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:32:9-34:40
+238            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+238-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:33:13-132
+239            android:exported="false" />
+239-->[com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:34:13-37
+240
+241        <meta-data
+241-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:12:9-14:37
+242            android:name="com.facebook.soloader.enabled"
+242-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:13:13-57
+243            android:value="false" />
+243-->[com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:14:13-34
+244    </application>
+245
+246</manifest>

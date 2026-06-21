@@ -1,20 +1,23 @@
 buildscript {
     ext {
         buildToolsVersion = "35.0.0"
-        minSdkVersion = 23
+        minSdkVersion = 26 // react-native-vision-camera requires API 26+
         compileSdkVersion = 35
-        targetSdkVersion = 35
+        targetSdkVersion = 35 // Google Play requires new apps to target API 35
         ndkVersion = "25.1.8937393"
-        kotlinVersion = "1.9.22"
+        kotlinVersion = "1.8.0"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.1")
+        // AGP 8.6.0 is the minimum required to compile against SDK 35
+        classpath("com.android.tools.build:gradle:8.6.0")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Firebase (@react-native-firebase) — Google Services plugin
+        classpath("com.google.gms:google-services:4.4.1")
     }
 }
 

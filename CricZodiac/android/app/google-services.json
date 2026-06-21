@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "818402093115",
+    "project_id": "criczodiac",
+    "storage_bucket": "criczodiac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:818402093115:android:3cffd6c3d743f1cc1e541e",
+        "android_client_info": {
+          "package_name": "com.criczodiac"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkgSo9PKyQ4RH4EK-1LL9UtbtxPgwk4Nc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
