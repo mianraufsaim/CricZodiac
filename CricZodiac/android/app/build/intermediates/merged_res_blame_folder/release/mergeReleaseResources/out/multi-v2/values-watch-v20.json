@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/res/values-watch-v20/values-watch-v20.xml",

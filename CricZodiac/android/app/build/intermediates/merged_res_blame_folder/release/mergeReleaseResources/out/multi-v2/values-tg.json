@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values-tg/values-tg.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-tg/values-tg.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-tg/values-tg.xml",

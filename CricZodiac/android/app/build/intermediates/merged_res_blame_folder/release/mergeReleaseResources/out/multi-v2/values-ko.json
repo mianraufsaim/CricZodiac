@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values-ko/values-ko.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-ko/values-ko.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-ko/values-ko.xml",

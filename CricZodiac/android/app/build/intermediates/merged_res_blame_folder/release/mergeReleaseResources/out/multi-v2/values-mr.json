@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values-mr/values-mr.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-mr/values-mr.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/res/values-mr/values.xml",

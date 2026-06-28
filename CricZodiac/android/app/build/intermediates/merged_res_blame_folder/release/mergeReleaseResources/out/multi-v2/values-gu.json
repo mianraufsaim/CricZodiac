@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values-gu/values-gu.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-gu/values-gu.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/res/values-gu/values-gu.xml",

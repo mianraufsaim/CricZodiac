@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-44:/values/values.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values/values.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/.gradle/caches/transforms-4/418d52ffec48fe897b26a81a66ff5701/transformed/jetified-numberpickerview-v1.1.5/res/values/values.xml",
