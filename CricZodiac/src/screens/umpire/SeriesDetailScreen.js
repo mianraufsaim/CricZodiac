@@ -155,7 +155,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     const teamBName = normalizeName(seriesTeamNames.teamBName);
 
     for (const item of matches) {
-      if (item.status !== 'completed') continue;
+      if (String(item.status || '').toLowerCase() !== 'completed') continue;
 
       const winnerName = normalizeName(resultWinnerName(item));
       const resultText = normalizeName(item.result_text);
@@ -174,10 +174,16 @@ const SeriesDetailScreen = ({ navigation, route }) => {
     return {
       total: Math.max(matches.length, numberValue(series?.match_count)),
       live: Math.max(
-        matches.filter(m => m.status === 'live' || m.status === 'innings_2').length,
+        matches.filter(m => {
+          const status = String(m.status || '').toLowerCase();
+          return status === 'live' || status === 'innings_2';
+        }).length,
         numberValue(series?.live_count)
       ),
-      done: Math.max(matches.filter(m => m.status === 'completed').length, numberValue(series?.completed_count)),
+      done: Math.max(
+        matches.filter(m => String(m.status || '').toLowerCase() === 'completed').length,
+        numberValue(series?.completed_count)
+      ),
       teamAWins: Math.max(numberValue(series?.team_a_wins), derivedTeamAWins),
       teamBWins: Math.max(numberValue(series?.team_b_wins), derivedTeamBWins),
     };
@@ -187,8 +193,9 @@ const SeriesDetailScreen = ({ navigation, route }) => {
   const seriesLimit = maxMatchesFor(series?.format);
   const displaySeriesName = series?.name || seriesName || 'Series';
   const seriesDecided = seriesStats.teamAWins >= winsNeeded || seriesStats.teamBWins >= winsNeeded;
+  const isSeriesActive = String(series?.status || '').toLowerCase() === 'active';
   const canCreateSeriesMatch =
-    series?.status === 'active' &&
+    isSeriesActive &&
     seriesStats.total < seriesLimit;
 
   const load = async () => {
@@ -273,15 +280,25 @@ const SeriesDetailScreen = ({ navigation, route }) => {
 
   const handleMatchPress = async (item, index) => {
     const matchNumber = matchNumberFromTitle(item.title) || matchOrdinals[item.id] || index + 1;
-    if (item.status === MATCH_STATUS?.SETUP || item.status === 'setup') {
+    const status = String(item.status || '').toLowerCase();
+    if (!isSeriesActive && status !== 'completed') {
+      showAlert(
+        'Series Closed',
+        'This series is closed, so setup and scoring are locked. Completed matches can still be viewed.'
+      );
+      return;
+    }
+
+    if (status === MATCH_STATUS?.SETUP || status === 'setup') {
       navigation.navigate('MatchSetup', {
         match: item,
         seriesId,
         seriesName: displaySeriesName,
+        seriesStatus: series?.status,
         matchNumber,
         lockedTeamNames: matchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
       });
-    } else if (item.status === 'toss') {
+    } else if (status === 'toss') {
       try {
         const res = await ApiService.get(
           `${API_ENDPOINTS.TEAMS_LIST}?match_id=${encodeURIComponent(item.id)}`
@@ -322,9 +339,9 @@ const SeriesDetailScreen = ({ navigation, route }) => {
       } catch (e) {
         showAlert('Error', 'Failed to load match teams.');
       }
-    } else if (item.status === 'live' || item.status === 'innings_2') {
+    } else if (status === 'live' || status === 'innings_2') {
       navigation.navigate('LiveScoring', { matchId: item.id });
-    } else if (item.status === 'completed') {
+    } else if (status === 'completed') {
       // Open the full match summary for completed matches
       navigation.navigate('MatchSummary', { match: item });
     } else {
@@ -335,13 +352,18 @@ const SeriesDetailScreen = ({ navigation, route }) => {
 
   const renderMatch = ({ item, index }) => {
     const resultLine = completedResultLine(item);
+    const status = String(item.status || 'setup').toLowerCase();
+    const matchLocked = !isSeriesActive && status !== 'completed';
+    const badgeLabel = matchLocked ? 'LOCKED' : (item.status?.toUpperCase() || 'SETUP');
+    const badgeColor = matchLocked ? COLORS.gray : statusColor(item.status);
+
     return (
       <TouchableOpacity
-        style={styles.matchCard}
+        style={[styles.matchCard, matchLocked && styles.matchCardLocked]}
         onPress={() => handleMatchPress(item, index)}
       >
-        <View style={styles.matchNum}>
-          <Icon name="trophy" size={20} color={COLORS.gold} />
+        <View style={[styles.matchNum, matchLocked && styles.matchNumLocked]}>
+          <Icon name={matchLocked ? 'lock-outline' : 'trophy'} size={20} color={matchLocked ? COLORS.gray : COLORS.gold} />
         </View>
         <View style={styles.matchBody}>
           <Text style={styles.matchTitle}>{item.title}</Text>
@@ -352,9 +374,9 @@ const SeriesDetailScreen = ({ navigation, route }) => {
             <Text style={styles.metaText}>{item.overs} ov  ·  {item.venue || 'Indoor'}</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { borderColor: statusColor(item.status) }]}>
-          <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
-            {item.status?.toUpperCase() || 'SETUP'}
+        <View style={[styles.statusBadge, { borderColor: badgeColor }]}>
+          <Text style={[styles.statusText, { color: badgeColor }]}>
+            {badgeLabel}
           </Text>
         </View>
       </TouchableOpacity>
@@ -441,6 +463,7 @@ const SeriesDetailScreen = ({ navigation, route }) => {
                       onPress={() => navigation.navigate('MatchSetup', {
                         seriesId,
                         seriesName: displaySeriesName,
+                        seriesStatus: series?.status,
                         matchNumber: nextMatchNumber,
                         lockedTeamNames: nextMatchNumber > 1 && knownSeriesTeams ? seriesTeamNames : null,
                       })}
@@ -482,7 +505,9 @@ const getStyles = (COLORS) => StyleSheet.create({
   newMatchText:  { color: COLORS.white, fontWeight: '700', fontSize: 14 },
   sectionLabel:  { color: COLORS.gold, fontSize: 11, fontWeight: '700', letterSpacing: 3, marginBottom: 10 },
   matchCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.cardBorder },
+  matchCardLocked:{ opacity: 0.62 },
   matchNum:      { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.darkGray, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: COLORS.gold + '66' },
+  matchNumLocked:{ borderColor: COLORS.gray + '55' },
   matchBody:     { flex: 1 },
   matchTitle:    { color: COLORS.white, fontWeight: '700', fontSize: 14, marginBottom: 2 },
   matchResult:   { color: COLORS.gray, fontSize: 12, marginBottom: 2, lineHeight: 17 },

@@ -1,7 +1,7 @@
 // ============================================================
 // CricZodiac — Leaderboard
 // All data fetched live from API (club-scoped, no local SQLite)
-// Tabs: BATTING | BOWLING   •   Top 5 per section
+// Tabs: BATTING | BOWLING
 // ============================================================
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -20,6 +20,9 @@ import { API_ENDPOINTS } from '../../config/api';
 // ── Rank colours ─────────────────────────────────────────────
 const RANK_COLOR  = ['#D4AF37', '#A8A9AD', '#CD7F32', null, null]; // gold/silver/bronze
 const RANK_ICON   = ['crown', 'medal', 'medal-outline'];
+const MIN_MATCHES = 20;
+const INITIAL_VISIBLE_ROWS = 5;
+const MAX_VISIBLE_ROWS = 10;
 
 // ── Avatar ────────────────────────────────────────────────────
 const Avatar = ({ uri, name, size = 32, COLORS }) => {
@@ -67,36 +70,66 @@ const LBRow = ({ item, rank, valueKey, suffix, COLORS, styles, navigation }) => 
 };
 
 // ── Section card ─────────────────────────────────────────────
-const Section = ({ icon, title, iconColor, data, valueKey, suffix, navigation, COLORS, styles }) => (
-  <View style={styles.card}>
-    {/* Card header */}
-    <View style={[styles.cardHeader, { borderLeftColor: iconColor }]}>
-      <View style={[styles.cardIconWrap, { backgroundColor: iconColor + '22' }]}>
-        <Icon name={icon} size={16} color={iconColor} />
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-    </View>
+const Section = ({
+  sectionKey,
+  icon,
+  title,
+  iconColor,
+  data,
+  valueKey,
+  suffix,
+  visibleCount,
+  onLoadMore,
+  navigation,
+  COLORS,
+  styles,
+}) => {
+  const rows = data ?? [];
+  const shownRows = rows.slice(0, visibleCount);
+  const canLoadMore = rows.length > shownRows.length && visibleCount < MAX_VISIBLE_ROWS;
 
-    {/* Rows */}
-    {!data || data.length === 0 ? (
-      <View style={styles.emptyWrap}>
-        <Icon name="database-off-outline" size={22} color={COLORS.gray} />
-        <Text style={styles.emptyText}>No data yet</Text>
+  return (
+    <View style={styles.card}>
+      {/* Card header */}
+      <View style={[styles.cardHeader, { borderLeftColor: iconColor }]}>
+        <View style={[styles.cardIconWrap, { backgroundColor: iconColor + '22' }]}>
+          <Icon name={icon} size={16} color={iconColor} />
+        </View>
+        <Text style={styles.cardTitle}>{title}</Text>
       </View>
-    ) : data.map((item, idx) => (
-      <LBRow
-        key={item.id || idx}
-        item={item}
-        rank={idx}
-        valueKey={valueKey}
-        suffix={suffix}
-        COLORS={COLORS}
-        styles={styles}
-        navigation={navigation}
-      />
-    ))}
-  </View>
-);
+
+      {/* Rows */}
+      {shownRows.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Icon name="database-off-outline" size={22} color={COLORS.gray} />
+          <Text style={styles.emptyText}>No data yet</Text>
+        </View>
+      ) : shownRows.map((item, idx) => (
+        <LBRow
+          key={item.id || idx}
+          item={item}
+          rank={idx}
+          valueKey={valueKey}
+          suffix={suffix}
+          COLORS={COLORS}
+          styles={styles}
+          navigation={navigation}
+        />
+      ))}
+
+      {canLoadMore ? (
+        <TouchableOpacity
+          style={styles.loadMoreBtn}
+          onPress={() => onLoadMore(sectionKey)}
+          activeOpacity={0.75}
+        >
+          <Icon name="chevron-down-circle-outline" size={16} color={COLORS.gold} />
+          <Text style={styles.loadMoreText}>Load More</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+};
 
 // ── Tab bar ───────────────────────────────────────────────────
 const TabBar = ({ active, onChange, COLORS, styles }) => (
@@ -156,10 +189,11 @@ const LeaderboardScreen = ({ navigation }) => {
   const [data,       setData]       = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [visibleRowsBySection, setVisibleRowsBySection] = useState({});
 
   const loadData = useCallback(async () => {
     try {
-      const params = {};
+      const params = { limit: MAX_VISIBLE_ROWS, min_matches: MIN_MATCHES };
       if (isSuperAdminView && effectiveClub?.id) params.club_id = effectiveClub.id;
       const res = await ApiService.get(API_ENDPOINTS.PLAYERS_LEADERBOARD, { params });
       if (res?.success) setData(res);
@@ -177,6 +211,16 @@ const LeaderboardScreen = ({ navigation }) => {
 
   const batting = data?.batting ?? {};
   const bowling = data?.bowling ?? {};
+  const visibleRowsFor = useCallback(
+    (sectionKey) => visibleRowsBySection[sectionKey] ?? INITIAL_VISIBLE_ROWS,
+    [visibleRowsBySection]
+  );
+  const handleLoadMore = useCallback((sectionKey) => {
+    setVisibleRowsBySection(prev => ({
+      ...prev,
+      [sectionKey]: Math.min(MAX_VISIBLE_ROWS, (prev[sectionKey] ?? INITIAL_VISIBLE_ROWS) + INITIAL_VISIBLE_ROWS),
+    }));
+  }, []);
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
@@ -212,18 +256,18 @@ const LeaderboardScreen = ({ navigation }) => {
 
           {activeTab === 'BATTING' ? (
             <>
-              <Section icon="trending-up"        title="Top Averages"       iconColor={COLORS.gold}       data={batting.top_averages}  valueKey="average"    navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="run-fast"           title="Top Run Scorers"    iconColor={COLORS.cyan}       data={batting.top_scores}    valueKey="total_runs" suffix="runs" navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="star-shooting"      title="Highest Score"      iconColor={COLORS.orange}     data={batting.highest_score} valueKey="best_score" navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="numeric-6-circle"   title="Most Sixes"         iconColor={COLORS.purple}     data={batting.most_sixes}    valueKey="total_sixes" suffix="×6" navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="numeric-4-circle"   title="Most Fours"         iconColor={COLORS.royalBlue}  data={batting.most_fours}    valueKey="total_fours" suffix="×4" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="batting.top_averages"  icon="trending-up"        title="Top Averages"       iconColor={COLORS.gold}       data={batting.top_averages}  valueKey="average"    visibleCount={visibleRowsFor('batting.top_averages')}  onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="batting.top_scores"    icon="run-fast"           title="Top Run Scorers"    iconColor={COLORS.cyan}       data={batting.top_scores}    valueKey="total_runs" suffix="runs" visibleCount={visibleRowsFor('batting.top_scores')}    onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="batting.highest_score" icon="star-shooting"      title="Highest Score"      iconColor={COLORS.orange}     data={batting.highest_score} valueKey="best_score" visibleCount={visibleRowsFor('batting.highest_score')} onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="batting.most_sixes"    icon="numeric-6-circle"   title="Most Sixes"         iconColor={COLORS.purple}     data={batting.most_sixes}    valueKey="total_sixes" suffix="×6" visibleCount={visibleRowsFor('batting.most_sixes')}    onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="batting.most_fours"    icon="numeric-4-circle"   title="Most Fours"         iconColor={COLORS.royalBlue}  data={batting.most_fours}    valueKey="total_fours" suffix="×4" visibleCount={visibleRowsFor('batting.most_fours')}    onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
             </>
           ) : (
             <>
-              <Section icon="bullseye-arrow"     title="Top Wicket Takers"  iconColor={COLORS.gold}       data={bowling.top_wickets}        valueKey="total_wickets"    suffix="wkts" navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="speedometer"        title="Best Economy"       iconColor={COLORS.success}    data={bowling.best_economy}       valueKey="economy"           navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="speedometer-slow"   title="Highest Economy"    iconColor={COLORS.danger}     data={bowling.worst_economy}      valueKey="economy"           navigation={navigation} COLORS={COLORS} styles={styles} />
-              <Section icon="fire"               title="Most Runs Conceded" iconColor={COLORS.orange}     data={bowling.most_runs_conceded} valueKey="runs_conceded"     suffix="rc" navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="bowling.top_wickets"        icon="bullseye-arrow"     title="Top Wicket Takers"  iconColor={COLORS.gold}       data={bowling.top_wickets}        valueKey="total_wickets" suffix="wkts" visibleCount={visibleRowsFor('bowling.top_wickets')}        onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="bowling.best_economy"       icon="speedometer"        title="Best Economy"       iconColor={COLORS.success}    data={bowling.best_economy}       valueKey="economy" visibleCount={visibleRowsFor('bowling.best_economy')}       onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="bowling.worst_economy"      icon="speedometer-slow"   title="Highest Economy"    iconColor={COLORS.danger}     data={bowling.worst_economy}      valueKey="economy" visibleCount={visibleRowsFor('bowling.worst_economy')}      onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
+              <Section sectionKey="bowling.most_runs_conceded" icon="fire"               title="Most Runs Conceded" iconColor={COLORS.orange}     data={bowling.most_runs_conceded} valueKey="runs_conceded" suffix="rc" visibleCount={visibleRowsFor('bowling.most_runs_conceded')} onLoadMore={handleLoadMore} navigation={navigation} COLORS={COLORS} styles={styles} />
             </>
           )}
         </ScrollView>
@@ -272,6 +316,8 @@ const getStyles = (COLORS) => StyleSheet.create({
   valueWrap:    { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   valueText:    { color: COLORS.white, fontWeight: '800', fontSize: 14 },
   valueSuffix:  { color: COLORS.gray, fontSize: 10, fontWeight: '500' },
+  loadMoreBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, margin: 12, marginTop: 8, paddingVertical: 11, borderRadius: 12, backgroundColor: COLORS.gold + '16', borderWidth: 1, borderColor: COLORS.gold + '55' },
+  loadMoreText: { color: COLORS.gold, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
 
   // Empty state
   emptyWrap:    { alignItems: 'center', paddingVertical: 20, gap: 6 },

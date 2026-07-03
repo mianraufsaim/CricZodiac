@@ -124,6 +124,7 @@ const MatchSetupScreen = ({ navigation, route }) => {
   const {
     seriesId: routeSeriesId = null,
     seriesName = null,
+    seriesStatus = null,
     matchNumber = 1,
     match: existingMatch = null,
     lockedTeamNames = null,
@@ -151,9 +152,30 @@ const MatchSetupScreen = ({ navigation, route }) => {
     };
   });
   const [loading, setLoading]       = useState(false);
+  const [seriesClosed, setSeriesClosed] = useState(
+    seriesStatus ? String(seriesStatus).toLowerCase() !== 'active' : false
+  );
   const [openDatePicker, setOpenDate] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const playerMinimum = minPlayersForOvers(form.overs);
+
+  useEffect(() => {
+    if (!seriesId) return;
+
+    let mounted = true;
+    const checkSeriesStatus = async () => {
+      try {
+        const seriesRule = await getSeriesById(seriesId);
+        if (!mounted) return;
+        if (seriesRule) {
+          setSeriesClosed(String(seriesRule.status || '').toLowerCase() !== 'active');
+        }
+      } catch (_) {}
+    };
+
+    checkSeriesStatus();
+    return () => { mounted = false; };
+  }, [seriesId]);
 
   useEffect(() => {
     if (!teamNamesLocked) return;
@@ -200,6 +222,11 @@ const MatchSetupScreen = ({ navigation, route }) => {
   };
 
   const handleCreate = async () => {
+    if (seriesClosed) {
+      showAlert('Series Closed', 'This series is closed. Re-open the series before setting up another match.');
+      return;
+    }
+
     if (!form.title.trim() || !form.team_a_name.trim() || !form.team_b_name.trim()) {
       showAlert('Missing Fields', 'Please fill in match title and both team names.');
       return;
@@ -218,6 +245,12 @@ const MatchSetupScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       const seriesRule = seriesId ? await getSeriesById(seriesId) : null;
+      if (seriesRule && String(seriesRule.status || '').toLowerCase() !== 'active') {
+        setSeriesClosed(true);
+        showAlert('Series Closed', 'This series is closed. Re-open the series before setting up another match.');
+        return;
+      }
+
       const allowSuperOver = isEditingSetup
         ? toBool(existingMatch?.allow_super_over)
         : toBool(seriesRule?.allow_super_over);
@@ -418,13 +451,13 @@ const MatchSetupScreen = ({ navigation, route }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.btn, loading && { opacity: 0.6 }]}
+            style={[styles.btn, (loading || seriesClosed) && { opacity: 0.6 }]}
             onPress={handleCreate}
             disabled={loading}
           >
             <LinearGradient colors={[COLORS.gold, '#B8942A']} style={styles.btnGradient}>
               <Text style={styles.btnText}>
-                {loading ? 'Saving...' : 'CONTINUE → SELECT TEAMS'}
+                {seriesClosed ? 'SERIES CLOSED' : loading ? 'Saving...' : 'CONTINUE → SELECT TEAMS'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

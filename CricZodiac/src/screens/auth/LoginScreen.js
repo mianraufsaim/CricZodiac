@@ -15,6 +15,14 @@ import { login } from '../../services/AuthService';
 import { useAuth } from '../../context/AuthContext';
 import { showAlert } from '../../utils/toast';
 
+const androidFocusSafeInputProps = Platform.OS === 'android'
+  ? {
+      autoComplete: 'off',
+      importantForAutofill: 'no',
+      textContentType: 'none',
+    }
+  : {};
+
 const LoginScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
   const styles = useMemo(() => getStyles(COLORS), [COLORS]);
@@ -51,8 +59,12 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kav}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.kav}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
 
           {/* Network status dot — top right */}
           <View style={styles.netRow}>
@@ -87,8 +99,10 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoComplete="email"
+                autoComplete={Platform.OS === 'ios' ? 'email' : undefined}
+                textContentType={Platform.OS === 'ios' ? 'emailAddress' : undefined}
                 autoCorrect={false}
+                {...androidFocusSafeInputProps}
               />
             </View>
 
@@ -102,7 +116,10 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setPassword}
                 secureTextEntry={!showPass}
                 autoCapitalize="none"
+                autoComplete={Platform.OS === 'ios' ? 'password' : undefined}
+                textContentType={Platform.OS === 'ios' ? 'password' : undefined}
                 autoCorrect={false}
+                {...androidFocusSafeInputProps}
               />
               <TouchableOpacity onPress={() => setShowPass(p => !p)} style={styles.eyeIcon}>
                 <Icon name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.gray} />

@@ -16,6 +16,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { register } from '../../services/AuthService';
 import { showAlert } from '../../utils/toast';
 
+const androidFocusSafeInputProps = Platform.OS === 'android'
+  ? {
+      autoComplete: 'off',
+      importantForAutofill: 'no',
+      textContentType: 'none',
+    }
+  : {};
+
 // ── Reusable input ────────────────────────────────────────
 const InputField = ({
   icon, placeholder, value, onChangeText, keyboardType,
@@ -34,6 +42,7 @@ const InputField = ({
       secureTextEntry={secureTextEntry}
       autoCapitalize={autoCapitalize || 'none'}
       autoCorrect={false}
+      {...androidFocusSafeInputProps}
     />
     {rightIcon && (
       <TouchableOpacity onPress={onRightIcon} style={styles.eyeIcon}>
@@ -123,8 +132,12 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <LinearGradient colors={[COLORS.background, COLORS.navy]} style={{ flex: 1 }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        >
 
           <View style={styles.topRow}>
             <TouchableOpacity onPress={() => navigation.goBack()}>

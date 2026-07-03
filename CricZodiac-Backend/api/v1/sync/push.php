@@ -468,21 +468,16 @@ function assignAutomaticSeriesAward(PDO $pdo, int $seriesId): void {
 
 // ── Recompute series.team_a_wins / team_b_wins from match_results ────────────
 function recomputeSeriesWins(PDO $pdo, int $seriesId): void {
-    $st = $pdo->prepare("SELECT team_a_id, team_b_id FROM series WHERE id = ? LIMIT 1");
-    $st->execute([$seriesId]);
-    $series = $st->fetch(PDO::FETCH_ASSOC);
-    if (!$series || (!$series['team_a_id'] && !$series['team_b_id'])) return;
-
-    $teamAId = $series['team_a_id'] ? (int) $series['team_a_id'] : null;
-    $teamBId = $series['team_b_id'] ? (int) $series['team_b_id'] : null;
-
     $st = $pdo->prepare("
-        SELECT winner_team_id, COUNT(*) AS wins
-        FROM match_results
-        WHERE series_id = ?
-          AND result_type != 'tie'
-          AND winner_team_id IS NOT NULL
-        GROUP BY winner_team_id
+        SELECT t.team_label, COUNT(*) AS wins
+        FROM match_results mr
+        JOIN matches m ON m.id = mr.match_id OR m.local_id = mr.match_local_id
+        JOIN teams t ON t.id = mr.winner_team_id OR t.local_id = mr.winner_team_local
+        WHERE COALESCE(m.series_id, mr.series_id) = ?
+          AND mr.result_type != 'tie'
+          AND mr.winner_team_id IS NOT NULL
+          AND t.team_label IN ('A', 'B')
+        GROUP BY t.team_label
     ");
     $st->execute([$seriesId]);
     $winsRows = $st->fetchAll(PDO::FETCH_ASSOC);
@@ -490,9 +485,8 @@ function recomputeSeriesWins(PDO $pdo, int $seriesId): void {
     $teamAWins = 0;
     $teamBWins = 0;
     foreach ($winsRows as $row) {
-        $wid = (int) $row['winner_team_id'];
-        if ($teamAId && $wid === $teamAId) $teamAWins = (int) $row['wins'];
-        if ($teamBId && $wid === $teamBId) $teamBWins = (int) $row['wins'];
+        if (($row['team_label'] ?? '') === 'A') $teamAWins = (int) $row['wins'];
+        if (($row['team_label'] ?? '') === 'B') $teamBWins = (int) $row['wins'];
     }
 
     $pdo->prepare("

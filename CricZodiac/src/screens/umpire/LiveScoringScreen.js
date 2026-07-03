@@ -26,7 +26,7 @@ import {
   getTeamPlayers, getAllTeamPlayers,
   getBallsWithPlayers, getPlayerBattingStats,
   getLastBall, deleteBall, getInnings, clearInningsProgress, saveWicket, retireBatsman,
-  upsertTeamPlayersFromServer, upsertMatchesFromServer,
+  saveMatchResult, upsertTeamPlayersFromServer, upsertMatchesFromServer,
 } from '../../database/queries/matchQueries';
 import { queryFirstRow, executeQuery } from '../../database/DatabaseHelper';
 import { processSyncQueue, setSyncSuccessToastsSuppressed } from '../../services/SyncService';
@@ -88,6 +88,11 @@ const bowlerRunsForDelivery = (ball) => {
 
 const shouldSwapForCrossedRuns = (crossedRuns) =>
   Math.abs(Number(crossedRuns) || 0) % 2 === 1;
+
+const oversFromLegalBalls = (balls) => {
+  const legalBalls = Math.max(0, Number(balls) || 0);
+  return Number(`${Math.floor(legalBalls / 6)}.${legalBalls % 6}`);
+};
 
 const BOWLER_CREDIT_WICKET_TYPES = new Set(['bowled', 'caught', 'lbw', 'stumped', 'hit_wicket']);
 const isBowlerCreditWicket = (ball) => {
@@ -1671,6 +1676,8 @@ const LiveScoringScreen = ({ navigation, route }) => {
       // Update score
       const newTotal = totRuns + totalAdded;
       const newLegal = isValidBall ? legal + 1 : legal;
+      totalRunsRef.current = newTotal;
+      legalRef.current = newLegal;
       setTotalRuns(newTotal);
       if (isValidBall) setLegalBalls(newLegal);
 
@@ -1751,7 +1758,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
       // Target chased? End innings immediately (2nd innings only)
       if (resolvedTarget && newTotal >= resolvedTarget) {
-        _endInnings(newTotal, totWkts, inn.id);
+        _endInnings(newTotal, totWkts, inn.id, ((ovNum - 1) * 6) + newLegal);
         return;
       }
 
@@ -1760,6 +1767,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         await updateInnings(inn.id, { total_overs: ovNum });
         setCurrentOver(null);
+        overRef.current = null;
+        legalRef.current = 0;
+        setLegalBalls(0);
         // Pre-increment so ensureOver creates the correct next over number.
         // Must happen BEFORE _endInnings check so ovNum still holds the
         // just-completed over number for the >= match.overs comparison.
@@ -1770,7 +1780,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         lastOverBowlerIdRef.current = bwl.id; // track for consecutive-over restriction
 
         if (ovNum >= inningsOversLimit) {
-          _endInnings(newTotal, totWkts, inn.id);
+          _endInnings(newTotal, totWkts, inn.id, ovNum * 6);
           return;
         }
         // Select new bowler for next over
@@ -1993,6 +2003,9 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
       // 3. Update counts + UI
       const newTotal = totRuns + runsCredit;
+      totalRunsRef.current = newTotal;
+      totalWktsRef.current = newWkts;
+      legalRef.current = newLegal;
       setTotalWickets(newWkts);
       setTotalRuns(newTotal);
       setLegalBalls(newLegal);
@@ -2024,13 +2037,13 @@ const LiveScoringScreen = ({ navigation, route }) => {
       // 4. A run-out can complete a chase with completed runs. End immediately
       // before asking for another batter, in a normal innings or super over.
       if (resolvedTarget && newTotal >= resolvedTarget) {
-        _endInnings(newTotal, newWkts, inn.id);
+        _endInnings(newTotal, newWkts, inn.id, ((ovNum - 1) * 6) + newLegal);
         return;
       }
 
       // 5. All out → end innings
       if (newWkts >= maxWktsAllowed) {
-        _endInnings(newTotal, newWkts, inn.id);
+        _endInnings(newTotal, newWkts, inn.id, ((ovNum - 1) * 6) + newLegal);
         return;
       }
 
@@ -2039,13 +2052,15 @@ const LiveScoringScreen = ({ navigation, route }) => {
         await updateOver(over.id, { is_completed: 1, balls_bowled: 6 });
         setCurrentOver(null);
         overRef.current = null;
+        legalRef.current = 0;
+        setLegalBalls(0);
         overNumRef.current = ovNum + 1;
         setOverNumber(ovNum + 1);
         overCompletedOnWicket = true;
         setBowlerStats(prev => ({ ...prev, overs: prev.overs + 1 }));
         lastOverBowlerIdRef.current = bwl.id;
         if (ovNum >= inningsOversLimit) {
-          _endInnings(newTotal, newWkts, inn.id);
+          _endInnings(newTotal, newWkts, inn.id, ovNum * 6);
           return;
         }
         pendingSelectBowlerRef.current = true;
@@ -2231,15 +2246,172 @@ const LiveScoringScreen = ({ navigation, route }) => {
   };
 
   // ── End Innings ────────────────────────────────────────
-  const _endInnings = async (runs, wkts, inningsId) => {
+  const isSameTeam = (team, value) => {
+    if (!team || value === null || value === undefined) return false;
+    return [team.id, team.local_id, team.server_id]
+      .filter(v => v !== null && v !== undefined && String(v) !== '')
+      .some(v => String(v) === String(value));
+  };
+
+  const currentLegalBallsTotal = (legalBallsOverride) => {
+    if (Number.isFinite(Number(legalBallsOverride))) {
+      return Math.max(0, Number(legalBallsOverride));
+    }
+
+    const completedOvers = Math.max(0, (Number(overNumRef.current || overNumber || 1) || 1) - 1);
+    const currentOverBalls = overRef.current
+      ? Math.max(0, Math.min(6, Number(legalRef.current || legalBalls || 0) || 0))
+      : 0;
+    return (completedOvers * 6) + currentOverBalls;
+  };
+
+  const currentInningsSnapshot = (runs, wkts, legalBallsOverride) => {
+    const totalLegalBalls = currentLegalBallsTotal(legalBallsOverride);
+    const nextRuns = Number.isFinite(Number(runs)) ? Number(runs) : Number(totalRunsRef.current || totalRuns || 0);
+    const nextWkts = Number.isFinite(Number(wkts)) ? Number(wkts) : Number(totalWktsRef.current || totalWickets || 0);
+    const extraTotal = Number(extras.wide || 0) + Number(extras.no_ball || 0) + Number(extras.bye || 0) + Number(extras.leg_bye || 0);
+    return {
+      runs: nextRuns,
+      wickets: nextWkts,
+      legalBalls: totalLegalBalls,
+      totalOvers: oversFromLegalBalls(totalLegalBalls),
+      extras: extraTotal,
+    };
+  };
+
+  const closeCurrentInnings = async (runs, wkts, inningsId, legalBallsOverride) => {
+    const snapshot = currentInningsSnapshot(runs, wkts, legalBallsOverride);
+    const targetInningsId = inningsId || inningsRef.current?.id || innings?.id;
+    if (targetInningsId) {
+      await updateInnings(targetInningsId, {
+        total_runs: snapshot.runs,
+        total_wickets: snapshot.wickets,
+        total_overs: snapshot.totalOvers,
+        extras: snapshot.extras,
+        is_completed: 1,
+      });
+    }
+    return snapshot;
+  };
+
+  const teamForSide = (side) => {
+    const candidates = [battingTeam, bowlingTeam].filter(Boolean);
+    const labelMatch = candidates.find(t => String(t.team_label || '').toUpperCase() === side);
+    if (labelMatch) return labelMatch;
+
+    const matchTeamId = side === 'A' ? (match?.team_a_id || match?.team_a_local) : (match?.team_b_id || match?.team_b_local);
+    return candidates.find(t => isSameTeam(t, matchTeamId)) || (side === 'A' ? candidates[0] : candidates.find(t => !isSameTeam(t, candidates[0]?.id)));
+  };
+
+  const scoreForTeam = (team, inningsRows, snapshot) => {
+    const row = (inningsRows || []).find(inn => isSameTeam(team, inn.batting_team_id));
+    if (row) return `${Number(row.total_runs || 0)}/${Number(row.total_wickets || 0)}`;
+    if (isSameTeam(team, battingTeam)) return `${snapshot.runs}/${snapshot.wickets}`;
+    return '0/0';
+  };
+
+  const saveManualWinnerResult = async (winnerTeam) => {
+    const snapshot = await closeCurrentInnings();
+    const latestInnings = await getMatchInnings(match.id).catch(() => []);
+    const teamA = teamForSide('A') || battingTeam;
+    const teamB = teamForSide('B') || bowlingTeam;
+    const loserTeam = winnerTeam
+      ? ([teamA, teamB].find(team => team && !isSameTeam(team, winnerTeam.id)) || null)
+      : null;
+
+    const resultText = winnerTeam
+      ? `${winnerTeam.team_name || 'Selected team'} won by surrender`
+      : 'Match Tied!';
+
+    await saveMatchResult({
+      match_id:        match.id,
+      winner_team_id:  winnerTeam ? (winnerTeam.local_id || winnerTeam.id) : null,
+      loser_team_id:   loserTeam ? (loserTeam.local_id || loserTeam.id) : null,
+      result_type:     winnerTeam ? 'win' : 'tie',
+      margin:          0,
+      margin_type:     null,
+      team_a_score:    scoreForTeam(teamA, latestInnings, snapshot),
+      team_b_score:    scoreForTeam(teamB, latestInnings, snapshot),
+      player_of_match: null,
+      result_text:     resultText,
+    });
+    await processSyncQueue({ silent: true }).catch(() => {});
+  };
+
+  const startNextInningsFromManualClose = async () => {
     try {
-      await updateInnings(inningsId || innings?.id, { is_completed: 1 });
+      const snapshot = await closeCurrentInnings();
+      const goToInnings = (params) => {
+        navigation.replace('LiveScoring', { match, ...params });
+      };
+
+      if (isSuperOver && !isSuperOverChase) {
+        goToInnings({
+          battingTeam: bowlingTeam,
+          bowlingTeam: battingTeam,
+          inningsNumber: superOverFirstInningsNumber(superOverNumber) + 1,
+          target: snapshot.runs + 1,
+          isSuperOver: true,
+          superOverNumber,
+        });
+        return;
+      }
+
+      goToInnings({
+        battingTeam: bowlingTeam,
+        bowlingTeam: battingTeam,
+        inningsNumber: 2,
+        target: snapshot.runs + 1,
+      });
+    } catch (error) {
+      showAlert('Close Innings Failed', error?.message || 'Please try again.');
+    }
+  };
+
+  const handleManualCloseInnings = () => {
+    const opensAnotherInnings = (!isSuperOver && inningsNumber === 1) || (isSuperOver && !isSuperOverChase);
+    if (opensAnotherInnings) {
+      showAlert('Close Innings', 'Close this innings and start the next innings?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isSuperOver ? 'Start Chase' : 'Start 2nd Innings',
+          onPress: startNextInningsFromManualClose,
+        },
+      ]);
+      return;
+    }
+
+    const chooseWinner = async (team) => {
+      try {
+        await saveManualWinnerResult(team);
+        handleEndMatch();
+      } catch (error) {
+        showAlert('Result Save Failed', error?.message || 'Please try again.');
+      }
+    };
+
+    showAlert('Choose Winner', 'This innings is being closed manually. Which team should win?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: battingTeam?.team_name || 'Batting Team',
+        onPress: () => chooseWinner(battingTeam),
+      },
+      {
+        text: bowlingTeam?.team_name || 'Bowling Team',
+        onPress: () => chooseWinner(bowlingTeam),
+      },
+    ]);
+  };
+
+  const _endInnings = async (runs, wkts, inningsId, legalBallsOverride) => {
+    try {
+      const snapshot = await closeCurrentInnings(runs, wkts, inningsId, legalBallsOverride);
 
       // A normal second innings or a super-over chase decides its pair.
       const decidingInnings = (!isSuperOver && inningsNumber === 2) || (isSuperOver && isSuperOverChase);
       if (decidingInnings && resolvedTarget) {
-        const finalRuns = runs  ?? totalRuns;
-        const finalWkts = wkts ?? totalWickets;
+        const finalRuns = snapshot.runs;
+        const finalWkts = snapshot.wickets;
         const maxWkts   = inningsWicketLimit;
         const phaseName = isSuperOver ? 'Super Over' : 'Match';
         let result;
@@ -2266,7 +2438,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
         }
         setInningsResultText(result);
       } else if (isSuperOver) {
-        const finalRuns = runs ?? totalRuns;
+        const finalRuns = snapshot.runs;
         setInningsResultText(`${battingTeam.team_name} set a target of ${finalRuns + 1}.`);
       }
 
@@ -2278,16 +2450,14 @@ const LiveScoringScreen = ({ navigation, route }) => {
 
   const handleStartNextInnings = async () => {
     setShowInningsComplete(false);
-    const snapRuns    = totalRunsRef.current;
     const snapMatch   = match;
-    const snapInnings = inningsRef.current;
+    let snapRuns      = totalRunsRef.current;
 
     // Belt-and-suspenders: ensure the completed innings is saved before the
     // next regular or super-over innings is created.
     try {
-      if (snapInnings?.id) {
-        await updateInnings(snapInnings.id, { is_completed: 1 });
-      }
+      const snapshot = await closeCurrentInnings();
+      snapRuns = snapshot.runs;
     } catch (e) {
       console.warn('[handleStartNextInnings] is_completed update failed:', e.message);
     }
@@ -2710,10 +2880,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           {/* End Innings button */}
           <TouchableOpacity
             style={sc.endBtn}
-            onPress={() => showAlert('Close Innings', 'End this innings?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Close Innings', onPress: () => _endInnings() },
-            ])}
+            onPress={handleManualCloseInnings}
           >
             <Text style={sc.endBtnTxt}>{isSuperOver ? 'CLOSE SUPER OVER' : 'CLOSE INNINGS'}</Text>
           </TouchableOpacity>

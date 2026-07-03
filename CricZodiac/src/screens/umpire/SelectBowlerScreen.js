@@ -3,7 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput } from 'r
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
-import { getTeamPlayers, upsertTeamPlayersFromServer, getBowlingScorecard } from '../../database/queries/matchQueries';
+import {
+  getTeamPlayers,
+  upsertTeamPlayersFromServer,
+  getBowlingScorecard,
+  getBallsWithPlayers,
+} from '../../database/queries/matchQueries';
 import ApiService from '../../services/ApiService';
 import { API_ENDPOINTS } from '../../config/api';
 import uuid from 'react-native-uuid';
@@ -18,6 +23,22 @@ const getPlayerDisplayName = (player) => (
 ).trim();
 
 const isMissingPlayerName = (name) => !name || name.toLowerCase() === 'unknown';
+
+const scoreFromBalls = (balls = []) => {
+  let runs = 0;
+  let wickets = 0;
+  let legalBalls = 0;
+  for (const ball of balls) {
+    runs += Number(ball.runs_scored || 0) + Number(ball.extra_runs || 0);
+    wickets += Number(ball.is_wicket || 0) === 1 ? 1 : 0;
+    legalBalls += Number(ball.is_valid_ball ?? 1) === 1 ? 1 : 0;
+  }
+  return {
+    runs,
+    wickets,
+    overs: `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`,
+  };
+};
 
 const SelectBowlerScreen = ({ navigation, route }) => {
   const { colors: COLORS } = useTheme();
@@ -35,10 +56,20 @@ const SelectBowlerScreen = ({ navigation, route }) => {
   const [players, setPlayers]             = useState([]);
   const [selected, setSelected]           = useState(null);
   const [searchQuery, setSearchQuery]     = useState('');
+  const [scoreInfo, setScoreInfo]         = useState(null);
 
   useEffect(() => { load(); }, []);
 
+  const loadScoreInfo = async () => {
+    if (!inningsId) return;
+    try {
+      const balls = await getBallsWithPlayers(inningsId);
+      setScoreInfo(scoreFromBalls(balls || []));
+    } catch (_) {}
+  };
+
   const load = async () => {
+    loadScoreInfo();
     let teamPlayers = [];
     const loadLocalTeamPlayers = async () => {
       const local = await getTeamPlayers(team.id);
@@ -157,6 +188,19 @@ const SelectBowlerScreen = ({ navigation, route }) => {
         </View>
       </View>
 
+      {scoreInfo && (
+        <View style={styles.scoreStrip}>
+          <View>
+            <Text style={styles.scoreLabel}>CURRENT SCORE</Text>
+            <Text style={styles.scoreValue}>{scoreInfo.runs}/{scoreInfo.wickets}</Text>
+          </View>
+          <View style={styles.scoreMetaPill}>
+            <Icon name="cricket" size={14} color={COLORS.gold} />
+            <Text style={styles.scoreMeta}>Ov {scoreInfo.overs}</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
@@ -217,6 +261,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   doneBtn:        { minWidth: 94, minHeight: 46, borderRadius: 10, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 14 },
   doneBtnDisabled:{ opacity: 0.38 },
   doneTxt:        { color: COLORS.navy, fontWeight: '900', fontSize: 14 },
+  scoreStrip:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.gold + '55' },
+  scoreLabel:     { color: COLORS.gray, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  scoreValue:     { color: COLORS.white, fontSize: 24, fontWeight: '900', marginTop: 2 },
+  scoreMetaPill:  { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: COLORS.gold + '14', borderWidth: 1, borderColor: COLORS.gold + '44' },
+  scoreMeta:      { color: COLORS.gold, fontSize: 12, fontWeight: '900' },
   row:            { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.cardBorder },
   rowSelected:    { borderColor: COLORS.cyan },
   rowCurrent:     { opacity: 0.4 },

@@ -29,6 +29,10 @@ import { showAlert } from '../../utils/toast';
 const SERIES_TOTAL_MATCHES = { bestOf1: 1, bestOf3: 3, bestOf5: 5 };
 
 const totalMatchesForSeries = (format) => SERIES_TOTAL_MATCHES[format] || 1;
+const matchNumberFromTitle = (title) => {
+  const match = String(title || '').match(/\bmatch\s+(\d+)\b/i);
+  return match ? Number(match[1]) : null;
+};
 const toBool = (value) => value === true || value === 1 || value === '1';
 const superOverLabel = (_sequence, isChase = false) =>
   `Super Over${isChase ? ' Chase' : ''}`;
@@ -672,6 +676,8 @@ const MatchSummaryScreen = ({ navigation, route }) => {
   const displayMatchTitle = matchObj?.title || matchParam?.title || 'Match';
   const displayVenue      = matchObj?.venue || matchParam?.venue || null;
   const currentSeriesId   = matchObj?.series_id || matchParam?.series_id || matchParam?.series_local_id || null;
+  const summaryStatus     = String(matchObj?.status || matchParam?.status || '').toLowerCase();
+  const canContinueSetup  = summaryStatus === 'setup';
   const seriesTotalMatches = totalMatchesForSeries(seriesInfo?.format);
   const knownMatchCount = Math.max(seriesMatches.length, Number(seriesInfo?.match_count || 0));
   const canCreateNextSeriesMatch = Boolean(
@@ -800,7 +806,29 @@ const MatchSummaryScreen = ({ navigation, route }) => {
         ) : (
           <View style={styles.noDataCard}>
             <Icon name="cricket" size={32} color={COLORS.cardBorder} />
-            <Text style={styles.noDataText}>Innings data unavailable</Text>
+            <Text style={styles.noDataTitle}>
+              {canContinueSetup ? 'Match setup is not finished' : 'Innings data unavailable'}
+            </Text>
+            <Text style={styles.noDataText}>
+              {canContinueSetup
+                ? 'Complete setup before opening the match summary.'
+                : 'No scoring innings were found for this match yet.'}
+            </Text>
+            {canContinueSetup && (
+              <TouchableOpacity
+                style={styles.noDataAction}
+                onPress={() => navigation.replace('MatchSetup', {
+                  match: matchObj || matchParam,
+                  seriesId: currentSeriesId,
+                  seriesName: seriesInfo?.name,
+                  seriesStatus: seriesInfo?.status,
+                  matchNumber: matchNumberFromTitle(displayMatchTitle) || nextMatchNumber,
+                })}
+              >
+                <Icon name="clipboard-edit-outline" size={16} color={COLORS.navy} />
+                <Text style={styles.noDataActionText}>Continue Setup</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1032,7 +1060,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   viewScorecardText: { color: COLORS.cyan, fontWeight: '600', fontSize: 13 },
 
   noDataCard:        { backgroundColor: COLORS.card, borderRadius: 16, padding: 28, alignItems: 'center', gap: 10, marginBottom: 16, borderWidth: 1, borderColor: COLORS.cardBorder },
+  noDataTitle:       { color: COLORS.white, fontSize: 16, fontWeight: '800', textAlign: 'center' },
   noDataText:        { color: COLORS.gray, fontSize: 14 },
+  noDataAction:      { marginTop: 6, minHeight: 42, borderRadius: 11, paddingHorizontal: 16, backgroundColor: COLORS.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  noDataActionText:  { color: COLORS.navy, fontSize: 12, fontWeight: '900', letterSpacing: 0.4 },
 
   potmCard:          { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: '#D4AF3760', gap: 14 },
   potmAvatar:        { width: 52, height: 52, borderRadius: 26, backgroundColor: '#2C4BB5', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#D4AF37' },
