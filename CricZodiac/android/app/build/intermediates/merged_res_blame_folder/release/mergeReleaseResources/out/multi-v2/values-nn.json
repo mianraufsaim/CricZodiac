@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-nn/values-nn.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-4:/values-nn/values-nn.xml",
             "map": [
                 {
                     "source": "/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-date-picker/android/build/intermediates/packaged_res/release/packageReleaseResources/values-nn/values-nn.xml",

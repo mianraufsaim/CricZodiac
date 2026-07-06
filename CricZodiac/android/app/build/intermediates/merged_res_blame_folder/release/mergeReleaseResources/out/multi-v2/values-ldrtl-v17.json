@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-ldrtl-v17/values-ldrtl-v17.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-4:/values-ldrtl-v17/values-ldrtl-v17.xml",
             "map": [
                 {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-ldrtl-v17/values-ldrtl-v17.xml",
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-ldrtl-v17/values-ldrtl-v17.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",

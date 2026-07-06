@@ -88,7 +88,7 @@ android {
         applicationId "com.criczodiac"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
+        versionCode 6
         versionName "1.0.0"
     }
     signingConfigs {
@@ -137,3 +137,7 @@ apply from: file("../../node_modules/@react-native-community/cli-platform-androi
 
 // react-native-vector-icons — bundle the icon font files into the APK
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
+tasks.matching { it.name == "generateReleaseLintVitalReportModel" }.configureEach {
+    dependsOn("copyReactNativeVectorIconFonts")
+}

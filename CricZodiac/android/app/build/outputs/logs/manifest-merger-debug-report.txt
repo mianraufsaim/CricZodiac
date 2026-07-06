@@ -1,0 +1,762 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:1:1-43:12
+MERGED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:1:1-43:12
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:2:1-9:12
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:2:1-9:12
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:2:1-9:12
+MERGED from [com.facebook.react:flipper-integration:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/7fe44931f87c6c96dbc1fae7a418fdc2/transformed/jetified-flipper-integration-0.73.4-debug/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-async-storage_async-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-async-storage/async-storage/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-10:12
+MERGED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-30:12
+MERGED from [:react-native-picker_picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-picker/picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-date-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-date-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-fs/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-9:12
+MERGED from [:react-native-gesture-handler] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-gesture-handler/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-19:12
+MERGED from [:react-native-linear-gradient] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-linear-gradient/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-reanimated] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-reanimated/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-safe-area-context] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-safe-area-context/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-screens] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-screens/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-19:12
+MERGED from [:react-native-sqlite-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-sqlite-storage/platforms/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-svg] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-svg/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-vector-icons] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vector-icons/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-vision-camera] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vision-camera/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-worklets-core] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-worklets-core/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:2:1-24:12
+MERGED from [com.facebook.fresco:flipper-fresco-plugin:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/3579884ea0de355e4212a5ffbabdc2ff/transformed/jetified-flipper-fresco-plugin-3.1.3/AndroidManifest.xml:8:1-13:12
+MERGED from [com.facebook.fresco:flipper:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/c38ed71ba095a806f2412e51afb244ff/transformed/jetified-flipper-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:fresco:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8dd7d2fa1e9c695fcd6302097a96eac5/transformed/jetified-fresco-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:imagepipeline-okhttp3:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/62e84b94e7711d8b52215cd815ac1ac9/transformed/jetified-imagepipeline-okhttp3-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:drawee:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1ee1db186271939b4f70b7333dd45e84/transformed/jetified-drawee-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:nativeimagefilters:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/23bb7c2bdc63a616d0691efa39aea296/transformed/jetified-nativeimagefilters-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:memory-type-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/86eba3b3f19b80b0a4a15139ad71237a/transformed/jetified-memory-type-native-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:memory-type-java:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/473bc70dcfa03e303c0d7b12ea0ca59f/transformed/jetified-memory-type-java-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:imagepipeline-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/848858b3406b858c0cbbab5ca7b8b249/transformed/jetified-imagepipeline-native-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:memory-type-ashmem:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/5116425b5d5fb189b7ef8533711973a7/transformed/jetified-memory-type-ashmem-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:imagepipeline:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/63c279d962369f17f53016334c5602b9/transformed/jetified-imagepipeline-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:nativeimagetranscoder:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/4e6c260e43d963c349fdcb932527c3a5/transformed/jetified-nativeimagetranscoder-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:imagepipeline-base:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1a55d139eec0e93fce11a78a5f0096f6/transformed/jetified-imagepipeline-base-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:middleware:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/44a39f687006a86c06cfb40aad1d69b1/transformed/jetified-middleware-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:ui-common:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/008690f0b4675d2e587dc8fafe40f00f/transformed/jetified-ui-common-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:soloader:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8f211d10994221d541ddfa710c4f94f2/transformed/jetified-soloader-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.fresco:fbcore:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/949803e3eb20c62289a0b2eb83c1a7fa/transformed/jetified-fbcore-3.1.3/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.flipper:flipper-network-plugin:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/4a269b64becdd3c83e86d3687470922f/transformed/jetified-flipper-network-plugin-0.201.0/AndroidManifest.xml:8:1-13:12
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:8:1-16:12
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/4ee472bbcf980ed8132c85d3526f6bff/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.material:material:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/AndroidManifest.xml:17:1-26:12
+MERGED from [com.facebook.stetho:stetho:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/cae75b6d8a80a889623e7af3730bc2ff/transformed/jetified-stetho-1.6.0/AndroidManifest.xml:2:1-13:12
+MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/c410a6d5ae0f1fac9975bc37b2e3465e/transformed/constraintlayout-2.0.1/AndroidManifest.xml:2:1-11:12
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:17:1-40:12
+MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:2:1-18:12
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] /Users/mian-rauf/.gradle/caches/transforms-4/8c996e5445c8f079cbaba607c241381c/transformed/jetified-play-services-auth-api-phone-18.0.2/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.10] /Users/mian-rauf/.gradle/caches/transforms-4/8b49d11bb798d7ad7010309bd2e48750/transformed/jetified-play-services-auth-base-18.0.10/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/8bc519d1a1cff38c5a1a41eb06c63e53/transformed/jetified-play-services-fido-20.0.1/AndroidManifest.xml:2:1-10:12
+MERGED from [com.google.mlkit:barcode-scanning-common:17.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/dc27dc1704d6fd5afd9a7e1a3a864241/transformed/jetified-barcode-scanning-common-17.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:2:1-18:12
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:2:1-26:12
+MERGED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.mlkit:vision-interfaces:16.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/5dffaadc9ebbd435f2bf28a1221759a5/transformed/jetified-vision-interfaces-16.2.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a5dbf1354d131a2a53f8e8f9f41577f0/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/ec398655d5022601fd84e22cc087756e/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/c7e7e52439d98db93c1f54566ed5f964/transformed/loader-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ecaf15e5a1439735d2396cf80c1c0a6d/transformed/lifecycle-viewmodel-2.5.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/fbf75d009fca9676fc83587a5a70a985/transformed/jetified-lifecycle-viewmodel-savedstate-2.5.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/c199a0905603fb3786e9b28bce4c57c4/transformed/jetified-datastore-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/77fc71a175d544229d833fd6d17ff469/transformed/jetified-datastore-preferences-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/820bab91ab46337dc627c4667109a40d/transformed/jetified-datastore-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/7beaa6c71e382e70187d6111b55da74a/transformed/jetified-datastore-preferences-release/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/e116e783c5b5801ddddd618293e261c0/transformed/jetified-play-services-tasks-18.2.0/AndroidManifest.xml:2:1-5:12
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:16:1-26:12
+MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/7a580141e03549012e1d92d0688bc654/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.fragment:fragment:1.5.7] /Users/mian-rauf/.gradle/caches/transforms-4/932c3025e91c2fe8bdc00f3c4f5f0fb6/transformed/fragment-1.5.7/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.activity:activity:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/630c5ff424fd6312b7a2b50a01b6f304/transformed/jetified-activity-1.6.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/61c70a43830c27c1266207c91c3a0181/transformed/jetified-savedstate-1.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.autofill:autofill:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/9744049e5b560c9bd9acea4e37646253/transformed/jetified-autofill-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e2621a29bfb06e1777a31b21e00634f/transformed/swiperefreshlayout-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d858613009e51a2d505bc4f088024fe9/transformed/coordinatorlayout-1.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/905d317a01844ee8f565931b6721d98f/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/09e2813cf569d54023252f7ed9b7bba8/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/97f72c2d35f2c8febca2a02995655ae4/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fad0fa0086b483815d0b158776af9b83/transformed/drawerlayout-1.1.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.transition:transition:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d8b1f81cc1a2b49c30f9afd00fd0e7b4/transformed/transition-1.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.core:core-ktx:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/6d00ee2a63b3100e91f0ccb5693d1e1e/transformed/jetified-core-ktx-1.9.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e85dbe23d6240fd0e31d9ecaafe9c2f/transformed/viewpager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/323517de2efb7452443b70c996147e60/transformed/recyclerview-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.customview:customview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/d031b1645d81ed7703b9934ead833a90/transformed/customview-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/788a60a695b4ddf220d7b2580d14b5fc/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.facebook.react:hermes-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/18c4373da7a83aa840d7d8d95c6a501a/transformed/jetified-hermes-android-0.73.4-debug/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:17:1-37:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/61cc874f4bc265fc999d7d1982c07506/transformed/jetified-tracing-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.exifinterface:exifinterface:1.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/9e8cb399dad58ba6c3506848b1c2ad36/transformed/exifinterface-1.3.3/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/b3c93a6e64020921ece0861a15af5735/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/d869ca0f3d0802be92841ed31350c5ef/transformed/lifecycle-runtime-2.5.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/fc9d3127f42cc42ff46be7b1cfd0d202/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite-framework:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/7ceb1f0c09214422d325faa5d73ca3ad/transformed/sqlite-framework-2.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/70737fa110ee4448e817c2445009a93a/transformed/cardview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:15:1-38:12
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.android.datatransport:transport-api:2.2.1] /Users/mian-rauf/.gradle/caches/transforms-4/28dffd1438f02be9b2fd5ddbc0346367/transformed/jetified-transport-api-2.2.1/AndroidManifest.xml:15:1-22:12
+MERGED from [com.google.firebase:firebase-encoders-json:17.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/2f1d83ea983ba69ef766bbe7ec32d049/transformed/jetified-firebase-encoders-json-17.1.0/AndroidManifest.xml:15:1-23:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/181c541ef1d42237a7a59e3597f483bc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ce924e98d2d25c86c5a368868179bd85/transformed/lifecycle-livedata-core-2.5.1/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.arch.core:core-runtime:2.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/1c982aa9266bb567e0198104d243e015/transformed/core-runtime-2.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.sqlite:sqlite:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/90268d38768360b08490ba50c01c6218/transformed/sqlite-2.2.0/AndroidManifest.xml:17:1-24:12
+MERGED from [com.google.firebase:firebase-components:19.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a0843903bd670097c10595bc4b8d05b4/transformed/jetified-firebase-components-19.0.0/AndroidManifest.xml:15:1-20:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/16d7e313e73d0db6b961685d24ec6c39/transformed/documentfile-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/5b9466dfe988081d50f5c08bd4decdf9/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/c48454bdeb0bcc2d4dbcbbcb042a5d98/transformed/print-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [com.facebook.fbjni:fbjni:0.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/b46fbf59bd1e93de18b00ee42102f670/transformed/jetified-fbjni-0.5.1/AndroidManifest.xml:2:1-7:12
+MERGED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:2:1-17:12
+MERGED from [com.github.henninghall:numberpickerview:v1.1.5] /Users/mian-rauf/.gradle/caches/transforms-4/418d52ffec48fe897b26a81a66ff5701/transformed/jetified-numberpickerview-v1.1.5/AndroidManifest.xml:2:1-11:12
+MERGED from [net.time4j:time4j-android:4.8-2021a] /Users/mian-rauf/.gradle/caches/transforms-4/b7243982387691eab96b9fccc6783bae/transformed/jetified-time4j-android-4.8-2021a/AndroidManifest.xml:2:1-13:12
+MERGED from [com.android.ndk.thirdparty:openssl:1.1.1l-beta-1] /Users/mian-rauf/.gradle/caches/transforms-4/6b2374faa03f4ead6a65edc60b0ab597/transformed/jetified-openssl-1.1.1l-beta-1/AndroidManifest.xml:1:1-3:12
+MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/mian-rauf/.gradle/caches/transforms-4/fb6ba5b8583cfc5790ac17b009d2a328/transformed/jetified-image-1.0.0-beta1/AndroidManifest.xml:2:1-9:12
+	package
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:2:5-51
+	android:versionCode
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:1:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:4:5-67
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:13:5-67
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:13:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:26:5-67
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:26:5-67
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:4:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:5:5-79
+MERGED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-79
+MERGED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:25:5-79
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:25:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:22:5-79
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:22:5-79
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:5:22-76
+uses-permission#com.google.android.gms.permission.AD_ID
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:6:5-8:31
+	tools:node
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:8:9-28
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:7:9-63
+uses-permission#android.permission.CAMERA
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:10:5-65
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:10:22-62
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:19:5-21:32
+REJECTED from [:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-fs/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-81
+	tools:node
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:21:9-29
+	android:maxSdkVersion
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:20:9-35
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:19:22-78
+application
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:23:5-42:19
+MERGED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:23:5-42:19
+MERGED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:23:5-42:19
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:5:5-8:50
+MERGED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:5-28:19
+MERGED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:5-28:19
+MERGED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-17:19
+MERGED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-17:19
+MERGED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-17:19
+MERGED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-17:19
+MERGED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:18:5-22:19
+MERGED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:18:5-22:19
+MERGED from [com.google.android.material:material:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/AndroidManifest.xml:24:5-20
+MERGED from [com.google.android.material:material:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/AndroidManifest.xml:24:5-20
+MERGED from [com.facebook.stetho:stetho:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/cae75b6d8a80a889623e7af3730bc2ff/transformed/jetified-stetho-1.6.0/AndroidManifest.xml:11:5-20
+MERGED from [com.facebook.stetho:stetho:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/cae75b6d8a80a889623e7af3730bc2ff/transformed/jetified-stetho-1.6.0/AndroidManifest.xml:11:5-20
+MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/c410a6d5ae0f1fac9975bc37b2e3465e/transformed/constraintlayout-2.0.1/AndroidManifest.xml:9:5-20
+MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/c410a6d5ae0f1fac9975bc37b2e3465e/transformed/constraintlayout-2.0.1/AndroidManifest.xml:9:5-20
+MERGED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:22:5-38:19
+MERGED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:22:5-38:19
+MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:8:5-16:19
+MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:8:5-16:19
+MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/8bc519d1a1cff38c5a1a41eb06c63e53/transformed/jetified-play-services-fido-20.0.1/AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/8bc519d1a1cff38c5a1a41eb06c63e53/transformed/jetified-play-services-fido-20.0.1/AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:8:5-16:19
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:8:5-16:19
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:8:5-24:19
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:8:5-24:19
+MERGED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:4:5-6:19
+MERGED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:4:5-6:19
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/e116e783c5b5801ddddd618293e261c0/transformed/jetified-play-services-tasks-18.2.0/AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/e116e783c5b5801ddddd618293e261c0/transformed/jetified-play-services-tasks-18.2.0/AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:20:5-24:19
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:20:5-24:19
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:25:5-35:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:25:5-35:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:28:5-36:19
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:28:5-36:19
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:25:5-39:19
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:25:5-39:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/181c541ef1d42237a7a59e3597f483bc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/181c541ef1d42237a7a59e3597f483bc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:11:5-15:19
+MERGED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:11:5-15:19
+MERGED from [net.time4j:time4j-android:4.8-2021a] /Users/mian-rauf/.gradle/caches/transforms-4/b7243982387691eab96b9fccc6783bae/transformed/jetified-time4j-android-4.8-2021a/AndroidManifest.xml:11:5-20
+MERGED from [net.time4j:time4j-android:4.8-2021a] /Users/mian-rauf/.gradle/caches/transforms-4/b7243982387691eab96b9fccc6783bae/transformed/jetified-time4j-android-4.8-2021a/AndroidManifest.xml:11:5-20
+MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/mian-rauf/.gradle/caches/transforms-4/fb6ba5b8583cfc5790ac17b009d2a328/transformed/jetified-image-1.0.0-beta1/AndroidManifest.xml:7:5-20
+MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/mian-rauf/.gradle/caches/transforms-4/fb6ba5b8583cfc5790ac17b009d2a328/transformed/jetified-image-1.0.0-beta1/AndroidManifest.xml:7:5-20
+	android:extractNativeLibs
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:25:7-39
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:25:7-39
+	tools:ignore
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:8:9-48
+	android:roundIcon
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:27:7-52
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:27:7-52
+	tools:targetApi
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:7:9-29
+	android:icon
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:26:7-41
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:26:7-41
+	android:allowBackup
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:28:7-34
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:28:7-34
+	android:theme
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:29:7-38
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:29:7-38
+	android:usesCleartextTraffic
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:6:9-44
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:24:7-38
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:24:7-38
+activity#com.criczodiac.MainActivity
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:30:7-41:18
+	android:label
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:32:9-41
+	android:launchMode
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:34:9-40
+	android:windowSoftInputMode
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:35:9-60
+	android:exported
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:36:9-32
+	android:configChanges
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:33:9-118
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:31:9-37
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:37:9-40:25
+action#android.intent.action.MAIN
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:38:13-65
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:38:21-62
+category#android.intent.category.LAUNCHER
+ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:39:13-73
+	android:name
+		ADDED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:39:23-70
+uses-sdk
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+MERGED from [com.facebook.react:flipper-integration:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/7fe44931f87c6c96dbc1fae7a418fdc2/transformed/jetified-flipper-integration-0.73.4-debug/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.react:flipper-integration:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/7fe44931f87c6c96dbc1fae7a418fdc2/transformed/jetified-flipper-integration-0.73.4-debug/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-async-storage_async-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-async-storage/async-storage/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-async-storage_async-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-async-storage/async-storage/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:6:5-44
+MERGED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:6:5-44
+MERGED from [:react-native-picker_picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-picker/picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-picker_picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-picker/picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-date-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-date-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-date-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-date-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-fs/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-fs] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-fs/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-gesture-handler] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-gesture-handler/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-gesture-handler] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-gesture-handler/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-linear-gradient] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-linear-gradient/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-linear-gradient] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-linear-gradient/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-reanimated] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-reanimated/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-reanimated] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-reanimated/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-safe-area-context] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-safe-area-context/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-safe-area-context] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-safe-area-context/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-screens] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-screens/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-screens] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-screens/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-sqlite-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-sqlite-storage/platforms/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-sqlite-storage] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-sqlite-storage/platforms/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-svg] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-svg/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-svg] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-svg/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-vector-icons] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vector-icons/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-vector-icons] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vector-icons/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-vision-camera] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vision-camera/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-vision-camera] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-vision-camera/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-worklets-core] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-worklets-core/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [:react-native-worklets-core] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-worklets-core/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:10:5-44
+MERGED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:10:5-44
+MERGED from [com.facebook.fresco:flipper-fresco-plugin:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/3579884ea0de355e4212a5ffbabdc2ff/transformed/jetified-flipper-fresco-plugin-3.1.3/AndroidManifest.xml:11:5-44
+MERGED from [com.facebook.fresco:flipper-fresco-plugin:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/3579884ea0de355e4212a5ffbabdc2ff/transformed/jetified-flipper-fresco-plugin-3.1.3/AndroidManifest.xml:11:5-44
+MERGED from [com.facebook.fresco:flipper:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/c38ed71ba095a806f2412e51afb244ff/transformed/jetified-flipper-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:flipper:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/c38ed71ba095a806f2412e51afb244ff/transformed/jetified-flipper-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:fresco:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8dd7d2fa1e9c695fcd6302097a96eac5/transformed/jetified-fresco-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:fresco:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8dd7d2fa1e9c695fcd6302097a96eac5/transformed/jetified-fresco-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-okhttp3:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/62e84b94e7711d8b52215cd815ac1ac9/transformed/jetified-imagepipeline-okhttp3-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-okhttp3:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/62e84b94e7711d8b52215cd815ac1ac9/transformed/jetified-imagepipeline-okhttp3-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:drawee:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1ee1db186271939b4f70b7333dd45e84/transformed/jetified-drawee-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:drawee:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1ee1db186271939b4f70b7333dd45e84/transformed/jetified-drawee-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:nativeimagefilters:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/23bb7c2bdc63a616d0691efa39aea296/transformed/jetified-nativeimagefilters-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:nativeimagefilters:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/23bb7c2bdc63a616d0691efa39aea296/transformed/jetified-nativeimagefilters-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/86eba3b3f19b80b0a4a15139ad71237a/transformed/jetified-memory-type-native-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/86eba3b3f19b80b0a4a15139ad71237a/transformed/jetified-memory-type-native-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-java:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/473bc70dcfa03e303c0d7b12ea0ca59f/transformed/jetified-memory-type-java-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-java:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/473bc70dcfa03e303c0d7b12ea0ca59f/transformed/jetified-memory-type-java-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/848858b3406b858c0cbbab5ca7b8b249/transformed/jetified-imagepipeline-native-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-native:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/848858b3406b858c0cbbab5ca7b8b249/transformed/jetified-imagepipeline-native-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-ashmem:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/5116425b5d5fb189b7ef8533711973a7/transformed/jetified-memory-type-ashmem-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:memory-type-ashmem:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/5116425b5d5fb189b7ef8533711973a7/transformed/jetified-memory-type-ashmem-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/63c279d962369f17f53016334c5602b9/transformed/jetified-imagepipeline-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/63c279d962369f17f53016334c5602b9/transformed/jetified-imagepipeline-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:nativeimagetranscoder:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/4e6c260e43d963c349fdcb932527c3a5/transformed/jetified-nativeimagetranscoder-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:nativeimagetranscoder:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/4e6c260e43d963c349fdcb932527c3a5/transformed/jetified-nativeimagetranscoder-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-base:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1a55d139eec0e93fce11a78a5f0096f6/transformed/jetified-imagepipeline-base-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:imagepipeline-base:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/1a55d139eec0e93fce11a78a5f0096f6/transformed/jetified-imagepipeline-base-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:middleware:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/44a39f687006a86c06cfb40aad1d69b1/transformed/jetified-middleware-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:middleware:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/44a39f687006a86c06cfb40aad1d69b1/transformed/jetified-middleware-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:ui-common:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/008690f0b4675d2e587dc8fafe40f00f/transformed/jetified-ui-common-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:ui-common:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/008690f0b4675d2e587dc8fafe40f00f/transformed/jetified-ui-common-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:soloader:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8f211d10994221d541ddfa710c4f94f2/transformed/jetified-soloader-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:soloader:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/8f211d10994221d541ddfa710c4f94f2/transformed/jetified-soloader-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:fbcore:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/949803e3eb20c62289a0b2eb83c1a7fa/transformed/jetified-fbcore-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fresco:fbcore:3.1.3] /Users/mian-rauf/.gradle/caches/transforms-4/949803e3eb20c62289a0b2eb83c1a7fa/transformed/jetified-fbcore-3.1.3/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.flipper:flipper-network-plugin:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/4a269b64becdd3c83e86d3687470922f/transformed/jetified-flipper-network-plugin-0.201.0/AndroidManifest.xml:11:5-44
+MERGED from [com.facebook.flipper:flipper-network-plugin:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/4a269b64becdd3c83e86d3687470922f/transformed/jetified-flipper-network-plugin-0.201.0/AndroidManifest.xml:11:5-44
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:11:5-44
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:11:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/4ee472bbcf980ed8132c85d3526f6bff/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/4ee472bbcf980ed8132c85d3526f6bff/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.material:material:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/AndroidManifest.xml:20:5-22:41
+MERGED from [com.google.android.material:material:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/AndroidManifest.xml:20:5-22:41
+MERGED from [com.facebook.stetho:stetho:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/cae75b6d8a80a889623e7af3730bc2ff/transformed/jetified-stetho-1.6.0/AndroidManifest.xml:7:5-9:41
+MERGED from [com.facebook.stetho:stetho:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/cae75b6d8a80a889623e7af3730bc2ff/transformed/jetified-stetho-1.6.0/AndroidManifest.xml:7:5-9:41
+MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/c410a6d5ae0f1fac9975bc37b2e3465e/transformed/constraintlayout-2.0.1/AndroidManifest.xml:5:5-7:41
+MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/c410a6d5ae0f1fac9975bc37b2e3465e/transformed/constraintlayout-2.0.1/AndroidManifest.xml:5:5-7:41
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/mian-rauf/.gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] /Users/mian-rauf/.gradle/caches/transforms-4/8c996e5445c8f079cbaba607c241381c/transformed/jetified-play-services-auth-api-phone-18.0.2/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] /Users/mian-rauf/.gradle/caches/transforms-4/8c996e5445c8f079cbaba607c241381c/transformed/jetified-play-services-auth-api-phone-18.0.2/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.10] /Users/mian-rauf/.gradle/caches/transforms-4/8b49d11bb798d7ad7010309bd2e48750/transformed/jetified-play-services-auth-base-18.0.10/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.10] /Users/mian-rauf/.gradle/caches/transforms-4/8b49d11bb798d7ad7010309bd2e48750/transformed/jetified-play-services-auth-base-18.0.10/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/8bc519d1a1cff38c5a1a41eb06c63e53/transformed/jetified-play-services-fido-20.0.1/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/8bc519d1a1cff38c5a1a41eb06c63e53/transformed/jetified-play-services-fido-20.0.1/AndroidManifest.xml:5:5-44
+MERGED from [com.google.mlkit:barcode-scanning-common:17.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/dc27dc1704d6fd5afd9a7e1a3a864241/transformed/jetified-barcode-scanning-common-17.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.mlkit:barcode-scanning-common:17.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/dc27dc1704d6fd5afd9a7e1a3a864241/transformed/jetified-barcode-scanning-common-17.0.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:6:5-44
+MERGED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:3:5-44
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:19:5-44
+MERGED from [com.google.mlkit:vision-interfaces:16.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/5dffaadc9ebbd435f2bf28a1221759a5/transformed/jetified-vision-interfaces-16.2.0/AndroidManifest.xml:5:5-44
+MERGED from [com.google.mlkit:vision-interfaces:16.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/5dffaadc9ebbd435f2bf28a1221759a5/transformed/jetified-vision-interfaces-16.2.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a5dbf1354d131a2a53f8e8f9f41577f0/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.dynamicanimation:dynamicanimation:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a5dbf1354d131a2a53f8e8f9f41577f0/transformed/dynamicanimation-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/ec398655d5022601fd84e22cc087756e/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/ec398655d5022601fd84e22cc087756e/transformed/legacy-support-core-utils-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/c7e7e52439d98db93c1f54566ed5f964/transformed/loader-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.loader:loader:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/c7e7e52439d98db93c1f54566ed5f964/transformed/loader-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ecaf15e5a1439735d2396cf80c1c0a6d/transformed/lifecycle-viewmodel-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ecaf15e5a1439735d2396cf80c1c0a6d/transformed/lifecycle-viewmodel-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/fbf75d009fca9676fc83587a5a70a985/transformed/jetified-lifecycle-viewmodel-savedstate-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/fbf75d009fca9676fc83587a5a70a985/transformed/jetified-lifecycle-viewmodel-savedstate-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/c199a0905603fb3786e9b28bce4c57c4/transformed/jetified-datastore-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/c199a0905603fb3786e9b28bce4c57c4/transformed/jetified-datastore-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/77fc71a175d544229d833fd6d17ff469/transformed/jetified-datastore-preferences-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences-core-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/77fc71a175d544229d833fd6d17ff469/transformed/jetified-datastore-preferences-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/820bab91ab46337dc627c4667109a40d/transformed/jetified-datastore-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/820bab91ab46337dc627c4667109a40d/transformed/jetified-datastore-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/7beaa6c71e382e70187d6111b55da74a/transformed/jetified-datastore-preferences-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.7] /Users/mian-rauf/.gradle/caches/transforms-4/7beaa6c71e382e70187d6111b55da74a/transformed/jetified-datastore-preferences-release/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/e116e783c5b5801ddddd618293e261c0/transformed/jetified-play-services-tasks-18.2.0/AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/e116e783c5b5801ddddd618293e261c0/transformed/jetified-play-services-tasks-18.2.0/AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:18:5-43
+MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/7a580141e03549012e1d92d0688bc654/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.viewpager2:viewpager2:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/7a580141e03549012e1d92d0688bc654/transformed/jetified-viewpager2-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.5.7] /Users/mian-rauf/.gradle/caches/transforms-4/932c3025e91c2fe8bdc00f3c4f5f0fb6/transformed/fragment-1.5.7/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.5.7] /Users/mian-rauf/.gradle/caches/transforms-4/932c3025e91c2fe8bdc00f3c4f5f0fb6/transformed/fragment-1.5.7/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.activity:activity:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/630c5ff424fd6312b7a2b50a01b6f304/transformed/jetified-activity-1.6.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.6.0] /Users/mian-rauf/.gradle/caches/transforms-4/630c5ff424fd6312b7a2b50a01b6f304/transformed/jetified-activity-1.6.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/61c70a43830c27c1266207c91c3a0181/transformed/jetified-savedstate-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.savedstate:savedstate:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/61c70a43830c27c1266207c91c3a0181/transformed/jetified-savedstate-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/9744049e5b560c9bd9acea4e37646253/transformed/jetified-autofill-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/9744049e5b560c9bd9acea4e37646253/transformed/jetified-autofill-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e2621a29bfb06e1777a31b21e00634f/transformed/swiperefreshlayout-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e2621a29bfb06e1777a31b21e00634f/transformed/swiperefreshlayout-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d858613009e51a2d505bc4f088024fe9/transformed/coordinatorlayout-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d858613009e51a2d505bc4f088024fe9/transformed/coordinatorlayout-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/905d317a01844ee8f565931b6721d98f/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/905d317a01844ee8f565931b6721d98f/transformed/jetified-emoji2-views-helper-1.2.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/09e2813cf569d54023252f7ed9b7bba8/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/09e2813cf569d54023252f7ed9b7bba8/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/97f72c2d35f2c8febca2a02995655ae4/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/97f72c2d35f2c8febca2a02995655ae4/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fad0fa0086b483815d0b158776af9b83/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.drawerlayout:drawerlayout:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fad0fa0086b483815d0b158776af9b83/transformed/drawerlayout-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d8b1f81cc1a2b49c30f9afd00fd0e7b4/transformed/transition-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/d8b1f81cc1a2b49c30f9afd00fd0e7b4/transformed/transition-1.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core-ktx:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/6d00ee2a63b3100e91f0ccb5693d1e1e/transformed/jetified-core-ktx-1.9.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/6d00ee2a63b3100e91f0ccb5693d1e1e/transformed/jetified-core-ktx-1.9.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e85dbe23d6240fd0e31d9ecaafe9c2f/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/8e85dbe23d6240fd0e31d9ecaafe9c2f/transformed/viewpager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/323517de2efb7452443b70c996147e60/transformed/recyclerview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.recyclerview:recyclerview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/323517de2efb7452443b70c996147e60/transformed/recyclerview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/d031b1645d81ed7703b9934ead833a90/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/d031b1645d81ed7703b9934ead833a90/transformed/customview-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/788a60a695b4ddf220d7b2580d14b5fc/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/788a60a695b4ddf220d7b2580d14b5fc/transformed/jetified-annotation-experimental-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [com.facebook.react:hermes-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/18c4373da7a83aa840d7d8d95c6a501a/transformed/jetified-hermes-android-0.73.4-debug/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.react:hermes-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/18c4373da7a83aa840d7d8d95c6a501a/transformed/jetified-hermes-android-0.73.4-debug/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/61cc874f4bc265fc999d7d1982c07506/transformed/jetified-tracing-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/61cc874f4bc265fc999d7d1982c07506/transformed/jetified-tracing-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/9e8cb399dad58ba6c3506848b1c2ad36/transformed/exifinterface-1.3.3/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/9e8cb399dad58ba6c3506848b1c2ad36/transformed/exifinterface-1.3.3/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/b3c93a6e64020921ece0861a15af5735/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/b3c93a6e64020921ece0861a15af5735/transformed/cursoradapter-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/d869ca0f3d0802be92841ed31350c5ef/transformed/lifecycle-runtime-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/d869ca0f3d0802be92841ed31350c5ef/transformed/lifecycle-runtime-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/fc9d3127f42cc42ff46be7b1cfd0d202/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/fc9d3127f42cc42ff46be7b1cfd0d202/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/7ceb1f0c09214422d325faa5d73ca3ad/transformed/sqlite-framework-2.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.sqlite:sqlite-framework:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/7ceb1f0c09214422d325faa5d73ca3ad/transformed/sqlite-framework-2.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/70737fa110ee4448e817c2445009a93a/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.cardview:cardview:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/70737fa110ee4448e817c2445009a93a/transformed/cardview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-api:2.2.1] /Users/mian-rauf/.gradle/caches/transforms-4/28dffd1438f02be9b2fd5ddbc0346367/transformed/jetified-transport-api-2.2.1/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.android.datatransport:transport-api:2.2.1] /Users/mian-rauf/.gradle/caches/transforms-4/28dffd1438f02be9b2fd5ddbc0346367/transformed/jetified-transport-api-2.2.1/AndroidManifest.xml:18:5-20:41
+MERGED from [com.google.firebase:firebase-encoders-json:17.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/2f1d83ea983ba69ef766bbe7ec32d049/transformed/jetified-firebase-encoders-json-17.1.0/AndroidManifest.xml:19:5-21:41
+MERGED from [com.google.firebase:firebase-encoders-json:17.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/2f1d83ea983ba69ef766bbe7ec32d049/transformed/jetified-firebase-encoders-json-17.1.0/AndroidManifest.xml:19:5-21:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/181c541ef1d42237a7a59e3597f483bc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/181c541ef1d42237a7a59e3597f483bc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ce924e98d2d25c86c5a368868179bd85/transformed/lifecycle-livedata-core-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/ce924e98d2d25c86c5a368868179bd85/transformed/lifecycle-livedata-core-2.5.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/1c982aa9266bb567e0198104d243e015/transformed/core-runtime-2.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.1.0] /Users/mian-rauf/.gradle/caches/transforms-4/1c982aa9266bb567e0198104d243e015/transformed/core-runtime-2.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.sqlite:sqlite:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/90268d38768360b08490ba50c01c6218/transformed/sqlite-2.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.sqlite:sqlite:2.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/90268d38768360b08490ba50c01c6218/transformed/sqlite-2.2.0/AndroidManifest.xml:20:5-22:41
+MERGED from [com.google.firebase:firebase-components:19.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a0843903bd670097c10595bc4b8d05b4/transformed/jetified-firebase-components-19.0.0/AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-components:19.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/a0843903bd670097c10595bc4b8d05b4/transformed/jetified-firebase-components-19.0.0/AndroidManifest.xml:18:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/16d7e313e73d0db6b961685d24ec6c39/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/16d7e313e73d0db6b961685d24ec6c39/transformed/documentfile-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/5b9466dfe988081d50f5c08bd4decdf9/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/5b9466dfe988081d50f5c08bd4decdf9/transformed/localbroadcastmanager-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/c48454bdeb0bcc2d4dbcbbcb042a5d98/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] /Users/mian-rauf/.gradle/caches/transforms-4/c48454bdeb0bcc2d4dbcbbcb042a5d98/transformed/print-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [com.facebook.fbjni:fbjni:0.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/b46fbf59bd1e93de18b00ee42102f670/transformed/jetified-fbjni-0.5.1/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.fbjni:fbjni:0.5.1] /Users/mian-rauf/.gradle/caches/transforms-4/b46fbf59bd1e93de18b00ee42102f670/transformed/jetified-fbjni-0.5.1/AndroidManifest.xml:5:5-44
+MERGED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:7:5-9:41
+MERGED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:7:5-9:41
+MERGED from [com.github.henninghall:numberpickerview:v1.1.5] /Users/mian-rauf/.gradle/caches/transforms-4/418d52ffec48fe897b26a81a66ff5701/transformed/jetified-numberpickerview-v1.1.5/AndroidManifest.xml:7:5-9:41
+MERGED from [com.github.henninghall:numberpickerview:v1.1.5] /Users/mian-rauf/.gradle/caches/transforms-4/418d52ffec48fe897b26a81a66ff5701/transformed/jetified-numberpickerview-v1.1.5/AndroidManifest.xml:7:5-9:41
+MERGED from [net.time4j:time4j-android:4.8-2021a] /Users/mian-rauf/.gradle/caches/transforms-4/b7243982387691eab96b9fccc6783bae/transformed/jetified-time4j-android-4.8-2021a/AndroidManifest.xml:7:5-9:41
+MERGED from [net.time4j:time4j-android:4.8-2021a] /Users/mian-rauf/.gradle/caches/transforms-4/b7243982387691eab96b9fccc6783bae/transformed/jetified-time4j-android-4.8-2021a/AndroidManifest.xml:7:5-9:41
+MERGED from [com.android.ndk.thirdparty:openssl:1.1.1l-beta-1] /Users/mian-rauf/.gradle/caches/transforms-4/6b2374faa03f4ead6a65edc60b0ab597/transformed/jetified-openssl-1.1.1l-beta-1/AndroidManifest.xml:2:2-70
+MERGED from [com.android.ndk.thirdparty:openssl:1.1.1l-beta-1] /Users/mian-rauf/.gradle/caches/transforms-4/6b2374faa03f4ead6a65edc60b0ab597/transformed/jetified-openssl-1.1.1l-beta-1/AndroidManifest.xml:2:2-70
+MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/mian-rauf/.gradle/caches/transforms-4/fb6ba5b8583cfc5790ac17b009d2a328/transformed/jetified-image-1.0.0-beta1/AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.odml:image:1.0.0-beta1] /Users/mian-rauf/.gradle/caches/transforms-4/fb6ba5b8583cfc5790ac17b009d2a328/transformed/jetified-image-1.0.0-beta1/AndroidManifest.xml:5:5-44
+	android:targetSdkVersion
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml
+uses-permission#android.permission.ACCESS_WIFI_STATE
+ADDED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:5-76
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:14:5-76
+MERGED from [com.facebook.flipper:flipper:0.201.0] /Users/mian-rauf/.gradle/caches/transforms-4/69cee62359168f332bc8a952395cc5fc/transformed/jetified-flipper-0.201.0/AndroidManifest.xml:14:5-76
+	android:name
+		ADDED from [:react-native-community_netinfo] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-community/netinfo/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:22-73
+meta-data#app_data_collection_default_enabled
+ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:9-11:36
+	android:value
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:11:13-33
+	android:name
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:13-63
+service#com.google.firebase.components.ComponentDiscoveryService
+ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:9-21:19
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:30:9-38:19
+MERGED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:30:9-38:19
+	android:exported
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:16:13-37
+	tools:targetApi
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:17:13-32
+	android:directBootAware
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:15:13-43
+	android:name
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:13-84
+meta-data#com.google.firebase.components:io.invertase.firebase.app.ReactNativeFirebaseAppRegistrar
+ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:18:13-20:85
+	android:value
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:20:17-82
+	android:name
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:19:17-120
+provider#io.invertase.firebase.app.ReactNativeFirebaseAppInitProvider
+ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:23:9-27:38
+	android:authorities
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:25:13-86
+	android:exported
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:26:13-37
+	android:initOrder
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:27:13-35
+	android:name
+		ADDED from [:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:24:13-88
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+IMPLIED from /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/debug/AndroidManifest.xml:2:1-9:12 reason: com.rnfs requested WRITE_EXTERNAL_STORAGE
+provider#com.imagepicker.ImagePickerProvider
+ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:9-16:20
+	android:grantUriPermissions
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:12:13-47
+	android:authorities
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:13-71
+	android:exported
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:11:13-37
+	android:name
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:13-63
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:13-15:70
+	android:resource
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:15:17-67
+	android:name
+		ADDED from [:react-native-image-picker] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-image-picker/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:17-67
+provider#cl.json.RNShareFileProvider
+ADDED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:9-16:20
+	android:grantUriPermissions
+		ADDED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:12:13-47
+	android:authorities
+		ADDED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:13-72
+	android:exported
+		ADDED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:11:13-37
+	android:name
+		ADDED from [:react-native-share] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/react-native-share/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:13-55
+uses-permission#android.permission.SYSTEM_ALERT_WINDOW
+ADDED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:16:5-78
+	android:name
+		ADDED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:16:22-75
+activity#com.facebook.react.devsupport.DevSettingsActivity
+ADDED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:19:9-21:40
+	android:exported
+		ADDED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:21:13-37
+	android:name
+		ADDED from [com.facebook.react:react-android:0.73.4] /Users/mian-rauf/.gradle/caches/transforms-4/ad98ef80a51651f76b137d795424f6f8/transformed/jetified-react-android-0.73.4-debug/AndroidManifest.xml:20:13-77
+activity#com.google.android.gms.auth.api.signin.internal.SignInHubActivity
+ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:23:9-27:75
+	android:excludeFromRecents
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:25:13-46
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:26:13-37
+	android:theme
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:27:13-72
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:24:13-93
+service#com.google.android.gms.auth.api.signin.RevocationBoundService
+ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:33:9-37:51
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:35:13-36
+	android:visibleToInstantApps
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:37:13-48
+	android:permission
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:36:13-107
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:21.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:34:13-89
+service#com.google.mlkit.common.internal.MlKitComponentDiscoveryService
+ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:9:9-15:19
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:9:9-15:19
+MERGED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:9:9-15:19
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:15:9-23:19
+MERGED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:15:9-23:19
+	android:exported
+		ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:11:13-37
+	tools:targetApi
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:19:13-32
+	android:directBootAware
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:17:13-43
+	android:name
+		ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:10:13-91
+meta-data#com.google.firebase.components:com.google.mlkit.vision.barcode.internal.BarcodeRegistrar
+ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:12:13-14:85
+	android:value
+		ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:14:17-82
+	android:name
+		ADDED from [com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:13:17-120
+meta-data#com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar
+ADDED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:12:13-14:85
+	android:value
+		ADDED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:14:17-82
+	android:name
+		ADDED from [com.google.mlkit:vision-common:17.3.0] /Users/mian-rauf/.gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:13:17-124
+provider#com.google.mlkit.common.internal.MlKitInitProvider
+ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:9:9-13:38
+	android:authorities
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:11:13-69
+	android:exported
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:12:13-37
+	android:initOrder
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:13:13-35
+	android:name
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:10:13-78
+meta-data#com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar
+ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:20:13-22:85
+	android:value
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:22:17-82
+	android:name
+		ADDED from [com.google.mlkit:common:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:21:17-120
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:9-173
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:146-170
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:86-145
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] /Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:19-85
+provider#com.google.firebase.provider.FirebaseInitProvider
+ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:23:9-28:39
+	android:authorities
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:25:13-72
+	android:exported
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:27:13-37
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:26:13-43
+	android:initOrder
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:28:13-36
+	android:name
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:24:13-77
+meta-data#com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar
+ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:35:13-37:85
+	android:value
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:37:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-common:22.0.1] /Users/mian-rauf/.gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:36:17-109
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:22:13-58
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:26:9-34:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:26:9-34:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/mian-rauf/.gradle/caches/transforms-4/fcb7826fc5568cba829d91945c5fca17/transformed/jetified-startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.2.0] /Users/mian-rauf/.gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
+permission#com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
+uses-permission#com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.9.0] /Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.4.1] /Users/mian-rauf/.gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
+service#com.google.android.datatransport.runtime.backends.TransportBackendDiscovery
+ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:29:9-35:19
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:36:9-38:40
+MERGED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:36:9-38:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:31:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:30:13-103
+meta-data#backend:com.google.android.datatransport.cct.CctBackendFactory
+ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:32:13-34:39
+	android:value
+		ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:34:17-36
+	android:name
+		ADDED from [com.google.android.datatransport:transport-backend-cct:2.3.3] /Users/mian-rauf/.gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:33:17-94
+service#com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService
+ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:26:9-30:19
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:28:13-37
+	android:permission
+		ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:29:13-69
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:27:13-117
+receiver#com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver
+ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:32:9-34:40
+	android:exported
+		ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:34:13-37
+	android:name
+		ADDED from [com.google.android.datatransport:transport-runtime:2.2.6] /Users/mian-rauf/.gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:33:13-132
+meta-data#com.facebook.soloader.enabled
+ADDED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:12:9-14:37
+	android:value
+		ADDED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:14:13-34
+	android:name
+		ADDED from [com.facebook.soloader:soloader:0.10.5] /Users/mian-rauf/.gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:13:13-57

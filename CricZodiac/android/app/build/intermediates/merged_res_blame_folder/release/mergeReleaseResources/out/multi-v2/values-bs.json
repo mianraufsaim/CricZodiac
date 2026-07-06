@@ -1,10 +1,61 @@
 {
     "logs": [
         {
-            "outputFile": "com.criczodiac.app-mergeReleaseResources-42:/values-bs/values-bs.xml",
+            "outputFile": "com.criczodiac.app-mergeReleaseResources-4:/values-bs/values-bs.xml",
             "map": [
                 {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-bs/values-bs.xml",
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/res/values-bs/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "218",
+                        "endColumns": "136",
+                        "endOffsets": "354"
+                    },
+                    "to": {
+                        "startLines": "53",
+                        "startColumns": "4",
+                        "startOffsets": "5082",
+                        "endColumns": "140",
+                        "endOffsets": "5218"
+                    }
+                },
+                {
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-bs/values-bs.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,129,218,303,377,446,528,595,662,740,820,904,987,1059,1140,1227,1303,1386,1468,1547,1625,1701,1789,1862,1941,2011",
+                        "endColumns": "73,88,84,73,68,81,66,66,77,79,83,82,71,80,86,75,82,81,78,77,75,87,72,78,69,76",
+                        "endOffsets": "124,213,298,372,441,523,590,657,735,815,899,982,1054,1135,1222,1298,1381,1463,1542,1620,1696,1784,1857,1936,2006,2083"
+                    },
+                    "to": {
+                        "startLines": "34,40,44,65,67,68,70,84,85,86,124,125,126,127,129,130,131,132,133,134,135,136,138,139,140,141",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "3102,3613,4005,6441,6592,6661,6806,7839,7906,7984,11038,11122,11205,11277,11445,11532,11608,11691,11773,11852,11930,12006,12195,12268,12347,12417",
+                        "endColumns": "73,88,84,73,68,81,66,66,77,79,83,82,71,80,86,75,82,81,78,77,75,87,72,78,69,76",
+                        "endOffsets": "3171,3697,4085,6510,6656,6738,6868,7901,7979,8059,11117,11200,11272,11353,11527,11603,11686,11768,11847,11925,12001,12089,12263,12342,12412,12489"
+                    }
+                },
+                {
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/res/values-bs/values.xml",
+                    "from": {
+                        "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+                        "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+                        "startOffsets": "193,295,451,573,679,825,947,1055,1153,1303,1406,1563,1686,1832,1974,2038,2096",
+                        "endColumns": "101,155,121,105,145,121,107,97,149,102,156,122,145,141,63,57,80",
+                        "endOffsets": "294,450,572,678,824,946,1054,1152,1302,1405,1562,1685,1831,1973,2037,2095,2176"
+                    },
+                    "to": {
+                        "startLines": "45,46,47,48,49,50,51,52,54,55,56,57,58,59,60,61,62",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "4090,4196,4356,4482,4592,4742,4868,4980,5223,5377,5484,5645,5772,5922,6068,6136,6198",
+                        "endColumns": "105,159,125,109,149,125,111,101,153,106,160,126,149,145,67,61,84",
+                        "endOffsets": "4191,4351,4477,4587,4737,4863,4975,5077,5372,5479,5640,5767,5917,6063,6131,6193,6278"
+                    }
+                },
+                {
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-bs/values-bs.xml",
                     "from": {
                         "startLines": "2,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -23,41 +74,7 @@
                     }
                 },
                 {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-bs/values-bs.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,129,218,303,377,446,528,595,662,740,820,904,987,1059,1140,1227,1303,1386,1468,1547,1625,1701,1789,1862,1941,2011",
-                        "endColumns": "73,88,84,73,68,81,66,66,77,79,83,82,71,80,86,75,82,81,78,77,75,87,72,78,69,76",
-                        "endOffsets": "124,213,298,372,441,523,590,657,735,815,899,982,1054,1135,1222,1298,1381,1463,1542,1620,1696,1784,1857,1936,2006,2083"
-                    },
-                    "to": {
-                        "startLines": "34,40,44,65,67,68,70,84,85,86,124,125,126,127,129,130,131,132,133,134,135,136,138,139,140,141",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "3102,3613,4005,6441,6592,6661,6806,7839,7906,7984,11038,11122,11205,11277,11445,11532,11608,11691,11773,11852,11930,12006,12195,12268,12347,12417",
-                        "endColumns": "73,88,84,73,68,81,66,66,77,79,83,82,71,80,86,75,82,81,78,77,75,87,72,78,69,76",
-                        "endOffsets": "3171,3697,4085,6510,6656,6738,6868,7901,7979,8059,11117,11200,11272,11353,11527,11603,11686,11768,11847,11925,12001,12089,12263,12342,12412,12489"
-                    }
-                },
-                {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/res/values-bs/values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "218",
-                        "endColumns": "136",
-                        "endOffsets": "354"
-                    },
-                    "to": {
-                        "startLines": "53",
-                        "startColumns": "4",
-                        "startOffsets": "5082",
-                        "endColumns": "140",
-                        "endOffsets": "5218"
-                    }
-                },
-                {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/res/values-bs/values-bs.xml",
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/res/values-bs/values-bs.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -74,24 +91,7 @@
                     }
                 },
                 {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/res/values-bs/values.xml",
-                    "from": {
-                        "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
-                        "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
-                        "startOffsets": "193,295,451,573,679,825,947,1055,1153,1303,1406,1563,1686,1832,1974,2038,2096",
-                        "endColumns": "101,155,121,105,145,121,107,97,149,102,156,122,145,141,63,57,80",
-                        "endOffsets": "294,450,572,678,824,946,1054,1152,1302,1405,1562,1685,1831,1973,2037,2095,2176"
-                    },
-                    "to": {
-                        "startLines": "45,46,47,48,49,50,51,52,54,55,56,57,58,59,60,61,62",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "4090,4196,4356,4482,4592,4742,4868,4980,5223,5377,5484,5645,5772,5922,6068,6136,6198",
-                        "endColumns": "105,159,125,109,149,125,111,101,153,106,160,126,149,145,67,61,84",
-                        "endOffsets": "4191,4351,4477,4587,4737,4863,4975,5077,5372,5479,5640,5767,5917,6063,6131,6193,6278"
-                    }
-                },
-                {
-                    "source": "/Users/mian-rauf/.gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/res/values-bs/values-bs.xml",
+                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/res/values-bs/values-bs.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

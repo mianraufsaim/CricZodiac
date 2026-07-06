@@ -20,7 +20,6 @@ const androidFocusSafeInputProps = Platform.OS === 'android'
   ? {
       autoComplete: 'off',
       importantForAutofill: 'no',
-      textContentType: 'none',
     }
   : {};
 

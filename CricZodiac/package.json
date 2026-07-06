@@ -6,7 +6,7 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start",
-    "postinstall": "node scripts/patch-react-native-ios-spaces.js && node scripts/patch-vision-camera-worklets-link.js && node scripts/patch-react-native-screens-android.js",
+    "postinstall": "node scripts/patch-react-native-ios-spaces.js && node scripts/patch-vision-camera-worklets-link.js && node scripts/patch-react-native-screens-android.js && node scripts/patch-react-native-gesture-handler-android.js",
     "test": "jest",
     "lint": "eslint ."
   },
