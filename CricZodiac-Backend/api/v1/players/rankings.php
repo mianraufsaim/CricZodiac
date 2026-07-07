@@ -22,11 +22,10 @@ $previousLimit = $currentLimit;
 
 function rankingMatchIds(PDO $pdo, int $clubId, ?int $limit = null, int $offset = 0): array {
     $sql = "
-        SELECT DISTINCT m.id
+        SELECT m.id
         FROM matches m
-        LEFT JOIN match_results mr ON mr.match_id = m.id
         WHERE m.club_id = ?
-          AND (m.status = 'completed' OR m.result_text IS NOT NULL OR mr.id IS NOT NULL)
+          AND m.status = 'completed'
         ORDER BY
           COALESCE(m.match_date, DATE(m.updated_at), DATE(m.created_at)) DESC,
           m.updated_at DESC,
@@ -83,8 +82,8 @@ function rankingAggregate(PDO $pdo, int $clubId, array $matchIds): array {
         SELECT bs.player_id, SUM(COALESCE(bs.runs_scored, 0)) AS runs
         FROM batting_scorecards bs
         LEFT JOIN innings i ON i.id = bs.innings_id
-        WHERE bs.club_id = ?
-          AND COALESCE(bs.match_id, i.match_id) IN ($matchSql)
+        JOIN players p ON p.id = bs.player_id AND p.club_id = ?
+        WHERE COALESCE(bs.match_id, i.match_id) IN ($matchSql)
           AND bs.player_id IS NOT NULL
         GROUP BY bs.player_id
     ");
@@ -103,8 +102,8 @@ function rankingAggregate(PDO $pdo, int $clubId, array $matchIds): array {
             SUM(COALESCE(bwl.runs_conceded, 0)) AS runs_conceded
         FROM bowling_scorecards bwl
         LEFT JOIN innings i ON i.id = bwl.innings_id
-        WHERE bwl.club_id = ?
-          AND COALESCE(bwl.match_id, i.match_id) IN ($matchSql)
+        JOIN players p ON p.id = bwl.player_id AND p.club_id = ?
+        WHERE COALESCE(bwl.match_id, i.match_id) IN ($matchSql)
           AND bwl.player_id IS NOT NULL
         GROUP BY bwl.player_id
     ");
@@ -125,8 +124,8 @@ function rankingAggregate(PDO $pdo, int $clubId, array $matchIds): array {
             SUM(CASE WHEN w.wicket_type = 'run_out' THEN 1 ELSE 0 END) AS run_outs
         FROM wickets w
         LEFT JOIN innings i ON i.id = w.innings_id
-        WHERE w.club_id = ?
-          AND COALESCE(w.match_id, i.match_id) IN ($matchSql)
+        JOIN players p ON p.id = w.fielder_id AND p.club_id = ?
+        WHERE COALESCE(w.match_id, i.match_id) IN ($matchSql)
           AND w.fielder_id IS NOT NULL
           AND w.wicket_type IN ('caught', 'stumped', 'run_out')
         GROUP BY w.fielder_id
@@ -159,7 +158,7 @@ function rankingProfiles(PDO $pdo, int $clubId, array $playerIds): array {
     if (!$playerIds) return [];
     $sql = rankingPlaceholders($playerIds);
     $st = $pdo->prepare("
-        SELECT p.id, p.local_id, COALESCE(u.name, 'Unknown Player') AS full_name, COALESCE(p.profile_pic, u.profile_pic) AS profile_pic
+        SELECT p.id, p.local_id, COALESCE(u.name, 'Unknown Player') AS full_name, p.profile_pic
         FROM players p
         LEFT JOIN users u ON u.id = p.user_id
         WHERE p.club_id = ? AND p.id IN ($sql)

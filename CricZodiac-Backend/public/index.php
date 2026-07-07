@@ -566,6 +566,17 @@
     .rank-player { min-width: 0; color: var(--white); font-size: 13px; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rank-points { color: var(--gold); font-size: 13px; font-weight: 950; text-align: right; }
     .rank-ath { color: var(--light-gray); font-size: 13px; font-weight: 850; text-align: right; }
+    .rank-error {
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 68, 68, 0.36);
+      background: rgba(255, 68, 68, 0.10);
+      color: #ffb7b7;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
 
     .profile-card { margin-bottom: 12px; padding: 16px; box-shadow: none; }
     .profile-card-title {
@@ -983,6 +994,7 @@
       history: [],
       leaderboard: null,
       rankings: null,
+      rankingsError: '',
       userProfile: null,
       activeTab: 'dashboard',
       leaderTab: 'batting',
@@ -1473,6 +1485,7 @@
       const matchCount = data.meta?.currentMatchCount || 25;
       els.rankingsSubtitle.textContent = `Last ${matchCount} matches ranking points`;
       els.rankingsSections.innerHTML = [
+        state.rankingsError ? `<div class="rank-error">Rankings API: ${escapeHtml(state.rankingsError)}</div>` : '',
         rankingSection('batting', '🏏', 'Batting', 'gold', data.batting),
         rankingSection('bowling', '🎯', 'Bowling', 'cyan', data.bowling),
         rankingSection('allRounder', '★', 'All-rounder', 'success', data.allRounder),
@@ -1556,13 +1569,14 @@
           apiFetch(API.myStats),
           apiFetch(API.matchHistory).catch(() => ({ matches: [] })),
           apiFetch(API.leaderboard).catch(() => ({})),
-          apiFetch(API.rankings).catch(() => ({})),
+          apiFetch(API.rankings).catch(error => ({ __error: error.message || 'Unable to load rankings.' })),
           apiFetch(API.profile).catch(() => ({ profile: null })),
         ]);
         state.stats = stats;
         state.history = history.matches || [];
         state.leaderboard = leaderboard;
-        state.rankings = rankings;
+        state.rankingsError = rankings.__error || '';
+        state.rankings = rankings.__error ? null : rankings;
         state.userProfile = profile.profile || null;
         const p = stats.profile || {};
         state.profileForm = {
@@ -1667,6 +1681,7 @@
       state.history = [];
       state.leaderboard = null;
       state.rankings = null;
+      state.rankingsError = '';
       state.rankingsVisible = {};
       state.activeTab = 'dashboard';
       showLogin();
