@@ -33,14 +33,19 @@ function rankingMatchIds(PDO $pdo, int $clubId, ?int $limit = null, int $offset 
           m.created_at DESC,
           m.id DESC
     ";
-    $params = [$clubId];
     if ($limit !== null) {
         $sql .= " LIMIT ? OFFSET ?";
-        $params[] = $limit;
-        $params[] = $offset;
     }
     $st = $pdo->prepare($sql);
-    $st->execute($params);
+    // With PDO::ATTR_EMULATE_PREPARES => false, params passed to execute() bind
+    // as strings, which MySQL rejects for LIMIT/OFFSET. Bind those as integers.
+    $pos = 1;
+    $st->bindValue($pos++, $clubId, PDO::PARAM_INT);
+    if ($limit !== null) {
+        $st->bindValue($pos++, $limit, PDO::PARAM_INT);
+        $st->bindValue($pos++, $offset, PDO::PARAM_INT);
+    }
+    $st->execute();
     return array_map('intval', array_column($st->fetchAll(PDO::FETCH_ASSOC), 'id'));
 }
 
