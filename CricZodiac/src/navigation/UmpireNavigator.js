@@ -26,6 +26,7 @@ import AddEditPlayerScreen   from '../screens/admin/AddEditPlayerScreen';
 import ManagePlayersScreen   from '../screens/admin/ManagePlayersScreen';
 import CreateUserScreen      from '../screens/shared/CreateUserScreen';
 import LeaderboardScreen     from '../screens/shared/LeaderboardScreen';
+import RankingsScreen        from '../screens/shared/RankingsScreen';
 import PlayerProfileViewScreen from '../screens/shared/PlayerProfileViewScreen';
 import PlayerCompareScreen   from '../screens/shared/PlayerCompareScreen';
 import SyncStatusScreen      from '../screens/admin/SyncStatusScreen';
@@ -63,6 +64,7 @@ const UmpireNavigator = () => (
     <Stack.Screen name="SyncStatus"        component={SyncStatusScreen} />
 
     {/* Stats & profiles */}
+    <Stack.Screen name="Rankings"          component={RankingsScreen} />
     <Stack.Screen name="Leaderboard"       component={LeaderboardScreen} />
     <Stack.Screen name="PlayerProfile"     component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerProfileView" component={PlayerProfileViewScreen} />

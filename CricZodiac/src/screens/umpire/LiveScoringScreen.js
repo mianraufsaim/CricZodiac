@@ -15,8 +15,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  StatusBar, Modal, FlatList, TextInput,
+  StatusBar, Modal, FlatList, TextInput, BackHandler, NativeModules, Platform,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../context/ThemeContext';
@@ -116,6 +117,16 @@ const getExtraBtns = (COLORS) => [
   { id: 'bye',     label: 'BYE',    short: 'B',  color: COLORS.gray     },
   { id: 'leg_bye', label: 'LEG BYE',short: 'Lb', color: COLORS.gray     },
 ];
+
+const getAdminTabBarStyle = (COLORS) => ({
+  backgroundColor: COLORS.tabBar,
+  borderTopColor: COLORS.tabBarBorder,
+  height: 58,
+  paddingBottom: 6,
+});
+
+const BACK_ACTION_TYPES = new Set(['GO_BACK', 'POP', 'POP_TO_TOP']);
+const KeepScreenAwake = Platform.OS === 'android' ? NativeModules.KeepScreenAwake : null;
 
 // ── Sub-components ────────────────────────────────────────
 
@@ -854,6 +865,31 @@ const LiveScoringScreen = ({ navigation, route }) => {
   const [legalBalls, setLegalBalls]     = useState(0);
   const [overBalls, setOverBalls]       = useState([]);    // balls in current over (for dots)
   const [allBalls, setAllBalls]         = useState([]);    // full innings ball history
+
+  useFocusEffect(
+    useCallback(() => {
+      KeepScreenAwake?.enable?.();
+      navigation.setOptions?.({ gestureEnabled: false });
+
+      const parentNavigation = navigation.getParent?.();
+      parentNavigation?.setOptions?.({ tabBarStyle: { display: 'none' } });
+
+      const backSubscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+      const removeSubscription = navigation.addListener('beforeRemove', (event) => {
+        if (BACK_ACTION_TYPES.has(event.data?.action?.type)) {
+          event.preventDefault();
+        }
+      });
+
+      return () => {
+        KeepScreenAwake?.disable?.();
+        backSubscription.remove();
+        removeSubscription();
+        navigation.setOptions?.({ gestureEnabled: true });
+        parentNavigation?.setOptions?.({ tabBarStyle: getAdminTabBarStyle(COLORS) });
+      };
+    }, [COLORS, navigation])
+  );
 
   // Per-player live stats (updated as balls come in)
   const [strikerStats, setStrikerStats]       = useState({ runs: 0, balls: 0, fours: 0, sixes: 0 });
@@ -2655,13 +2691,7 @@ const LiveScoringScreen = ({ navigation, route }) => {
           ) : null}
         </View>
 
-        {/* Right — scorecard icon */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Scorecard', { inningsId: innings?.id, match, liveOverNumber: overNumber, liveLegalBalls: legalBalls })}
-          style={styles.headerSide}
-        >
-          <Icon name="view-list" size={22} color={COLORS.gold} />
-        </TouchableOpacity>
+        <View style={styles.headerSide} />
       </View>
 
       {/* Team row — teams centred */}

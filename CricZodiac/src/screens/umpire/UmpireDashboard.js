@@ -116,6 +116,8 @@ const UmpireDashboard = ({ navigation }) => {
             onPress={() => navigation.navigate('ManagePlayers')} COLORS={COLORS} styles={styles} />
           <QuickBtn icon="podium"        label="Leaderboard" color={COLORS.success}
             onPress={() => navigation.navigate('Leaderboard')} COLORS={COLORS} styles={styles} />
+          <QuickBtn icon="trophy"        label="Rankings"    color={COLORS.gold}
+            onPress={() => navigation.navigate('Rankings')} COLORS={COLORS} styles={styles} />
         </View>
 
         <View style={styles.syncCard}>

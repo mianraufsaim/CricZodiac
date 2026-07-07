@@ -37,6 +37,7 @@ import ScorecardScreen         from '../screens/umpire/ScorecardScreen';
 import MatchSummaryScreen      from '../screens/umpire/MatchSummaryScreen';
 import PlayerProfileScreen     from '../screens/player/PlayerProfileScreen';
 import LeaderboardScreen       from '../screens/shared/LeaderboardScreen';
+import RankingsScreen          from '../screens/shared/RankingsScreen';
 import PlayerProfileViewScreen from '../screens/shared/PlayerProfileViewScreen';
 import PlayerCompareScreen     from '../screens/shared/PlayerCompareScreen';
 import ClubSelectorScreen      from '../screens/shared/ClubSelectorScreen';
@@ -71,6 +72,7 @@ const AdminHomeStack = () => (
     <Stack.Screen name="SyncStatus"        component={SyncStatusScreen} />
     <Stack.Screen name="PlayerProfileView" component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerCompare"     component={PlayerCompareScreen} />
+    <Stack.Screen name="Rankings"          component={RankingsScreen} />
     <Stack.Screen name="Leaderboard"       component={LeaderboardScreen} />
     {MATCH_SCREENS.map(s => <Stack.Screen key={s.name} name={s.name} component={s.component} />)}
   </Stack.Navigator>
@@ -87,6 +89,7 @@ const UsersStack = () => (
     <Stack.Screen name="PlayerProfileView" component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerCompare"     component={PlayerCompareScreen} />
     <Stack.Screen name="PlayerProfile"     component={PlayerProfileScreen} />
+    <Stack.Screen name="Rankings"          component={RankingsScreen} />
   </Stack.Navigator>
 );
 
@@ -105,6 +108,7 @@ const SeriesStack = () => (
 // ── Stats Stack ───────────────────────────────────────────
 const StatsStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Rankings"          component={RankingsScreen} />
     <Stack.Screen name="Leaderboard"       component={LeaderboardScreen} />
     <Stack.Screen name="PlayerProfileView" component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerCompare"     component={PlayerCompareScreen} />

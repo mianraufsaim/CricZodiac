@@ -209,11 +209,18 @@ const AdminDashboard = ({ navigation }) => {
         <View style={styles.qaRow}>
           <QuickAction icon="account-group"  label="Manage Users" color={COLORS.purple}    onPress={() => navigation.navigate('Users')}      styles={styles} />
           <QuickAction icon="history"        label="All Matches"  color={COLORS.success}   onPress={() => navigation.navigate('AllMatches')} styles={styles} />
-          <QuickAction icon="podium"         label="Leaderboard"  color={COLORS.royalBlue} onPress={() => navigation.navigate('Stats')}      styles={styles} />
+          <QuickAction icon="podium"         label="Leaderboard"  color={COLORS.royalBlue} onPress={() => navigation.navigate('Leaderboard')} styles={styles} />
         </View>
 
-        {/* Row 2: Pending Approvals · Sync Status · Theme */}
-        <View style={[styles.qaRow, { marginTop: 10, marginBottom: 16 }]}>
+        {/* Row 2: Rankings · Compare Players · Sync Status */}
+        <View style={[styles.qaRow, { marginTop: 10 }]}>
+          <QuickAction
+            icon="trophy"
+            label="Rankings"
+            color={COLORS.gold}
+            onPress={() => navigation.navigate('Rankings')}
+            styles={styles}
+          />
           <QuickAction
             icon="compare"
             label="Compare Players"
@@ -228,6 +235,10 @@ const AdminDashboard = ({ navigation }) => {
             onPress={() => navigation.navigate('SyncStatus')}
             styles={styles}
           />
+        </View>
+
+        {/* Row 3: AI Ball Lab */}
+        <View style={[styles.qaRow, { marginTop: 10, marginBottom: 16 }]}>
           <QuickAction
             icon="radar"
             label="AI Ball Lab"

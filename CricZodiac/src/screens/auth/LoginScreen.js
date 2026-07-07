@@ -187,7 +187,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   registerLink:     { alignItems: 'center', marginTop: 20 },
   registerText:     { color: COLORS.gray, fontSize: 14 },
   registerTextBold: { color: COLORS.gold, fontWeight: '700' },
-  footer:           { textAlign: 'center', color: COLORS.darkGray, fontSize: 11, marginTop: 16 },
+  footer:           { textAlign: 'center', color: COLORS.lightGray, fontSize: 12, fontWeight: '600', marginTop: 16 },
 });
 
 export default LoginScreen;

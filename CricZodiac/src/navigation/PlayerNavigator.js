@@ -9,6 +9,7 @@ import PlayerProfileScreen from '../screens/player/PlayerProfileScreen';
 import PlayerStatsScreen from '../screens/player/PlayerStatsScreen';
 import MatchHistoryScreen from '../screens/player/MatchHistoryScreen';
 import LeaderboardScreen from '../screens/shared/LeaderboardScreen';
+import RankingsScreen from '../screens/shared/RankingsScreen';
 import PlayerProfileViewScreen from '../screens/shared/PlayerProfileViewScreen';
 import PlayerCompareScreen from '../screens/shared/PlayerCompareScreen';
 
@@ -19,6 +20,7 @@ const Stack = createNativeStackNavigator();
 const HomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="PlayerDashboard"    component={PlayerDashboard} />
+    <Stack.Screen name="Rankings"           component={RankingsScreen} />
     <Stack.Screen name="Leaderboard"        component={LeaderboardScreen} />
     <Stack.Screen name="PlayerProfile"      component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerProfileView"  component={PlayerProfileViewScreen} />
@@ -30,6 +32,7 @@ const HomeStack = () => (
 const StatsStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="PlayerStatsMain"    component={PlayerStatsScreen} />
+    <Stack.Screen name="Rankings"           component={RankingsScreen} />
     <Stack.Screen name="Leaderboard"        component={LeaderboardScreen} />
     <Stack.Screen name="PlayerProfile"      component={PlayerProfileViewScreen} />
     <Stack.Screen name="PlayerProfileView"  component={PlayerProfileViewScreen} />
@@ -50,7 +53,7 @@ const PlayerNavigator = () => {
         tabBarIcon: ({ color, size }) => {
           const icons = {
             Home: 'view-dashboard', Stats: 'podium', History: 'history',
-            Leaderboard: 'trophy', Profile: 'account-circle',
+            Rankings: 'trophy', Leaderboard: 'trophy', Profile: 'account-circle',
           };
           return <Icon name={icons[route.name] || 'circle'} size={size} color={color} />;
         },
@@ -58,7 +61,7 @@ const PlayerNavigator = () => {
     >
       <Tab.Screen name="Home"        component={HomeStack}          options={{ tabBarLabel: 'Dashboard' }} />
       <Tab.Screen name="Stats"       component={StatsStack}         options={{ tabBarLabel: 'Stats' }} />
-      <Tab.Screen name="Leaderboard" component={LeaderboardScreen}  options={{ tabBarLabel: 'Leaderboard' }} />
+      <Tab.Screen name="Rankings"    component={RankingsScreen} />
       <Tab.Screen name="History"     component={MatchHistoryScreen} />
       <Tab.Screen name="Profile"     component={PlayerProfileScreen} />
     </Tab.Navigator>
