@@ -496,6 +496,77 @@
     }
     .load-more.show { display: block; }
 
+    .points-legend {
+      margin-bottom: 12px;
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+    }
+    .legend-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 10px;
+      color: var(--light-gray);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .legend-item {
+      min-height: 58px;
+      padding: 8px 4px;
+      border-radius: 10px;
+      background: var(--dark-gray);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+    .legend-value { font-size: 16px; font-weight: 950; line-height: 1; }
+    .legend-label { color: var(--gray); font-size: 9px; font-weight: 800; line-height: 1.2; }
+    .rank-card { margin-bottom: 12px; overflow: hidden; box-shadow: none; }
+    .rank-table-head, .rank-row {
+      display: grid;
+      grid-template-columns: 28px 34px minmax(0, 1fr) 58px 52px;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+    }
+    .rank-table-head {
+      background: var(--dark-gray);
+      color: var(--gray);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .rank-row {
+      min-height: 48px;
+      border-top: 1px solid rgba(26, 36, 69, 0.54);
+    }
+    .rank-position { color: var(--light-gray); font-size: 14px; font-weight: 950; }
+    .rank-move {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 950;
+    }
+    .rank-move.up { color: var(--success); background: rgba(0, 200, 81, 0.12); }
+    .rank-move.down { color: var(--danger); background: rgba(255, 68, 68, 0.12); }
+    .rank-move.same { color: var(--gray); background: rgba(136, 146, 164, 0.10); }
+    .rank-player { min-width: 0; color: var(--white); font-size: 13px; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-points { color: var(--gold); font-size: 13px; font-weight: 950; text-align: right; }
+    .rank-ath { color: var(--light-gray); font-size: 13px; font-weight: 850; text-align: right; }
+
     .profile-card { margin-bottom: 12px; padding: 16px; box-shadow: none; }
     .profile-card-title {
       display: flex;
@@ -594,7 +665,7 @@
       transform: translateX(-50%);
       width: min(100%, 460px);
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px);
       background: var(--tab-bar);
       border-top: 1px solid var(--card-border);
@@ -610,10 +681,10 @@
       align-items: center;
       justify-content: center;
       gap: 3px;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
     }
-    .bottom-tab .tab-icon { font-size: 20px; line-height: 1; }
+    .bottom-tab .tab-icon { font-size: 18px; line-height: 1; }
     .bottom-tab.active { color: var(--gold); }
 
     .hidden { display: none !important; }
@@ -759,6 +830,25 @@
           <div id="leaderSections"></div>
         </section>
 
+        <section id="rankingsPage" class="tab-page" data-page="rankings">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">Rankings</h2>
+              <p id="rankingsSubtitle" class="page-subtitle">Last 25 matches ranking points</p>
+            </div>
+          </div>
+          <section class="points-legend" aria-label="Points legend">
+            <div class="legend-title"><span class="gold">ⓘ</span><span>Points Legend</span></div>
+            <div class="legend-grid">
+              <div class="legend-item"><span class="legend-value gold">+1</span><span class="legend-label">Run</span></div>
+              <div class="legend-item"><span class="legend-value cyan">+25</span><span class="legend-label">Wicket</span></div>
+              <div class="legend-item"><span class="legend-value success">+5</span><span class="legend-label">Catch/Stump/RO</span></div>
+              <div class="legend-item"><span class="legend-value danger">-0.5</span><span class="legend-label">Run conceded</span></div>
+            </div>
+          </section>
+          <div id="rankingsSections"></div>
+        </section>
+
         <section id="historyPage" class="tab-page" data-page="history">
           <div class="page-header">
             <div>
@@ -837,6 +927,7 @@
         <button class="bottom-tab active" type="button" data-tab="dashboard"><span class="tab-icon">▦</span><span>Dashboard</span></button>
         <button class="bottom-tab" type="button" data-tab="stats"><span class="tab-icon">♜</span><span>Stats</span></button>
         <button class="bottom-tab" type="button" data-tab="leaderboard"><span class="tab-icon">🏆</span><span>Leaderboard</span></button>
+        <button class="bottom-tab" type="button" data-tab="rankings"><span class="tab-icon">↕</span><span>Rankings</span></button>
         <button class="bottom-tab" type="button" data-tab="history"><span class="tab-icon">◷</span><span>History</span></button>
         <button class="bottom-tab" type="button" data-tab="profile"><span class="tab-icon">●</span><span>Profile</span></button>
       </nav>
@@ -849,6 +940,7 @@
       myStats: '/api/v1/players/my-stats.php',
       matchHistory: '/api/v1/players/match-history.php',
       leaderboard: '/api/v1/players/leaderboard.php?limit=10&min_matches=20',
+      rankings: '/api/v1/players/rankings.php?matches=25',
       profile: '/api/v1/users/profile.php',
       playerUpdate: '/api/v1/players/update.php',
       uploadProfile: '/api/v1/upload/profile-picture.php',
@@ -890,10 +982,12 @@
       stats: null,
       history: [],
       leaderboard: null,
+      rankings: null,
       userProfile: null,
       activeTab: 'dashboard',
       leaderTab: 'batting',
       leaderVisible: {},
+      rankingsVisible: {},
       profileForm: {
         player_type: 'allrounder',
         batting_hand: 'right',
@@ -928,6 +1022,8 @@
       leaderSections: $('leaderSections'),
       leaderBattingTab: $('leaderBattingTab'),
       leaderBowlingTab: $('leaderBowlingTab'),
+      rankingsSubtitle: $('rankingsSubtitle'),
+      rankingsSections: $('rankingsSections'),
       historySubtitle: $('historySubtitle'),
       historyCount: $('historyCount'),
       historyList: $('historyList'),
@@ -1333,6 +1429,56 @@
       els.leaderBowlingTab.classList.toggle('active', state.leaderTab === 'bowling');
     }
 
+    function formatRankPoints(raw) {
+      const number = Number(raw || 0);
+      return Number.isInteger(number) ? String(number) : number.toFixed(1);
+    }
+
+    function rankMovement(movement) {
+      if (movement === 'down') return { cls: 'down', icon: '↓' };
+      if (movement === 'up') return { cls: 'up', icon: '↑' };
+      return { cls: 'same', icon: '−' };
+    }
+
+    function rankRow(item) {
+      const move = rankMovement(item.movement);
+      return `
+        <div class="rank-row">
+          <div class="rank-position">${escapeHtml(item.standing)}</div>
+          <div class="rank-move ${move.cls}" aria-label="${escapeHtml(move.cls)}">${move.icon}</div>
+          <div class="rank-player">${escapeHtml(item.full_name)}</div>
+          <div class="rank-points">${escapeHtml(formatRankPoints(item.points))}</div>
+          <div class="rank-ath">${escapeHtml(formatRankPoints(item.ath))}</div>
+        </div>
+      `;
+    }
+
+    function rankingSection(key, icon, title, color, rows) {
+      const visible = state.rankingsVisible[key] || 5;
+      const shown = (rows || []).slice(0, visible);
+      return `
+        <section class="leader-card rank-card">
+          <header class="section-header ${color}"><span class="section-icon">${icon}</span><span>${escapeHtml(title)}</span></header>
+          <div class="rank-table-head">
+            <span>#</span><span>Move</span><span>Name</span><span style="text-align:right;">Points</span><span style="text-align:right;">ATH</span>
+          </div>
+          ${shown.length ? shown.map(rankRow).join('') : '<div class="empty-card" style="margin:0; border:0; border-radius:0; box-shadow:none;"><p class="empty-sub">No ranking data yet</p></div>'}
+          <button class="load-more ${(rows || []).length > shown.length ? 'show' : ''}" type="button" data-ranking-section="${escapeHtml(key)}">View More</button>
+        </section>
+      `;
+    }
+
+    function renderRankings() {
+      const data = state.rankings || {};
+      const matchCount = data.meta?.currentMatchCount || 25;
+      els.rankingsSubtitle.textContent = `Last ${matchCount} matches ranking points`;
+      els.rankingsSections.innerHTML = [
+        rankingSection('batting', '🏏', 'Batting', 'gold', data.batting),
+        rankingSection('bowling', '🎯', 'Bowling', 'cyan', data.bowling),
+        rankingSection('allRounder', '★', 'All-rounder', 'success', data.allRounder),
+      ].join('');
+    }
+
     function renderChoiceChips(container, options, activeValue, onSelectName) {
       container.innerHTML = options.map(opt => `
         <button class="choice-chip ${opt.id === activeValue ? 'active' : ''}" type="button" data-${onSelectName}="${escapeHtml(opt.id)}">${escapeHtml(opt.label)}</button>
@@ -1384,6 +1530,7 @@
       renderStats();
       renderHistory();
       renderLeaderboard();
+      renderRankings();
       renderProfile();
       setActiveTab(state.activeTab);
       els.appLoading.classList.add('hidden');
@@ -1405,15 +1552,17 @@
     async function loadApp() {
       showAppShell();
       try {
-        const [stats, history, leaderboard, profile] = await Promise.all([
+        const [stats, history, leaderboard, rankings, profile] = await Promise.all([
           apiFetch(API.myStats),
           apiFetch(API.matchHistory).catch(() => ({ matches: [] })),
           apiFetch(API.leaderboard).catch(() => ({})),
+          apiFetch(API.rankings).catch(() => ({})),
           apiFetch(API.profile).catch(() => ({ profile: null })),
         ]);
         state.stats = stats;
         state.history = history.matches || [];
         state.leaderboard = leaderboard;
+        state.rankings = rankings;
         state.userProfile = profile.profile || null;
         const p = stats.profile || {};
         state.profileForm = {
@@ -1517,6 +1666,8 @@
       state.stats = null;
       state.history = [];
       state.leaderboard = null;
+      state.rankings = null;
+      state.rankingsVisible = {};
       state.activeTab = 'dashboard';
       showLogin();
     });
@@ -1542,6 +1693,14 @@
       const key = button.dataset.loadSection;
       state.leaderVisible[key] = Math.min(10, (state.leaderVisible[key] || 5) + 5);
       renderLeaderboard();
+    });
+
+    els.rankingsSections.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-ranking-section]');
+      if (!button) return;
+      const key = button.dataset.rankingSection;
+      state.rankingsVisible[key] = (state.rankingsVisible[key] || 5) + 5;
+      renderRankings();
     });
 
     els.playerTypeChips.addEventListener('click', (event) => {
