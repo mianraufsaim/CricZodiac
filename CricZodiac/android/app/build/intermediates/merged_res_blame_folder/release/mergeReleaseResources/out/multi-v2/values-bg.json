@@ -4,7 +4,7 @@
             "outputFile": "com.criczodiac.app-mergeReleaseResources-4:/values-bg/values-bg.xml",
             "map": [
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/res/values-bg/values-bg.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/6b63eb4741cf1c0b0260d8ffb7090142/transformed/appcompat-1.6.1/res/values-bg/values-bg.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/res/values-bg/values-bg.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/res/values-bg/values-bg.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -38,7 +38,7 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/res/values-bg/values.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/res/values-bg/values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
                         "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
@@ -55,7 +55,24 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-bg/values-bg.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-bg/values-bg.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,125,218,302,375,450,538,607,674,754,836,923,1003,1074,1161,1248,1322,1401,1483,1560,1637,1712,1796,1871,1953,2023",
+                        "endColumns": "69,92,83,72,74,87,68,66,79,81,86,79,70,86,86,73,78,81,76,76,74,83,74,81,69,84",
+                        "endOffsets": "120,213,297,370,445,533,602,669,749,831,918,998,1069,1156,1243,1317,1396,1478,1555,1632,1707,1791,1866,1948,2018,2103"
+                    },
+                    "to": {
+                        "startLines": "33,39,43,64,66,67,69,83,84,85,123,124,125,126,128,129,130,131,132,133,134,135,137,138,139,140",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "3064,3607,4017,6571,6724,6799,6949,8001,8068,8148,11246,11333,11413,11484,11655,11742,11816,11895,11977,12054,12131,12206,12391,12466,12548,12618",
+                        "endColumns": "69,92,83,72,74,87,68,66,79,81,86,79,70,86,86,73,78,81,76,76,74,83,74,81,69,84",
+                        "endOffsets": "3129,3695,4096,6639,6794,6882,7013,8063,8143,8225,11328,11408,11479,11566,11737,11811,11890,11972,12049,12126,12201,12285,12461,12543,12613,12698"
+                    }
+                },
+                {
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-bg/values-bg.xml",
                     "from": {
                         "startLines": "2,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -74,7 +91,7 @@
                     }
                 },
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/res/values-bg/values.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/res/values-bg/values.xml",
                     "from": {
                         "startLines": "4",
                         "startColumns": "0",
@@ -88,23 +105,6 @@
                         "startOffsets": "5151",
                         "endColumns": "137",
                         "endOffsets": "5284"
-                    }
-                },
-                {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/89ddd6f7531d9316b6cd18a384930ca2/transformed/jetified-react-android-0.73.4-release/res/values-bg/values-bg.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,125,218,302,375,450,538,607,674,754,836,923,1003,1074,1161,1248,1322,1401,1483,1560,1637,1712,1796,1871,1953,2023",
-                        "endColumns": "69,92,83,72,74,87,68,66,79,81,86,79,70,86,86,73,78,81,76,76,74,83,74,81,69,84",
-                        "endOffsets": "120,213,297,370,445,533,602,669,749,831,918,998,1069,1156,1243,1317,1396,1478,1555,1632,1707,1791,1866,1948,2018,2103"
-                    },
-                    "to": {
-                        "startLines": "33,39,43,64,66,67,69,83,84,85,123,124,125,126,128,129,130,131,132,133,134,135,137,138,139,140",
-                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
-                        "startOffsets": "3064,3607,4017,6571,6724,6799,6949,8001,8068,8148,11246,11333,11413,11484,11655,11742,11816,11895,11977,12054,12131,12206,12391,12466,12548,12618",
-                        "endColumns": "69,92,83,72,74,87,68,66,79,81,86,79,70,86,86,73,78,81,76,76,74,83,74,81,69,84",
-                        "endOffsets": "3129,3695,4096,6639,6794,6882,7013,8063,8143,8225,11328,11408,11479,11566,11737,11811,11890,11972,12049,12126,12201,12285,12461,12543,12613,12698"
                     }
                 }
             ]

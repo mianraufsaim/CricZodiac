@@ -40,15 +40,15 @@
 29    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 30
 31    <permission
-31-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
+31-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:22:5-24:47
 32        android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-32-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
+32-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:23:9-81
 33        android:protectionLevel="signature" />
-33-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
+33-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:24:9-44
 34
 35    <uses-permission android:name="com.criczodiac.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-35-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
-35-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
+35-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:5-97
+35-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:26:22-94
 36
 37    <application
 37-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:23:5-42:19
@@ -57,7 +57,7 @@
 39        android:allowBackup="false"
 39-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:28:7-34
 40        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-40-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
+40-->[androidx.core:core:1.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/9e80f9ffccabefa2cd7be28d8a04d16d/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
 41        android:extractNativeLibs="false"
 42        android:icon="@mipmap/ic_launcher"
 42-->/Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/android/app/src/main/AndroidManifest.xml:26:7-41
@@ -115,11 +115,11 @@
 70                android:value="com.google.firebase.components.ComponentRegistrar" />
 70-->[:react-native-firebase_app] /Users/mian-rauf/Mobile Development/CricZodiac/CricZodiac/node_modules/@react-native-firebase/app/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml:20:17-82
 71            <meta-data
-71-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:35:13-37:85
+71-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:35:13-37:85
 72                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
-72-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:36:17-109
+72-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:36:17-109
 73                android:value="com.google.firebase.components.ComponentRegistrar" />
-73-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:37:17-82
+73-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:37:17-82
 74        </service>
 75
 76        <provider
@@ -168,155 +168,155 @@
 98        </provider>
 99
 100        <activity
-100-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:23:9-27:75
+100-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:23:9-27:75
 101            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
-101-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:24:13-93
+101-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:24:13-93
 102            android:excludeFromRecents="true"
-102-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:25:13-46
+102-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:25:13-46
 103            android:exported="false"
-103-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:26:13-37
+103-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:26:13-37
 104            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-104-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:27:13-72
+104-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:27:13-72
 105        <!--
 106            Service handling Google Sign-In user revocation. For apps that do not integrate with
 107            Google Sign-In, this service will never be started.
 108        -->
 109        <service
-109-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:33:9-37:51
+109-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:33:9-37:51
 110            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
-110-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:34:13-89
+110-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:34:13-89
 111            android:exported="true"
-111-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:35:13-36
+111-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:35:13-36
 112            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
-112-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:36:13-107
+112-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:36:13-107
 113            android:visibleToInstantApps="true" />
-113-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:37:13-48
+113-->[com.google.android.gms:play-services-auth:21.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/04c62453810dbae3051f1f7fe45ef6d9/transformed/jetified-play-services-auth-21.5.0/AndroidManifest.xml:37:13-48
 114        <service
-114-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:9:9-15:19
+114-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:9:9-15:19
 115            android:name="com.google.mlkit.common.internal.MlKitComponentDiscoveryService"
-115-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:10:13-91
+115-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:10:13-91
 116            android:directBootAware="true"
-116-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:17:13-43
+116-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:17:13-43
 117            android:exported="false" >
-117-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:11:13-37
+117-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:11:13-37
 118            <meta-data
-118-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:12:13-14:85
+118-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:12:13-14:85
 119                android:name="com.google.firebase.components:com.google.mlkit.vision.barcode.internal.BarcodeRegistrar"
-119-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:13:17-120
+119-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:13:17-120
 120                android:value="com.google.firebase.components.ComponentRegistrar" />
-120-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:14:17-82
+120-->[com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/3d6506349a8d9075d8a06a0d4f2ff944/transformed/jetified-play-services-mlkit-barcode-scanning-18.3.0/AndroidManifest.xml:14:17-82
 121            <meta-data
-121-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:12:13-14:85
+121-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:12:13-14:85
 122                android:name="com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar"
-122-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:13:17-124
+122-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:13:17-124
 123                android:value="com.google.firebase.components.ComponentRegistrar" />
-123-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:14:17-82
+123-->[com.google.mlkit:vision-common:17.3.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/728dd68a1fdd5ec4ea896ceb012fc3ea/transformed/jetified-vision-common-17.3.0/AndroidManifest.xml:14:17-82
 124            <meta-data
-124-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:20:13-22:85
+124-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:20:13-22:85
 125                android:name="com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar"
-125-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:21:17-120
+125-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:21:17-120
 126                android:value="com.google.firebase.components.ComponentRegistrar" />
-126-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:22:17-82
+126-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:22:17-82
 127        </service>
 128
 129        <provider
-129-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:9:9-13:38
+129-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:9:9-13:38
 130            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
-130-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:10:13-78
+130-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:10:13-78
 131            android:authorities="com.criczodiac.mlkitinitprovider"
-131-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:11:13-69
+131-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:11:13-69
 132            android:exported="false"
-132-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:12:13-37
+132-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:12:13-37
 133            android:initOrder="99" />
-133-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:13:13-35
+133-->[com.google.mlkit:common:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/91e35b075b33e83f44c170adc8be8f85/transformed/jetified-common-18.9.0/AndroidManifest.xml:13:13-35
 134
 135        <activity
-135-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:9-173
+135-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:9-173
 136            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-136-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:19-85
+136-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:19-85
 137            android:exported="false"
-137-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:146-170
+137-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:146-170
 138            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-138-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:86-145
+138-->[com.google.android.gms:play-services-base:18.5.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f1c6cd1a1e033dbd40d4f47bf37074ba/transformed/jetified-play-services-base-18.5.0/AndroidManifest.xml:5:86-145
 139
 140        <provider
-140-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:23:9-28:39
+140-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:23:9-28:39
 141            android:name="com.google.firebase.provider.FirebaseInitProvider"
-141-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:24:13-77
+141-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:24:13-77
 142            android:authorities="com.criczodiac.firebaseinitprovider"
-142-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:25:13-72
+142-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:25:13-72
 143            android:directBootAware="true"
-143-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:26:13-43
+143-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:26:13-43
 144            android:exported="false"
-144-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:27:13-37
+144-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:27:13-37
 145            android:initOrder="100" />
-145-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:28:13-36
+145-->[com.google.firebase:firebase-common:22.0.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/f6e156b7aa5a596593188d64c7ea9f69/transformed/jetified-firebase-common-22.0.1/AndroidManifest.xml:28:13-36
 146
 147        <meta-data
-147-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:21:9-23:69
+147-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:21:9-23:69
 148            android:name="com.google.android.gms.version"
-148-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:22:13-58
+148-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:22:13-58
 149            android:value="@integer/google_play_services_version" />
-149-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:23:13-66
+149-->[com.google.android.gms:play-services-basement:18.9.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/1bf88ff5fb331f03ed3ce323dcef6210/transformed/jetified-play-services-basement-18.9.0/AndroidManifest.xml:23:13-66
 150
 151        <provider
-151-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+151-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
 152            android:name="androidx.startup.InitializationProvider"
-152-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
+152-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:25:13-67
 153            android:authorities="com.criczodiac.androidx-startup"
-153-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
+153-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:26:13-68
 154            android:exported="false" >
-154-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
+154-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:27:13-37
 155            <meta-data
-155-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+155-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
 156                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-156-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
+156-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:30:17-75
 157                android:value="androidx.startup" />
-157-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
+157-->[androidx.emoji2:emoji2:1.2.0] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/47c19c64c9a19e19a3dd0df51c6c0c1b/transformed/jetified-emoji2-1.2.0/AndroidManifest.xml:31:17-49
 158            <meta-data
-158-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
+158-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:31:13-33:52
 159                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-159-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
+159-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:32:17-78
 160                android:value="androidx.startup" />
-160-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
+160-->[androidx.lifecycle:lifecycle-process:2.4.1] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/e43ef3056c3efdd9b6b6e6149eefff72/transformed/jetified-lifecycle-process-2.4.1/AndroidManifest.xml:33:17-49
 161        </provider>
 162
 163        <service
-163-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:29:9-35:19
+163-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:29:9-35:19
 164            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
-164-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:30:13-103
+164-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:30:13-103
 165            android:exported="false" >
-165-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:31:13-37
+165-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:31:13-37
 166            <meta-data
-166-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:32:13-34:39
+166-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:32:13-34:39
 167                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
-167-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:33:17-94
+167-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:33:17-94
 168                android:value="cct" />
-168-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:34:17-36
+168-->[com.google.android.datatransport:transport-backend-cct:2.3.3] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/39c950b5fc2686ed75688dc7a90cd046/transformed/jetified-transport-backend-cct-2.3.3/AndroidManifest.xml:34:17-36
 169        </service>
 170        <service
-170-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:26:9-30:19
+170-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:26:9-30:19
 171            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
-171-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:27:13-117
+171-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:27:13-117
 172            android:exported="false"
-172-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:28:13-37
+172-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:28:13-37
 173            android:permission="android.permission.BIND_JOB_SERVICE" >
-173-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:29:13-69
+173-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:29:13-69
 174        </service>
 175
 176        <receiver
-176-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:32:9-34:40
+176-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:32:9-34:40
 177            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
-177-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:33:13-132
+177-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:33:13-132
 178            android:exported="false" />
-178-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:34:13-37
+178-->[com.google.android.datatransport:transport-runtime:2.2.6] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/b5c99cb403475de0e928cb132b12f4c9/transformed/jetified-transport-runtime-2.2.6/AndroidManifest.xml:34:13-37
 179
 180        <meta-data
-180-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:12:9-14:37
+180-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:12:9-14:37
 181            android:name="com.facebook.soloader.enabled"
-181-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:13:13-57
+181-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:13:13-57
 182            android:value="false" />
-182-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:14:13-34
+182-->[com.facebook.soloader:soloader:0.10.5] /private/tmp/criczodiac-gradle-v6/caches/transforms-4/8060197a276a23e21b03b7a3bc3551a9/transformed/jetified-soloader-0.10.5/AndroidManifest.xml:14:13-34
 183    </application>
 184
 185</manifest>

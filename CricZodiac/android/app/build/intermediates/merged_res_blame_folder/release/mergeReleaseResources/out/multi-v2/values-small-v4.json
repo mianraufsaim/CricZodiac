@@ -4,7 +4,7 @@
             "outputFile": "com.criczodiac.app-mergeReleaseResources-4:/values-small-v4/values-small-v4.xml",
             "map": [
                 {
-                    "source": "/private/tmp/criczodiac-gradle/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-small-v4/values-small-v4.xml",
+                    "source": "/private/tmp/criczodiac-gradle-v6/caches/transforms-4/d9580c0c2ffb06cf6e42649741f7ecee/transformed/material-1.9.0/res/values-small-v4/values-small-v4.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",
