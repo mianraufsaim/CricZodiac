@@ -13,15 +13,17 @@ class KeepScreenAwakeModule(
 
   @ReactMethod
   fun enable() {
-    currentActivity?.runOnUiThread {
-      currentActivity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    val activity = reactApplicationContext.currentActivity ?: return
+    activity.runOnUiThread {
+      activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
   }
 
   @ReactMethod
   fun disable() {
-    currentActivity?.runOnUiThread {
-      currentActivity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    val activity = reactApplicationContext.currentActivity ?: return
+    activity.runOnUiThread {
+      activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
   }
 }

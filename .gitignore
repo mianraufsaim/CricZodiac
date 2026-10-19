@@ -3,3 +3,10 @@
 *.aab
 *.DS_Store
 CricZodiac/android/app/build/outputs/bundle/release/app-release.aab
+
+# Generated dependencies and build state
+**/node_modules/
+**/build/
+**/.gradle/
+**/.cxx/
+.idea/

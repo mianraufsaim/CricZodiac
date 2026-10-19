@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image, NativeModules,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -21,6 +21,10 @@ const androidFocusSafeInputProps = Platform.OS === 'android'
       importantForAutofill: 'no',
     }
   : {};
+
+const appInfo = NativeModules.AppInfo;
+const versionName = appInfo?.versionName || '1.0.0';
+const buildNumber = appInfo?.versionCode || '7';
 
 const LoginScreen = ({ navigation }) => {
   const { colors: COLORS } = useTheme();
@@ -151,6 +155,7 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <Text style={styles.footer}>Zodiac Technologies • Indoor Cricket Manager</Text>
+          <Text style={styles.buildInfo}>Version {versionName} (Build {buildNumber})</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -188,6 +193,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   registerText:     { color: COLORS.gray, fontSize: 14 },
   registerTextBold: { color: COLORS.gold, fontWeight: '700' },
   footer:           { textAlign: 'center', color: COLORS.lightGray, fontSize: 12, fontWeight: '600', marginTop: 16 },
+  buildInfo:        { textAlign: 'center', color: COLORS.gray, fontSize: 11, marginTop: 6 },
 });
 
 export default LoginScreen;
